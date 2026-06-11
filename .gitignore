@@ -1,0 +1,39 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.flattened-pom.xml
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.metadata/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Build artifacts
+*.class
+*.jar
+*.oxt
+*.zip
+build/
+out/
+
+# Testing
+.coverage
+.pytest_cache/
