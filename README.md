@@ -103,6 +103,17 @@ LibreImpress-SmartArt/
 - **dev** (default) - Normal development build with tests
 - **release** - Full build with .oxt extension packaging
 
+## Testing Strategy
+
+**Local Tests (Maven):** Fast unit tests that don't depend on the compiled artifact
+- `SmartArtCommandTest.java` - Tests core classes
+- Run with `mvn test`
+
+**Artifact Validation Tests (GitHub Actions):** Validates the `.oxt` extension package structure after build
+- `ExtensionValidationTest.java` - Validates zip structure, manifests, required files
+- Runs automatically on push/PR via `.github/workflows/build-and-validate.yml`
+- Excluded from local `mvn test` to avoid circular dependencies with `mvn clean`
+
 ## Verification Checklist
 
 After cloning/setting up, verify everything works:
@@ -116,18 +127,20 @@ mvn --version
 mvn clean compile
 # Expected: BUILD SUCCESS
 
-# 3. Run tests (even if empty)
+# 3. Run unit tests
 mvn test
-# Expected: Tests run (even if none exist yet)
+# Expected: Unit tests run and pass
 
 # 4. Package
 mvn package
-# Expected: target/smartart-0.1.0-SNAPSHOT.jar created
+# Expected: target/smartart-0.1.0-SNAPSHOT.jar and target/SmartArt.oxt created
 
-# 5. Verify .oxt creation (release mode)
-mvn clean package -P release
-# Expected: target/SmartArt.oxt created
+# 5. Full build with tests
+mvn clean test package
+# Expected: All unit tests pass and artifact is created
 ```
+
+**Note:** Artifact validation tests run in GitHub Actions on each push/PR. See `.github/workflows/build-and-validate.yml`
 
 ## IDE Setup
 

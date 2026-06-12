@@ -95,8 +95,18 @@ Declares the UNO component:
 - Component class path
 
 ### description.xml
+Root element must declare proper XML namespaces:
+- `xmlns="http://openoffice.org/extensions/description/2006"` (default namespace)
+- `xmlns:xlink="http://www.w3.org/1999/xlink"` (for xlink references)
 
-- Must adhere to Attributes of `<description>` https://wiki.documentfoundation.org/Documentation/DevGuide/Extensions#Extension_Manager
+Must contain per https://wiki.documentfoundation.org/Documentation/DevGuide/Extensions#Extension_Manager:
+- Identifier, version, and display name
+- Summary and description
+- Release notes
+- Publisher information
+- License text
+- Dependency list (e.g., com.sun.star version)
+- Registration and icon references
 
 ---
 
@@ -161,21 +171,31 @@ mvn clean
 # Compile
 mvn compile
 
-# Run tests
+# Run unit tests (excludes artifact validation)
 mvn test
 
-# Build JAR
+# Build JAR and .oxt extension
 mvn package
-
-# Generate .oxt extension
-mvn package -P build-extension
 
 # Install locally (for testing in LibreOffice)
 mvn install
 
-# Full build with tests
+# Full build with unit tests
 mvn clean test package
+
+# Run artifact validation tests only (after build)
+mvn test -Dtest=ExtensionValidationTest
 ```
+
+### Test Organization
+- **Unit tests** (Maven): Fast, isolated tests that don't depend on the artifact
+  - `SmartArtCommandTest.java` - Tests core command and dialog classes
+  - Run during local development with `mvn test`
+  
+- **Artifact validation tests** (GitHub Actions): Tests that verify the `.oxt` package structure
+  - `ExtensionValidationTest.java` - Validates the built extension artifact
+  - Run in CI/CD pipeline after the artifact is packaged
+  - Excluded from local Maven builds to avoid circular dependencies with `mvn clean`
 
 ---
 
