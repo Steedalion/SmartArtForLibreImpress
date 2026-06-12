@@ -1,48 +1,44 @@
 package org.libreimpress.smartart;
 
-/**
- * SmartArtCommand - Main entry point for the LibreImpress SmartArt extension.
- * 
- * This class serves as the command executor for the SmartArt menu item.
- * It orchestrates the flow: Dialog -> Parser -> Generator -> Renderer -> LibreOffice
- */
+import com.sun.star.uno.XComponentContext;
+
 public class SmartArtCommand {
-    
-    private static final String IMPLEMENTATION_NAME = 
+
+    private static final String IMPLEMENTATION_NAME =
         "org.libreimpress.smartart.SmartArtCommand";
     private static final String[] SERVICE_NAMES = {
         "com.sun.star.frame.ProtocolHandler"
     };
 
-    private Object componentContext;  // Will be XComponentContext at runtime
+    private Object componentContext;
 
-    /**
-     * Returns the implementation name of this component.
-     */
     public static String getImplementationName() {
         return IMPLEMENTATION_NAME;
     }
 
-    /**
-     * Returns the service names supported by this component.
-     */
     public static String[] getSupportedServiceNames() {
         return SERVICE_NAMES;
     }
 
-    /**
-     * Initialize the command with the component context.
-     */
     public SmartArtCommand(Object componentContext) {
         this.componentContext = componentContext;
     }
 
-    /**
-     * Execute the SmartArt command.
-     * This opens the dialog and begins the diagram generation workflow.
-     */
     public void execute() {
-        // To be implemented in Phase 2
-        System.out.println("SmartArtCommand.execute() called");
+        try {
+            XComponentContext context = (XComponentContext) componentContext;
+            SmartArtDialog dialog = new SmartArtDialog();
+
+            if (dialog.show(context)) {
+                String hierarchy = dialog.getHierarchyText();
+                String type = dialog.getDiagramType();
+
+                System.out.println("Creating " + type + " diagram");
+                System.out.println("Hierarchy:\n" + hierarchy);
+            }
+        } catch (Exception e) {
+            System.err.println("Error executing SmartArt command: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

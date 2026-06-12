@@ -30,10 +30,22 @@
             <id>central</id>
             <url>https://repo.maven.apache.org/maven2</url>
         </repository>
+        <!-- LibreOffice artifacts -->
+        <repository>
+            <id>libreoffice</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
     </repositories>
 
     <!-- Dependencies -->
     <dependencies>
+        <!-- LibreOffice UNO SDK -->
+        <dependency>
+            <groupId>org.libreoffice</groupId>
+            <artifactId>libreoffice</artifactId>
+            <version>7.4.0</version>
+        </dependency>
+
         <!-- JSON processing for palette parsing -->
         <dependency>
             <groupId>com.google.code.gson</groupId>

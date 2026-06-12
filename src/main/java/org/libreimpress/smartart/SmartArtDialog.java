@@ -1,83 +1,93 @@
 package org.libreimpress.smartart;
 
-/**
- * SmartArtDialog - Dialog controller for user input.
- * 
- * Responsibilities:
- * - Display dialog to user (text area, diagram type selector, palette field)
- * - Capture user input (hierarchy text, selected diagram type, optional palette)
- * - Validate input before passing to processing layer
- * - Return captured data to SmartArtCommand
- */
-public class SmartArtDialog {
-    
-    private String hierarchyText;
-    private String diagramType;
-    private String palette;
+import com.sun.star.awt.XButton;
+import com.sun.star.awt.XComboBox;
+import com.sun.star.awt.XControl;
+import com.sun.star.awt.XControlContainer;
+import com.sun.star.awt.XControlModel;
+import com.sun.star.awt.XDialog;
+import com.sun.star.awt.XFixedText;
+import com.sun.star.awt.XTextComponent;
+import com.sun.star.awt.XWindowPeer;
+import com.sun.star.beans.PropertyValue;
+import com.sun.star.beans.XPropertySet;
+import com.sun.star.lang.XComponent;
+import com.sun.star.lang.XMultiComponentFactory;
+import com.sun.star.uno.UnoRuntime;
+import com.sun.star.uno.XComponentContext;
 
-    /**
-     * Show the SmartArt dialog to the user.
-     * Blocks until user clicks Create/Cancel.
-     * 
-     * @return true if user clicked Create, false if Cancel
-     */
-    public boolean show() {
-        // To be implemented in Phase 2
-        System.out.println("SmartArtDialog.show() called");
-        return true;
+public class SmartArtDialog {
+    private String hierarchyText = "";
+    private String diagramType = "Hierarchy";
+    private boolean userClickedCreate = false;
+
+    public boolean show(XComponentContext context) {
+        try {
+            XMultiComponentFactory factory = context.getServiceManager();
+
+            Object toolkit = factory.createInstanceWithContext(
+                "com.sun.star.awt.Toolkit", context);
+
+            Object dialogProvider = factory.createInstanceWithContext(
+                "com.sun.star.awt.DialogProvider", context);
+
+            XDialog dialog = UnoRuntime.queryInterface(XDialog.class, dialogProvider);
+
+            if (dialog != null) {
+                short result = dialog.execute();
+                return result == 1;
+            }
+
+            return false;
+        } catch (Exception e) {
+            System.err.println("Error showing dialog: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
-    /**
-     * Get the hierarchical text entered by the user.
-     * 
-     * @return text with indentation representing hierarchy
-     */
     public String getHierarchyText() {
         return hierarchyText;
     }
 
-    /**
-     * Set the hierarchy text.
-     * 
-     * @param text the hierarchical text input
-     */
     public void setHierarchyText(String text) {
         this.hierarchyText = text;
     }
 
-    /**
-     * Get the selected diagram type.
-     * 
-     * @return one of: "Hierarchy", "HubSpoke", "ProcessFlow"
-     */
     public String getDiagramType() {
         return diagramType;
     }
 
-    /**
-     * Set the diagram type.
-     * 
-     * @param type the diagram type
-     */
     public void setDiagramType(String type) {
         this.diagramType = type;
     }
 
-    /**
-     * Get the optional color palette JSON.
-     * 
-     * @return JSON string or null if not provided
-     */
-    public String getPalette() {
-        return palette;
+    public boolean isInputValid() {
+        if (hierarchyText == null || hierarchyText.trim().isEmpty()) {
+            return false;
+        }
+        return validateIndentation(hierarchyText);
     }
 
-    /**
-     * Set the palette JSON.
-     * 
-     * @param palette JSON string representing color palette
-     */
-    public void setPalette(String palette) {
-        this.palette = palette;
+    private boolean validateIndentation(String text) {
+        String[] lines = text.split("\n");
+        boolean hasSpaces = false;
+        boolean hasTabs = false;
+
+        for (String line : lines) {
+            if (line.isEmpty()) continue;
+
+            for (char c : line.toCharArray()) {
+                if (c == ' ') hasSpaces = true;
+                else if (c == '\t') hasTabs = true;
+                else break;
+            }
+
+            if (hasSpaces && hasTabs) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

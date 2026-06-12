@@ -36,17 +36,13 @@ public class SmartArtCommandTest {
     @Test
     public void testSmartArtDialogGettersSetters() {
         SmartArtDialog dialog = new SmartArtDialog();
-        
+
         String hierarchyText = "Parent\n  Child1\n  Child2";
         dialog.setHierarchyText(hierarchyText);
         assertEquals("Hierarchy text should match", hierarchyText, dialog.getHierarchyText());
-        
+
         String diagramType = "Hierarchy";
         dialog.setDiagramType(diagramType);
         assertEquals("Diagram type should match", diagramType, dialog.getDiagramType());
-        
-        String palette = "{\"level1\": \"#FF0000\"}";
-        dialog.setPalette(palette);
-        assertEquals("Palette should match", palette, dialog.getPalette());
     }
 }
