@@ -10,8 +10,19 @@ Add a "SmartArt" menu item under the Insert menu in LibreOffice Impress that use
 In Phase 2, we add:
 1. **Java UNO Component** (`SmartArtCommand.java`) — Entry point for the extension
 2. **UNO Component Registration** — Updated manifest.xml to register the service
-3. **Menu Configuration** (`Addons.xcu`) — Defines the Insert > SmartArt menu item
-4. **Compiled JAR** — Package the Java code into the OXT
+3. **Menu Configuration** (`Addons.xcu`) — Adds a top-level **SmartArt** menu
+4. **Protocol Handler binding** (`ProtocolHandler.xcu`) — Routes the menu command to the Java code
+5. **Compiled JAR** — Package the Java code into the OXT
+
+> ⚠️ **The hard part of Phase 2 is naming, not code.** The same identifier
+> strings must be repeated verbatim across `SmartArtImpl.xml`,
+> `ProtocolHandler.xcu`, `Addons.xcu`, `description.xml`, the JAR manifest, and
+> the Java class — a single off-by-one character (famously
+> `…/2010/component` instead of `…/2010/uno-components`) fails silently or with
+> an opaque `InvalidRegistryException`. Before changing any name here, consult
+> the **name-matching contract** and **exact-match rules** in the master spec
+> ([`impressSmartArt.md`](impressSmartArt.md) §5.5.2–§5.5.3); they are the
+> authoritative, repeatable checklist.
 
 ---
 

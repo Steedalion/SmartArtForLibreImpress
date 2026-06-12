@@ -181,7 +181,7 @@ Color Palette (Optional):
 
 The plugin ships as a `.oxt` (a ZIP). Getting it to install and expose a menu
 requires several files to agree exactly. These requirements were verified by
-installing the built `.oxt` with `unopkg` (see §5.5.3); each was a real
+installing the built `.oxt` with `unopkg` (see §5.5.4); each was a real
 failure mode encountered during development.
 
 ### 5.5.1 Required files inside the `.oxt`
@@ -194,7 +194,30 @@ failure mode encountered during development.
 | `uno/SmartArtImpl.xml` | UNO component descriptor (which class implements which service) |
 | `smartart.jar` | Compiled Java code |
 
-### 5.5.2 Exact-match rules (each one is a silent-failure trap)
+### 5.5.2 Name-matching contract (the part that made the menu hard)
+
+The menu only works when the same identifier strings are repeated **verbatim**
+across several files. A single differing character (e.g. `…/2010/component` vs
+`…/2010/uno-components`) fails silently or with an opaque error. Each token below
+must be **identical** in every listed location; to repurpose this extension,
+change a token in *all* its locations at once:
+
+| Token | Value (this project) | Must be identical in |
+|-------|----------------------|----------------------|
+| Component namespace | `http://openoffice.org/2010/uno-components` | `uno/SmartArtImpl.xml` root `xmlns` |
+| Implementation name | `org.libreimpress.smartart.SmartArtCommand` | `SmartArtImpl.xml` `<implementation name>` · `ProtocolHandler.xcu` `HandlerSet` child `oor:name` · JAR `MANIFEST.MF` `RegistrationClassName` · the Java class (FQN + `IMPLEMENTATION_NAME`) |
+| Service name | `com.sun.star.frame.ProtocolHandler` | `SmartArtImpl.xml` `<service name>` · Java `SERVICE_NAME` / `getSupportedServiceNames()` |
+| Command protocol prefix | `org.libreimpress.smartart` | `ProtocolHandler.xcu` `Protocols` (as `…:*`) · the part of the `Addons.xcu` menu `URL` before the `:` · the Java `dispatch`/`queryDispatch` `startsWith(...)` guard |
+| Full command URL | `org.libreimpress.smartart:CreateDiagram` | `Addons.xcu` menu item `URL` value |
+| Extension identifier | `org.libreimpress.smartart` | `description.xml` `<identifier value>` · the argument to `unopkg remove` |
+| Component jar name | `smartart.jar` | `SmartArtImpl.xml` `uri` · assembly `oxt.xml` include · pom jar `finalName` |
+
+> The command **protocol prefix** and the **extension identifier** happen to be
+> the same text (`org.libreimpress.smartart`) but are independent roles: the
+> first routes menu clicks to the handler, the second names the installed
+> package. They need not be equal, and changing one does not change the other.
+
+### 5.5.3 Exact-match rules (each one is a silent-failure trap)
 1. **Component descriptor namespace** — `uno/SmartArtImpl.xml` must use
    `xmlns="http://openoffice.org/2010/uno-components"`. A wrong namespace makes
    `unopkg`/LibreOffice throw `InvalidRegistryException: unexpected item in outer
@@ -223,7 +246,7 @@ failure mode encountered during development.
    `META-INF/MANIFEST.MF` must declare
    `RegistrationClassName: org.libreimpress.smartart.SmartArtCommand`.
 
-### 5.5.3 Install verification (local and CI)
+### 5.5.4 Install verification (local and CI)
 The authoritative test that registration works is installing the `.oxt` into
 LibreOffice with `unopkg` — structural checks alone do not catch a bad namespace
 or identifier. Install into an **isolated user profile** so it never touches a
