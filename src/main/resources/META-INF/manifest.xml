@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<manifest xmlns="urn:sun:star:package:manifest">
-    <entry full-path="/" media-type="application/vnd.sun.star.package:package"/>
-    <entry full-path="smartart.jar" media-type="application/vnd.sun.star.java.component.jar"/>
-</manifest>
+<manifest:manifest xmlns:manifest="http://openoffice.org/2001/manifest">
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.package:package"
+        manifest:full-path="/"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.configuration-data"
+        manifest:full-path="Addons.xcu"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.configuration-data"
+        manifest:full-path="ProtocolHandler.xcu"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.uno-components"
+        manifest:full-path="uno/SmartArtImpl.xml"/>
+</manifest:manifest>

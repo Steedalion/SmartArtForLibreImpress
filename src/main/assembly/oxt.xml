@@ -16,7 +16,9 @@
                 <include>META-INF/**</include>
                 <include>description.xml</include>
                 <include>Addons.xcu</include>
+                <include>ProtocolHandler.xcu</include>
                 <include>uno/**</include>
+                <include>images/**</include>
             </includes>
         </fileSet>
         <fileSet>

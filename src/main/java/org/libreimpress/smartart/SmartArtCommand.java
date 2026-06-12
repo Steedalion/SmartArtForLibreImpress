@@ -20,7 +20,7 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
     @Override
     public XDispatch queryDispatch(URL aURL, String sTargetFrameName, int iSearchFlags) {
-        if (aURL.Complete.equals("private:factory/smartart")) {
+        if (aURL.Complete.startsWith("org.libreimpress.smartart:")) {
             return this;
         }
         return null;
@@ -37,7 +37,7 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
     @Override
     public void dispatch(URL aURL, PropertyValue[] aArguments) {
-        if (aURL.Complete.equals("private:factory/smartart")) {
+        if (aURL.Complete.startsWith("org.libreimpress.smartart:")) {
             execute();
         }
     }
