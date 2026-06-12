@@ -93,10 +93,11 @@
                     <archive>
                         <manifestFile>src/main/resources/META-INF/MANIFEST.MF</manifestFile>
                     </archive>
+                    <finalName>smartart</finalName>
                 </configuration>
             </plugin>
 
-            <!-- Maven Shade Plugin - Bundle dependencies -->
+            <!-- Maven Shade Plugin - Skip for OXT (UNO SDK provided by LibreOffice) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -108,12 +109,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <shadedArtifactAttached>false</shadedArtifactAttached>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.libreimpress.smartart.SmartArtCommand</mainClass>
-                                </transformer>
-                            </transformers>
+                            <skip>true</skip>
                         </configuration>
                     </execution>
                 </executions>

@@ -15,6 +15,15 @@
             <includes>
                 <include>META-INF/**</include>
                 <include>description.xml</include>
+                <include>Addons.xcu</include>
+                <include>uno/**</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>smartart.jar</include>
             </includes>
         </fileSet>
     </fileSets>

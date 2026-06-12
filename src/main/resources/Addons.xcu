@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <item oor:path="/org.openoffice.Office.Impress/Menus/org.openoffice.Office.Impress/Insert">
+        <node oor:name="SmartArt" oor:op="fuse">
+            <prop oor:name="URL" oor:op="fuse"><value>private:factory/smartart</value></prop>
+            <prop oor:name="Title" oor:op="fuse"><value>SmartArt</value></prop>
+            <prop oor:name="Target" oor:op="fuse"><value>_self</value></prop>
+            <prop oor:name="ImageIdentifier" oor:op="fuse"><value>private:factory/smartart</value></prop>
+        </node>
+    </item>
+</oor:items>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest xmlns="urn:sun:star:package:manifest">
     <entry full-path="/" media-type="application/vnd.sun.star.package:package"/>
+    <entry full-path="smartart.jar" media-type="application/vnd.sun.star.java.component.jar"/>
 </manifest>
