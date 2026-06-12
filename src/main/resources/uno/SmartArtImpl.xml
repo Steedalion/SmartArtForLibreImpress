@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<components xmlns="http://openoffice.org/2010/component">
+<components xmlns="http://openoffice.org/2010/uno-components">
     <component loader="com.sun.star.loader.Java2" uri="smartart.jar">
         <implementation name="org.libreimpress.smartart.SmartArtCommand">
             <service name="com.sun.star.frame.ProtocolHandler"/>
