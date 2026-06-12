@@ -151,6 +151,74 @@ Color Palette (Optional):
 
 ---
 
+## 5.5 Packaging & UNO Registration (Extension Infrastructure)
+
+The plugin ships as a `.oxt` (a ZIP). Getting it to install and expose a menu
+requires several files to agree exactly. These requirements were verified by
+installing the built `.oxt` with `unopkg` (see §5.5.3); each was a real
+failure mode encountered during development.
+
+### 5.5.1 Required files inside the `.oxt`
+| File | Purpose |
+|------|---------|
+| `META-INF/manifest.xml` | Package manifest: registers every `.xcu` and the component descriptor |
+| `description.xml` | Extension metadata (identifier, version, display name) |
+| `Addons.xcu` | Adds the menu entry to the LibreOffice UI |
+| `ProtocolHandler.xcu` | Binds the command-URL protocol to the Java handler |
+| `uno/SmartArtImpl.xml` | UNO component descriptor (which class implements which service) |
+| `smartart.jar` | Compiled Java code |
+
+### 5.5.2 Exact-match rules (each one is a silent-failure trap)
+1. **Component descriptor namespace** — `uno/SmartArtImpl.xml` must use
+   `xmlns="http://openoffice.org/2010/uno-components"`. A wrong namespace makes
+   `unopkg`/LibreOffice throw `InvalidRegistryException: unexpected item in outer
+   level` (the C++ parser rejects the root element before reading attributes).
+   This is the same namespace LibreOffice's own `program/services.rdb` uses.
+2. **Component `uri`** — must be the bare jar name, `uri="smartart.jar"` (not a
+   `jar:*…!/…Class` URL).
+3. **`description.xml` identifier/version use `value` attributes** —
+   `<identifier value="org.libreimpress.smartart"/>` and
+   `<version value="0.1.0"/>`. Using element *text*
+   (`<identifier>…</identifier>`) is ignored; LibreOffice then falls back to a
+   `org.openoffice.legacy.<filename>` identifier, which also breaks
+   `unopkg remove org.libreimpress.smartart`.
+4. **`display-name`/`publisher`** use child `<name lang="en">…</name>` elements,
+   not direct text.
+5. **`Addons.xcu`** must be `oor:component-data` merging into
+   `org.openoffice.Office.Addons / AddonUI` (under `OfficeMenuBar` for a
+   top-level menu, or `AddonMenu` for Tools → Add-Ons). Every `prop` declares
+   `oor:type` and uses `oor:op="replace"`.
+6. **`ProtocolHandler.xcu`** `HandlerSet` node name must equal the
+   `implementation name` in `uno/SmartArtImpl.xml`, and its `Protocols` value
+   (`org.libreimpress.smartart:*`) must match the prefix of the menu command URL.
+7. **Java side** — the implementation class must expose static
+   `__getComponentFactory(String)` and `__writeRegistryServiceInfo(XRegistryKey)`
+   (built via `com.sun.star.lib.uno.helper.Factory`), and the JAR's
+   `META-INF/MANIFEST.MF` must declare
+   `RegistrationClassName: org.libreimpress.smartart.SmartArtCommand`.
+
+### 5.5.3 Install verification (local and CI)
+The authoritative test that registration works is installing the `.oxt` into
+LibreOffice with `unopkg` — structural checks alone do not catch a bad namespace
+or identifier. Install into an **isolated user profile** so it never touches a
+real LibreOffice profile:
+
+```bash
+mvn clean package
+PROFILE=file:///tmp/lo-test
+unopkg add    --suppress-license -env:UserInstallation=$PROFILE target/SmartArt.oxt
+unopkg list   -env:UserInstallation=$PROFILE      # expect "Identifier: org.libreimpress.smartart"
+unopkg remove -env:UserInstallation=$PROFILE org.libreimpress.smartart
+```
+
+The GitHub Actions workflow (`.github/workflows/build-and-validate.yml`) runs
+exactly this on every push: build → validate OXT structure → install LibreOffice
+→ `unopkg add` / `list` / `remove` under `xvfb`. A registration regression
+(wrong namespace, bad identifier, missing file) fails CI instead of only
+surfacing during a manual install.
+
+---
+
 ## 6. Constraints & Assumptions
 
 ### 6.1 Constraints

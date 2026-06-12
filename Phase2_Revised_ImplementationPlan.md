@@ -51,17 +51,34 @@ Location: `src/main/java/org/libreimpress/smartart/SmartArtCommand.java`
 
 ### 3.2 Update: META-INF/manifest.xml
 
-**Add UNO component registration:**
+**Register every configuration file and the UNO component descriptor.** Use the
+`manifest:` namespace and `manifest:file-entry` elements (not the older
+`urn:sun:star:package:manifest` / `entry` form). Each `.xcu` is
+`configuration-data`; the component descriptor is `uno-components`:
+
 ```xml
-<manifest xmlns="urn:sun:star:package:manifest">
-    <entry full-path="/" media-type="application/vnd.sun.star.package:package"/>
-    <entry full-path="smartart.jar" media-type="application/vnd.sun.star.java.component.jar"/>
-</manifest>
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="http://openoffice.org/2001/manifest">
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.package:package"
+        manifest:full-path="/"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.configuration-data"
+        manifest:full-path="Addons.xcu"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.configuration-data"
+        manifest:full-path="ProtocolHandler.xcu"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.uno-components"
+        manifest:full-path="uno/SmartArtImpl.xml"/>
+</manifest:manifest>
 ```
 
 This tells LibreOffice:
-- There's a JAR file containing UNO components
-- Load components from `smartart.jar`
+- `Addons.xcu` and `ProtocolHandler.xcu` are configuration data to merge
+- `uno/SmartArtImpl.xml` describes the UNO component(s) to load
+- The `smartart.jar` itself is referenced from inside the component descriptor
+  (`uri="smartart.jar"`), so it does **not** need its own manifest entry
 
 ### 3.3 New: UNO Component Descriptor (uno/SmartArtImpl.xml)
 
@@ -72,8 +89,8 @@ Location: `src/main/resources/uno/SmartArtImpl.xml`
 **Content:**
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<components xmlns="http://openoffice.org/2010/component">
-    <component loader="com.sun.star.loader.Java2" uri="jar:*smartart.jar!/org/libreimpress/smartart/SmartArtCommand.class">
+<components xmlns="http://openoffice.org/2010/uno-components">
+    <component loader="com.sun.star.loader.Java2" uri="smartart.jar">
         <implementation name="org.libreimpress.smartart.SmartArtCommand">
             <service name="com.sun.star.frame.ProtocolHandler"/>
         </implementation>
@@ -84,7 +101,17 @@ Location: `src/main/resources/uno/SmartArtImpl.xml`
 This tells LibreOffice:
 - Find SmartArtCommand class in smartart.jar
 - Register it as a ProtocolHandler service
-- Service name: `org.libreimpress.smartart.SmartArtCommand`
+- Implementation name: `org.libreimpress.smartart.SmartArtCommand`
+
+> ⚠️ **Two mistakes here will fail the install with
+> `InvalidRegistryException: unexpected item in outer level`:**
+> 1. **Namespace must be `http://openoffice.org/2010/uno-components`** — *not*
+>    `.../2010/component`. The C++ parser in `servicemanager.cxx` rejects the
+>    root `<components>` element at the outer level if the namespace is wrong,
+>    before it ever reads any attributes.
+> 2. **`uri` must be the bare jar name (`smartart.jar`)** — *not*
+>    `jar:*smartart.jar!/...Class`. The `jar:*...!/...class` form is not valid
+>    in this schema.
 
 ### 3.4 New: Menu Configuration (Addons.xcu)
 
@@ -95,22 +122,99 @@ Location: `src/main/resources/Addons.xcu`
 **Content:**
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema">
-    <item oor:path="/org.openoffice.Office.Common/Menus/org.openoffice.Office.Impress/Insert">
-        <node oor:name="SmartArt" oor:op="fuse">
-            <prop oor:name="URL" oor:op="fuse"><value>private:factory/smartart</value></prop>
-            <prop oor:name="Title" oor:op="fuse"><value>SmartArt</value></prop>
-            <prop oor:name="Target" oor:op="fuse"><value>_self</value></prop>
-            <prop oor:name="ImageIdentifier" oor:op="fuse"><value>private:factory/smartart</value></prop>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry"
+                    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                    oor:name="Addons" oor:package="org.openoffice.Office">
+    <node oor:name="AddonUI">
+        <node oor:name="OfficeMenuBar">
+            <node oor:name="org.libreimpress.smartart" oor:op="replace">
+                <prop oor:name="Title" oor:type="xs:string">
+                    <value xml:lang="en-US">SmartArt</value>
+                </prop>
+                <prop oor:name="Target" oor:type="xs:string">
+                    <value>_self</value>
+                </prop>
+                <node oor:name="Submenu">
+                    <node oor:name="m1" oor:op="replace">
+                        <prop oor:name="URL" oor:type="xs:string">
+                            <value>org.libreimpress.smartart:CreateDiagram</value>
+                        </prop>
+                        <prop oor:name="Title" oor:type="xs:string">
+                            <value xml:lang="en-US">Create Diagram…</value>
+                        </prop>
+                        <prop oor:name="Target" oor:type="xs:string">
+                            <value>_self</value>
+                        </prop>
+                        <prop oor:name="Context" oor:type="xs:string">
+                            <value>com.sun.star.presentation.PresentationDocument</value>
+                        </prop>
+                    </node>
+                </node>
+            </node>
         </node>
-    </item>
-</oor:items>
+    </node>
+</oor:component-data>
 ```
 
 This tells LibreOffice:
-- Add a menu item "SmartArt" under Insert menu
-- When clicked, execute URL: `private:factory/smartart`
-- This URL is dispatched to SmartArtCommand
+- Add-on UI **must** merge into `org.openoffice.Office.Addons / AddonUI` with a
+  root element of `oor:component-data` (not `oor:items` / a `Common/Menus` path)
+- `OfficeMenuBar` gives a top-level menu; use `AddonMenu` for **Tools → Add-Ons**
+- Every `prop` must declare `oor:type="xs:string"` and use `oor:op="replace"`
+- The command URL `org.libreimpress.smartart:CreateDiagram` is dispatched to
+  SmartArtCommand via the protocol bound in `ProtocolHandler.xcu` (§3.5)
+- `Context` limits the entry to Impress (`PresentationDocument`)
+
+### 3.5 New: Protocol Handler binding (ProtocolHandler.xcu)
+
+Location: `src/main/resources/ProtocolHandler.xcu`
+
+**Purpose:** Binds the `org.libreimpress.smartart:` command-URL protocol to the
+Java handler so that clicking the menu item reaches `SmartArtCommand`. The
+`HandlerSet` node name **must equal** the implementation name in
+`uno/SmartArtImpl.xml`.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry"
+                    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                    oor:name="ProtocolHandler" oor:package="org.openoffice.Office">
+    <node oor:name="HandlerSet">
+        <node oor:name="org.libreimpress.smartart.SmartArtCommand" oor:op="replace">
+            <prop oor:name="Protocols" oor:type="oor:string-list">
+                <value>org.libreimpress.smartart:*</value>
+            </prop>
+        </node>
+    </node>
+</oor:component-data>
+```
+
+### 3.6 Java side: static factory methods + JAR manifest
+
+The `Java2` loader instantiates the component by calling **static** methods on
+the implementation class. Without them the component will not load even after
+the descriptor parses:
+
+```java
+public static XSingleComponentFactory __getComponentFactory(String sImplementationName) {
+    if (sImplementationName.equals(IMPLEMENTATION_NAME)) {
+        return Factory.createComponentFactory(SmartArtCommand.class,
+                new String[]{SERVICE_NAME});
+    }
+    return null;
+}
+
+public static boolean __writeRegistryServiceInfo(XRegistryKey xRegistryKey) {
+    return Factory.writeRegistryServiceInfo(IMPLEMENTATION_NAME,
+            new String[]{SERVICE_NAME}, xRegistryKey);
+}
+```
+
+The JAR's `META-INF/MANIFEST.MF` must also declare:
+
+```
+RegistrationClassName: org.libreimpress.smartart.SmartArtCommand
+```
 
 ---
 

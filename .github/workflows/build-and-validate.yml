@@ -2,7 +2,7 @@ name: Build and Validate Extension
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, Behaviour-first ]
   pull_request:
     branches: [ main, master ]
 
@@ -11,26 +11,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
           cache: maven
 
       - name: Build with Maven
-        run: mvn clean package -DskipTests
+        run: mvn clean package
 
-      - name: Run unit tests
-        run: mvn test
+      - name: Validate OXT structure
+        run: |
+          set -e
+          OXT=target/SmartArt.oxt
+          test -f "$OXT" || { echo "::error::$OXT was not produced"; exit 1; }
+          echo "Checking required files inside $OXT ..."
+          for f in META-INF/manifest.xml description.xml Addons.xcu ProtocolHandler.xcu uno/SmartArtImpl.xml smartart.jar; do
+            if unzip -l "$OXT" | grep -q " $f$"; then
+              echo "  OK   $f"
+            else
+              echo "::error::missing $f in OXT"; exit 1
+            fi
+          done
+          echo "Checking component descriptor namespace ..."
+          unzip -p "$OXT" uno/SmartArtImpl.xml | grep -q 'http://openoffice.org/2010/uno-components' \
+            || { echo "::error::SmartArtImpl.xml must use the uno-components namespace"; exit 1; }
+          echo "Checking description.xml identifier uses value attribute ..."
+          unzip -p "$OXT" description.xml | grep -q '<identifier value="org.libreimpress.smartart"' \
+            || { echo "::error::description.xml identifier must use value attribute"; exit 1; }
+          echo "Structure valid."
 
-      - name: Validate extension artifact
-        run: mvn test -Dtest=ExtensionValidationTest
+      - name: Install LibreOffice
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libreoffice libreoffice-java-common default-jre xvfb
+
+      - name: Install extension into LibreOffice and verify registration
+        run: |
+          set -e
+          PROFILE="file://$RUNNER_TEMP/lo-ci-profile"
+          xvfb-run -a bash -c "
+            set -e
+            echo '--- unopkg add ---'
+            unopkg add --suppress-license -env:UserInstallation=$PROFILE target/SmartArt.oxt
+            echo '--- unopkg list ---'
+            unopkg list -env:UserInstallation=$PROFILE
+            echo '--- verify identifier registered ---'
+            unopkg list -env:UserInstallation=$PROFILE | grep -q 'org.libreimpress.smartart'
+            echo '--- unopkg remove (clean uninstall must also succeed) ---'
+            unopkg remove -env:UserInstallation=$PROFILE org.libreimpress.smartart
+          "
+          echo "Extension installed, registered, and removed cleanly."
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: SmartArt-extension
