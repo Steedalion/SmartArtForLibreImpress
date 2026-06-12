@@ -88,6 +88,9 @@ LibreImpress-SmartArt/
 │   │           └── SmartArtImpl.xml         # UNO component descriptor
 │   └── test/java/org/libreimpress/smartart/
 │       └── parsers/HierarchyParserTest.java # parser unit tests (run in mvn package)
+├── tools/
+│   ├── verify-extension.sh                 # install + headless UNO dispatch test
+│   └── probe_extension.py                  # UNO probe (config merge + queryDispatch)
 └── target/
     ├── smartart.jar
     └── SmartArt.oxt

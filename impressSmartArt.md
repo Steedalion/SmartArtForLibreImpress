@@ -259,24 +259,30 @@ change a token in *all* its locations at once:
    `RegistrationClassName: org.libreimpress.smartart.SmartArtCommand`.
 
 ### 5.5.4 Install verification (local and CI)
-The authoritative test that registration works is installing the `.oxt` into
-LibreOffice with `unopkg` — structural checks alone do not catch a bad namespace
-or identifier. Install into an **isolated user profile** so it never touches a
-real LibreOffice profile:
+Structural checks alone do not catch a bad namespace, identifier, or a
+mis-placed jar — those only fail at *runtime*, when LibreOffice tries to load the
+component and dispatch the command. The authoritative test therefore installs the
+`.oxt` into a throwaway profile, starts a **headless** LibreOffice, and asserts
+via UNO that the menu item is registered **and** that the command actually
+dispatches (a null dispatch is why a broken extension shows an empty submenu).
+
+This is automated as a committed test, `tools/verify-extension.sh` (orchestrator)
++ `tools/probe_extension.py` (the UNO probe):
 
 ```bash
 mvn clean package
-PROFILE=file:///tmp/lo-test
-unopkg add    --suppress-license -env:UserInstallation=$PROFILE target/SmartArt.oxt
-unopkg list   -env:UserInstallation=$PROFILE      # expect "Identifier: org.libreimpress.smartart"
-unopkg remove -env:UserInstallation=$PROFILE org.libreimpress.smartart
+xvfb-run -a bash tools/verify-extension.sh target/SmartArt.oxt
+#   PASS: config has menu 'org.libreimpress.smartart' with submenu items ['m1'] …
+#   PASS: queryDispatch('org.libreimpress.smartart:CreateDiagram') -> …SmartArtCommand
+#   VERIFY PASS
 ```
 
 The GitHub Actions workflow (`.github/workflows/build-and-validate.yml`) runs
-exactly this on every push: build → validate OXT structure → install LibreOffice
-→ `unopkg add` / `list` / `remove` under `xvfb`. A registration regression
-(wrong namespace, bad identifier, missing file) fails CI instead of only
-surfacing during a manual install.
+this on every push: build → validate OXT structure → install LibreOffice +
+`python3-uno` → `xvfb-run … tools/verify-extension.sh`. A registration **or
+dispatch** regression (wrong namespace, bad identifier, jar in the wrong
+directory, missing file) fails CI instead of only surfacing during a manual
+install. See `TESTING_STRATEGY.md` for the full three-layer test plan.
 
 ---
 
