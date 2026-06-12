@@ -94,6 +94,10 @@ Declares the UNO component:
 - Service names
 - Component class path
 
+### description.xml
+
+- Must adhere to Attributes of `<description>` https://wiki.documentfoundation.org/Documentation/DevGuide/Extensions#Extension_Manager
+
 ---
 
 ## 5. Build Output Target
