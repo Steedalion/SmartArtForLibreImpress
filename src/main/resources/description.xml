@@ -1,52 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<description xmlns="http://openoffice.org/extensions/description/2006" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <identifier value="org.libreimpress.smartart"/>
-    <version value="0.1.0"/>
+<description xmlns="http://openoffice.org/extensions/description/2006"
+             xmlns:xlink="http://www.w3.org/1999/xlink">
+    <identifier>org.libreimpress.smartart</identifier>
+    <version>0.1.0</version>
     <display-name>LibreImpress SmartArt</display-name>
-    <summary>Create professional diagrams from hierarchical text in LibreOffice Impress</summary>
-    <description>
-        LibreImpress SmartArt enables users to quickly create structured diagrams 
-        (Hierarchy, Hub &amp; Spoke, Process Flow) from simple hierarchical text input. 
-        Simply enter your points with indentation, select a diagram type, and let 
-        SmartArt generate a professional-looking diagram instantly.
+    <summary xml:lang="en">Create professional diagrams from hierarchical text in LibreOffice Impress</summary>
+    <description xml:lang="en">
+LibreImpress SmartArt is a UNO extension for LibreOffice Impress that enables users to quickly create structured diagrams from hierarchical text input. Supports multiple diagram types including hierarchy, hub-and-spoke, and process flow layouts.
     </description>
-    
-    <release-notes>
-        Version 0.1.0 - Initial MVP Release
-        - Support for Hierarchy diagrams
-        - Support for Hub &amp; Spoke diagrams
-        - Support for Process Flow diagrams
-        - Custom color palette support
-        - Default styling templates
-    </release-notes>
-    
+    <license-text xml:lang="en">
+This extension is provided as-is for use with LibreOffice Impress.
+    </license-text>
     <publisher>
         <name>LibreImpress SmartArt Team</name>
-        <url>https://github.com/yourusername/libreimpress-smartart</url>
     </publisher>
-    
-    <license-text lang="en">
-        MIT License
-        
-        Permission is hereby granted, free of charge, to any person obtaining a copy
-        of this software and associated documentation files (the "Software"), to deal
-        in the Software without restriction, including without limitation the rights
-        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-        copies of the Software, and to permit persons to whom the Software is
-        furnished to do so, subject to the following conditions:
-        
-        The above copyright notice and this permission notice shall be included in all
-        copies or substantial portions of the Software.
-    </license-text>
-    
-    <dependency-list>
-        <dependency name="com.sun.star" version="7.4"/>
-    </dependency-list>
-    
-    <registration>
-        <update-information/>
-        <icon type="image/png">
-            <default url="icons/extension.png"/>
-        </icon>
-    </registration>
+    <release-notes xml:lang="en">
+Initial release - Phase 1: Empty OXT foundation
+    </release-notes>
 </description>
