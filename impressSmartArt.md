@@ -19,7 +19,7 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 ├── Phase plans (how each phase is built, in order)
 │   ├── Phase1_ImplementationPlan.md   — Phase 1: Empty OXT extension (installable skeleton)
 │   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (Insert/menu entry → dispatch)
-│   └── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing (not yet written)
+│   └── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing
 │
 ├── Architecture_VDiagram.md       — architecture overview & V-model development process
 ├── TESTING_STRATEGY.md            — testing approach (unit, structural, install verification)

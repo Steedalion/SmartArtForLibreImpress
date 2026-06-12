@@ -7,7 +7,11 @@ A LibreOffice Impress UNO extension that generates structured diagrams
 - ✅ **Phase 1 — Empty OXT extension:** a minimal, installable `.oxt` skeleton.
 - ✅ **Phase 2 — Menu integration:** a top-level **SmartArt** menu whose
   *Create Diagram…* item dispatches to the Java handler (`SmartArtCommand`).
-- ⏳ **Phase 3 — Dialog & text parsing:** not yet started.
+- ✅ **Phase 3 — Dialog & text parsing:** *Create Diagram…* opens an input
+  dialog (text + diagram-type dropdown); on Create the indented text is parsed
+  into a validated hierarchy and the parsed tree (or a clear error) is shown.
+- ⏳ **Phase 4 — Shape rendering:** draw the parsed tree as grouped, editable
+  shapes on the slide. Not yet started.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
@@ -66,7 +70,11 @@ LibreImpress-SmartArt/
 ├── src/
 │   ├── main/
 │   │   ├── java/org/libreimpress/smartart/
-│   │   │   └── SmartArtCommand.java        # UNO ProtocolHandler component
+│   │   │   ├── SmartArtCommand.java        # UNO ProtocolHandler component + dispatch
+│   │   │   ├── SmartArtDialog.java         # programmatic UNO input dialog
+│   │   │   ├── models/                     # DiagramNode, DiagramType
+│   │   │   ├── parsers/                     # HierarchyParser, ParseResult (pure Java)
+│   │   │   └── helpers/                     # LibreOfficeHelper (message boxes)
 │   │   ├── assembly/
 │   │   │   └── oxt.xml                      # assembles the .oxt
 │   │   └── resources/
@@ -78,7 +86,8 @@ LibreImpress-SmartArt/
 │   │       ├── ProtocolHandler.xcu         # command-URL → handler binding
 │   │       └── uno/
 │   │           └── SmartArtImpl.xml         # UNO component descriptor
-│   └── test/                                # (unit tests arrive with later phases)
+│   └── test/java/org/libreimpress/smartart/
+│       └── parsers/HierarchyParserTest.java # parser unit tests (run in mvn package)
 └── target/
     ├── smartart.jar
     └── SmartArt.oxt
@@ -99,6 +108,7 @@ only surfacing during a manual install.
 | [`impressSmartArt.md`](impressSmartArt.md) | Master specification + packaging/registration rules |
 | [`Phase1_ImplementationPlan.md`](Phase1_ImplementationPlan.md) | Phase 1 — empty OXT extension |
 | [`Phase2_ImplementationPlan.md`](Phase2_ImplementationPlan.md) | Phase 2 — menu integration |
+| [`Phase3_ImplementationPlan.md`](Phase3_ImplementationPlan.md) | Phase 3 — dialog & text parsing |
 | [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
 | [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 

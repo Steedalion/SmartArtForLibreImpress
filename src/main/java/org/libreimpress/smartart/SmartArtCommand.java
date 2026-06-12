@@ -12,6 +12,11 @@ import com.sun.star.util.URL;
 import com.sun.star.frame.DispatchDescriptor;
 import com.sun.star.beans.PropertyValue;
 
+import org.libreimpress.smartart.helpers.LibreOfficeHelper;
+import org.libreimpress.smartart.models.DiagramNode;
+import org.libreimpress.smartart.parsers.HierarchyParser;
+import org.libreimpress.smartart.parsers.ParseResult;
+
 public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDispatch, XServiceInfo {
     private XComponentContext xComponentContext;
     private static final String SERVICE_NAME = "com.sun.star.frame.ProtocolHandler";
@@ -92,8 +97,27 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
     }
 
     private void execute() {
-        // Phase 2: Proof of concept - shows that menu item works
-        // Phase 3+: Will open dialog here
-        System.out.println("SmartArt command executed!");
+        try {
+            SmartArtDialog dialog = new SmartArtDialog(xComponentContext);
+            SmartArtDialog.Result result = dialog.show();
+            if (result == null) {
+                return; // user cancelled
+            }
+
+            ParseResult parsed = new HierarchyParser().parse(result.getText());
+            if (parsed.isValid()) {
+                DiagramNode root = parsed.getRoot();
+                String summary = "Parsed " + root.countDescendants() + " nodes across "
+                        + root.depth() + " levels (" + result.getType().getLabel() + "):\n\n"
+                        + HierarchyParser.toOutline(root);
+                LibreOfficeHelper.showMessage(xComponentContext, "SmartArt", summary, false);
+            } else {
+                LibreOfficeHelper.showMessage(xComponentContext,
+                        "SmartArt – Invalid input", parsed.getErrorMessage(), true);
+            }
+        } catch (Exception e) {
+            LibreOfficeHelper.showMessage(xComponentContext,
+                    "SmartArt – Error", String.valueOf(e), true);
+        }
     }
 }
