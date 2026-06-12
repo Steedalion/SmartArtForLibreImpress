@@ -140,6 +140,7 @@ Location: `src/main/resources/Addons.xcu`
         <node oor:name="OfficeMenuBar">
             <node oor:name="org.libreimpress.smartart" oor:op="replace">
                 <prop oor:name="Title" oor:type="xs:string">
+                    <value/>
                     <value xml:lang="en-US">SmartArt</value>
                 </prop>
                 <prop oor:name="Target" oor:type="xs:string">
@@ -151,6 +152,7 @@ Location: `src/main/resources/Addons.xcu`
                             <value>org.libreimpress.smartart:CreateDiagram</value>
                         </prop>
                         <prop oor:name="Title" oor:type="xs:string">
+                            <value/>
                             <value xml:lang="en-US">Create Diagram…</value>
                         </prop>
                         <prop oor:name="Target" oor:type="xs:string">
@@ -172,6 +174,10 @@ This tells LibreOffice:
   root element of `oor:component-data` (not `oor:items` / a `Common/Menus` path)
 - `OfficeMenuBar` gives a top-level menu; use `AddonMenu` for **Tools → Add-Ons**
 - Every `prop` must declare `oor:type="xs:string"` and use `oor:op="replace"`
+- **Each `Title` needs a bare `<value/>` default before the
+  `<value xml:lang="en-US">` entry.** Omit it and LibreOffice cannot resolve the
+  title for the running locale and **silently drops the item** — the top-level
+  **SmartArt** menu appears but its submenu is empty.
 - The command URL `org.libreimpress.smartart:CreateDiagram` is dispatched to
   SmartArtCommand via the protocol bound in `ProtocolHandler.xcu` (§3.5)
 - `Context` limits the entry to Impress (`PresentationDocument`)
@@ -387,6 +393,15 @@ OR Dialog opens (Phase 3+)
 - Verify Addons.xcu is in OXT root: `unzip -l target/SmartArt.oxt | grep Addons`
 - Check for XML syntax errors in Addons.xcu
 - Restart LibreOffice after installing
+
+### Issue: Top-level SmartArt menu appears but its submenu is empty
+**Solution:**
+- Each `Title` prop in `Addons.xcu` must have a bare `<value/>` default *before*
+  the `<value xml:lang="en-US">…</value>`. Without it the item's title cannot be
+  resolved for the running locale and the item is silently dropped (the menu
+  container still shows because it falls back to the node name).
+- Confirm the submenu item's `Context` matches the module you are testing in
+  (`com.sun.star.presentation.PresentationDocument` for Impress).
 
 ### Issue: Menu item appears but clicking does nothing
 **Solution:**

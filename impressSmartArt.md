@@ -237,10 +237,16 @@ change a token in *all* its locations at once:
    `org.openoffice.Office.Addons / AddonUI` (under `OfficeMenuBar` for a
    top-level menu, or `AddonMenu` for Tools → Add-Ons). Every `prop` declares
    `oor:type` and uses `oor:op="replace"`.
-6. **`ProtocolHandler.xcu`** `HandlerSet` node name must equal the
+6. **Localized `Title` needs an empty default** — each `Title` prop must list a
+   bare `<value/>` *before* the `<value xml:lang="en-US">…</value>`. Without the
+   default, LibreOffice cannot resolve a title for the running locale and
+   **silently drops the menu item** — the top-level menu appears but its submenu
+   is empty. (The top-level menu still shows because containers fall back to the
+   node name; leaf items do not.)
+7. **`ProtocolHandler.xcu`** `HandlerSet` node name must equal the
    `implementation name` in `uno/SmartArtImpl.xml`, and its `Protocols` value
    (`org.libreimpress.smartart:*`) must match the prefix of the menu command URL.
-7. **Java side** — the implementation class must expose static
+8. **Java side** — the implementation class must expose static
    `__getComponentFactory(String)` and `__writeRegistryServiceInfo(XRegistryKey)`
    (built via `com.sun.star.lib.uno.helper.Factory`), and the JAR's
    `META-INF/MANIFEST.MF` must declare

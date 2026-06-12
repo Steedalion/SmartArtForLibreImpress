@@ -6,6 +6,7 @@
         <node oor:name="OfficeMenuBar">
             <node oor:name="org.libreimpress.smartart" oor:op="replace">
                 <prop oor:name="Title" oor:type="xs:string">
+                    <value/>
                     <value xml:lang="en-US">SmartArt</value>
                 </prop>
                 <prop oor:name="Target" oor:type="xs:string">
@@ -17,6 +18,7 @@
                             <value>org.libreimpress.smartart:CreateDiagram</value>
                         </prop>
                         <prop oor:name="Title" oor:type="xs:string">
+                            <value/>
                             <value xml:lang="en-US">Create Diagram…</value>
                         </prop>
                         <prop oor:name="Target" oor:type="xs:string">
