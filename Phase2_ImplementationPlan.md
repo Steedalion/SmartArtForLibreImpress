@@ -1,347 +1,416 @@
-# Phase 2: Dialog UI Implementation - Plan
+# Phase 2: Menu Integration - Implementation Plan
 
 ## Objective
-Implement the LibreOffice dialog UI that allows users to input their hierarchy text, select a diagram type, and optionally customize colors. The dialog will serve as the entry point for users to begin the diagram generation workflow.
+Add a "SmartArt" menu item under the Insert menu in LibreOffice Impress that users can click to trigger the SmartArt extension.
 
 ---
 
-## 1. Dialog Design
+## 1. What's New in Phase 2
 
-### User Interface Layout
-```
-┌─────────────────────────────────────────────────────────┐
-│  LibreImpress SmartArt Diagram Generator                │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│ Hierarchy Text:                                          │
-│ ┌────────────────────────────────────────────────────┐ │
-│ │ Enter hierarchical text (indentation = levels)    │ │
-│ │ Example:                                           │ │
-│ │   Executive                                        │ │
-│ │     Department 1                                   │ │
-│ │       Team 1-1                                     │ │
-│ │     Department 2                                   │ │
-│ │       Team 2-1                                     │ │
-│ │       Team 2-2                                     │ │
-│ │                                                    │ │
-│ │ [10+ lines, multiline text box]                   │ │
-│ │                                                    │ │
-│ └────────────────────────────────────────────────────┘ │
-│                                                          │
-│ Diagram Type:  [ Hierarchy ▼ ]                          │
-│   Options: Hierarchy, Hub & Spoke, Process Flow         │
-│                                                          │
-│  [ Create Diagram ]  [ Cancel ]  [ Help ]              │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Components
-1. **Hierarchy Text Area** - MultilineTextBox
-   - Placeholder text with examples
-   - Focus on entry point
-   - Minimum 10 visible lines
-
-2. **Diagram Type Dropdown** - ComboBox
-   - Options: "Hierarchy", "Hub & Spoke", "Process Flow"
-   - Default: "Hierarchy"
-
-3. **Buttons**
-   - "Create Diagram" - Primary action (CAN_DEFAULT=true)
-   - "Cancel" - Close dialog
-   - "Help" - No-op placeholder (Phase 4+)
+In Phase 2, we add:
+1. **Java UNO Component** (`SmartArtCommand.java`) — Entry point for the extension
+2. **UNO Component Registration** — Updated manifest.xml to register the service
+3. **Menu Configuration** (`Addons.xcu`) — Defines the Insert > SmartArt menu item
+4. **Compiled JAR** — Package the Java code into the OXT
 
 ---
 
-## 2. Dialog Implementation Approach
-
-### Programmatic Dialog Construction (Java-based)
-
-Instead of using XML, we'll build the dialog entirely in Java code. This approach:
-- Eliminates need for separate dialog XML files
-- Simpler resource management (no XML parsing)
-- More code, but easier to understand and debug
-- Aligns with our UNO integration strategy
-
-The `SmartArtDialog.show()` method will:
-1. Create UNO `XDialog` instance
-2. Programmatically add all controls (labels, text fields, dropdowns, buttons)
-3. Set properties (position, size, text, callbacks)
-4. Show dialog modally
-5. Capture user input and return result
-
-### Dialog Structure (programmatic)
+## 2. Architecture Overview
 
 ```
-SmartArtDialog {
-  XDialog dialog
-  XTextComponent hierarchyText        // Multiline text area
-  XComboBox diagramType              // Dropdown: Hierarchy, Hub & Spoke, Process Flow
-  XButton createButton               // Primary action
-  XButton cancelButton               // Dismiss
-  XButton helpButton                 // No-op in Phase 2 (Phase 4+)
-}
+Insert Menu (LibreOffice UI)
+        ↓
+    SmartArt [Menu Item]
+        ↓
+LibreOffice calls registered UNO service
+        ↓
+SmartArtCommand.java (execute method)
+        ↓
+[Phase 3+: Opens dialog, generates diagrams]
 ```
-
-### Note: Color Palettes
-
-Color palette selection deferred to Phase 3+. Phase 2 uses default colors only.
 
 ---
 
-## 3. Java Implementation
+## 3. Files to Create/Modify
 
-### SmartArtDialog.java - Dialog Controller
+### 3.1 Java Source File: SmartArtCommand.java
 
-Key responsibilities:
-1. Build dialog programmatically (no XML)
-2. Create and show UNO dialog
-3. Validate input in real-time (Phase 2)
-4. Capture user input
-5. Return results (true if Create, false if Cancel)
+Location: `src/main/java/org/libreimpress/smartart/SmartArtCommand.java`
 
-Implementation details:
-- Extends/implements UNO dialog handling
-- `show(XComponentContext context)` creates dialog, shows modally, returns boolean
-- Real-time validation: Check hierarchy not empty, consistent indentation
-- Show error messages in dialog via `XMessageBox` if validation fails
-- Button handlers close dialog with appropriate result code
+**Purpose:** UNO component that handles the menu action
 
-Input validation (Phase 2):
-- **Hierarchy text**: Not empty, basic indentation check (consistent spacing)
-- **Diagram type**: Required (dropdown always has selection)
-- **Color palette**: Not validated (preset selection always valid)
-- Error display: Show message box if validation fails, don't allow Create
+**Key Methods:**
+- `execute()` — Called when user clicks menu item
+- `getImplementationName()` — Returns service name
+- `supportsService()` — Service registry check
+
+**Minimal implementation for Phase 2:**
+- Implements `XDispatchProvider` interface (required for menu commands)
+- `execute()` shows a simple info message (proof of concept)
+- Ready to extend in Phase 3 for actual dialog
+
+### 3.2 Update: META-INF/manifest.xml
+
+**Register every configuration file and the UNO component descriptor.** Use the
+`manifest:` namespace and `manifest:file-entry` elements (not the older
+`urn:sun:star:package:manifest` / `entry` form). Each `.xcu` is
+`configuration-data`; the component descriptor is `uno-components`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="http://openoffice.org/2001/manifest">
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.package:package"
+        manifest:full-path="/"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.configuration-data"
+        manifest:full-path="Addons.xcu"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.configuration-data"
+        manifest:full-path="ProtocolHandler.xcu"/>
+    <manifest:file-entry
+        manifest:media-type="application/vnd.sun.star.uno-components"
+        manifest:full-path="uno/SmartArtImpl.xml"/>
+</manifest:manifest>
+```
+
+This tells LibreOffice:
+- `Addons.xcu` and `ProtocolHandler.xcu` are configuration data to merge
+- `uno/SmartArtImpl.xml` describes the UNO component(s) to load
+- The `smartart.jar` itself is referenced from inside the component descriptor
+  (`uri="smartart.jar"`), so it does **not** need its own manifest entry
+
+### 3.3 New: UNO Component Descriptor (uno/SmartArtImpl.xml)
+
+Location: `src/main/resources/uno/SmartArtImpl.xml`
+
+**Purpose:** Describes the UNO component and its services
+
+**Content:**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<components xmlns="http://openoffice.org/2010/uno-components">
+    <component loader="com.sun.star.loader.Java2" uri="smartart.jar">
+        <implementation name="org.libreimpress.smartart.SmartArtCommand">
+            <service name="com.sun.star.frame.ProtocolHandler"/>
+        </implementation>
+    </component>
+</components>
+```
+
+This tells LibreOffice:
+- Find SmartArtCommand class in smartart.jar
+- Register it as a ProtocolHandler service
+- Implementation name: `org.libreimpress.smartart.SmartArtCommand`
+
+> ⚠️ **Two mistakes here will fail the install with
+> `InvalidRegistryException: unexpected item in outer level`:**
+> 1. **Namespace must be `http://openoffice.org/2010/uno-components`** — *not*
+>    `.../2010/component`. The C++ parser in `servicemanager.cxx` rejects the
+>    root `<components>` element at the outer level if the namespace is wrong,
+>    before it ever reads any attributes.
+> 2. **`uri` must be the bare jar name (`smartart.jar`)** — *not*
+>    `jar:*smartart.jar!/...Class`. The `jar:*...!/...class` form is not valid
+>    in this schema.
+
+### 3.4 New: Menu Configuration (Addons.xcu)
+
+Location: `src/main/resources/Addons.xcu`
+
+**Purpose:** Defines the menu item in the LibreOffice UI
+
+**Content:**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry"
+                    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                    oor:name="Addons" oor:package="org.openoffice.Office">
+    <node oor:name="AddonUI">
+        <node oor:name="OfficeMenuBar">
+            <node oor:name="org.libreimpress.smartart" oor:op="replace">
+                <prop oor:name="Title" oor:type="xs:string">
+                    <value xml:lang="en-US">SmartArt</value>
+                </prop>
+                <prop oor:name="Target" oor:type="xs:string">
+                    <value>_self</value>
+                </prop>
+                <node oor:name="Submenu">
+                    <node oor:name="m1" oor:op="replace">
+                        <prop oor:name="URL" oor:type="xs:string">
+                            <value>org.libreimpress.smartart:CreateDiagram</value>
+                        </prop>
+                        <prop oor:name="Title" oor:type="xs:string">
+                            <value xml:lang="en-US">Create Diagram…</value>
+                        </prop>
+                        <prop oor:name="Target" oor:type="xs:string">
+                            <value>_self</value>
+                        </prop>
+                        <prop oor:name="Context" oor:type="xs:string">
+                            <value>com.sun.star.presentation.PresentationDocument</value>
+                        </prop>
+                    </node>
+                </node>
+            </node>
+        </node>
+    </node>
+</oor:component-data>
+```
+
+This tells LibreOffice:
+- Add-on UI **must** merge into `org.openoffice.Office.Addons / AddonUI` with a
+  root element of `oor:component-data` (not `oor:items` / a `Common/Menus` path)
+- `OfficeMenuBar` gives a top-level menu; use `AddonMenu` for **Tools → Add-Ons**
+- Every `prop` must declare `oor:type="xs:string"` and use `oor:op="replace"`
+- The command URL `org.libreimpress.smartart:CreateDiagram` is dispatched to
+  SmartArtCommand via the protocol bound in `ProtocolHandler.xcu` (§3.5)
+- `Context` limits the entry to Impress (`PresentationDocument`)
+
+### 3.5 New: Protocol Handler binding (ProtocolHandler.xcu)
+
+Location: `src/main/resources/ProtocolHandler.xcu`
+
+**Purpose:** Binds the `org.libreimpress.smartart:` command-URL protocol to the
+Java handler so that clicking the menu item reaches `SmartArtCommand`. The
+`HandlerSet` node name **must equal** the implementation name in
+`uno/SmartArtImpl.xml`.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry"
+                    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                    oor:name="ProtocolHandler" oor:package="org.openoffice.Office">
+    <node oor:name="HandlerSet">
+        <node oor:name="org.libreimpress.smartart.SmartArtCommand" oor:op="replace">
+            <prop oor:name="Protocols" oor:type="oor:string-list">
+                <value>org.libreimpress.smartart:*</value>
+            </prop>
+        </node>
+    </node>
+</oor:component-data>
+```
+
+### 3.6 Java side: static factory methods + JAR manifest
+
+The `Java2` loader instantiates the component by calling **static** methods on
+the implementation class. Without them the component will not load even after
+the descriptor parses:
 
 ```java
-public class SmartArtDialog {
-    private String hierarchyText;
-    private String diagramType = "Hierarchy";
-    
-    public boolean show(XComponentContext context) {
-        // 1. Create dialog programmatically
-        // 2. Create controls (labels, text area, dropdown, buttons)
-        // 3. Set event handlers for buttons
-        // 4. Show dialog modally
-        // 5. Validate input on Create click
-        // 6. Return true if Create valid, false if Cancel
+public static XSingleComponentFactory __getComponentFactory(String sImplementationName) {
+    if (sImplementationName.equals(IMPLEMENTATION_NAME)) {
+        return Factory.createComponentFactory(SmartArtCommand.class,
+                new String[]{SERVICE_NAME});
     }
-    
-    private boolean validateInput() {
-        if (hierarchyText == null || hierarchyText.trim().isEmpty()) {
-            showError("Hierarchy text cannot be empty");
-            return false;
-        }
-        if (!validateIndentation(hierarchyText)) {
-            showError("Indentation must be consistent (use spaces or tabs, not mixed)");
-            return false;
-        }
-        return true;
-    }
-    
-    private boolean validateIndentation(String text) {
-        // Check indentation is consistent (all spaces or all tabs, not mixed)
-        // Allow reasonable nesting depth
-    }
+    return null;
+}
+
+public static boolean __writeRegistryServiceInfo(XRegistryKey xRegistryKey) {
+    return Factory.writeRegistryServiceInfo(IMPLEMENTATION_NAME,
+            new String[]{SERVICE_NAME}, xRegistryKey);
 }
 ```
 
-### SmartArtCommand.java - Command Executor
+The JAR's `META-INF/MANIFEST.MF` must also declare:
 
-Key responsibilities:
-1. Act as UNO ProtocolHandler entry point
-2. Create and show dialog
-3. On user Create: Store input for Phase 3 processing
-4. On user Cancel: Cleanup and return
-
-```java
-public class SmartArtCommand {
-    public void execute(XComponentContext context) {
-        SmartArtDialog dialog = new SmartArtDialog();
-        if (dialog.show(context)) {
-            // User clicked Create - input is validated
-            String hierarchy = dialog.getHierarchyText();
-            String type = dialog.getDiagramType();
-            // TODO: Pass to parser in Phase 3
-            System.out.println("Creating " + type + " diagram");
-        }
-        // If Cancel, method returns and dialog closes
-    }
-}
+```
+RegistrationClassName: org.libreimpress.smartart.SmartArtCommand
 ```
 
 ---
 
-## 4. UNO Integration
+## 4. Build Process
 
-### Dialog Creation Mechanism
-- No XML file needed; dialog built entirely in Java
-- `SmartArtDialog.show()` creates `XDialog` and adds controls programmatically
-- Simpler packaging (no extra XML resources to manage)
+### Updated pom.xml Behavior
+1. Compile `SmartArtCommand.java` → `smartart.jar`
+2. Package JAR into OXT
+3. Include `uno/SmartArtImpl.xml` in OXT (tells LibreOffice where the component is)
+4. Include `Addons.xcu` in OXT (tells LibreOffice about the menu)
 
-### Event Handling
-- Button click listeners capture user action
-- Create button: Validates input, returns true if valid, false if error
-- Cancel button: Returns false immediately
-- Help button: No-op in Phase 2 (clickable, does nothing)
-
-### Context Flow
-```
-ProtocolHandler dispatch (LibreOffice)
-  ↓
-SmartArtCommand.execute(XComponentContext)
-  ↓
-Create SmartArtDialog instance
-  ↓
-SmartArtDialog.show(context)
-  ↓
-Build XDialog programmatically
-  ↓
-Add controls (text area, dropdown, buttons)
-  ↓
-Set event handlers
-  ↓
-Show dialog modally (blocks)
-  ↓
-User interacts, clicks button
-  ↓
-Validate input (if Create)
-  ↓
-Return boolean result + captured data
-```
-
-### Required UNO Interfaces
-- `com.sun.star.awt.XDialog` - Dialog window
-- `com.sun.star.awt.XTextComponent` - Text input field
-- `com.sun.star.awt.XComboBox` - Dropdown list
-- `com.sun.star.awt.XButton` - Buttons
-- `com.sun.star.awt.XMessageBox` - Error messages during validation
-
----
-
-## 5. Build & Packaging
-
-### No Assembly Changes Needed
-Dialog is built programmatically in Java, no additional resources required. Existing `src/main/assembly/oxt.xml` configuration is sufficient.
-
-### .oxt Structure (Phase 2)
-```
-SmartArt.oxt (ZIP)
-├── META-INF/manifest.xml
-├── SmartArt.jar                      # Contains SmartArtCommand, SmartArtDialog
-├── SmartArtImpl.xml                   # UNO component registration
-├── description.xml                   # Extension metadata
-└── icons/
-    └── extension.png                 # Extension icon
+### Updated Assembly Descriptor (oxt.xml)
+```xml
+<fileSets>
+    <fileSet>
+        <directory>${project.basedir}/src/main/resources</directory>
+        <outputDirectory>/</outputDirectory>
+        <includes>
+            <include>META-INF/**</include>
+            <include>description.xml</include>
+            <include>uno/**</include>
+            <include>Addons.xcu</include>
+        </includes>
+    </fileSet>
+    <fileSet>
+        <directory>${project.build.directory}</directory>
+        <outputDirectory>/</outputDirectory>
+        <includes>
+            <include>smartart.jar</include>
+        </includes>
+    </fileSet>
+</fileSets>
 ```
 
 ---
 
-## 6. Testing Strategy
+## 5. OXT Structure After Phase 2
 
-### Unit Tests (in Maven)
-**SmartArtDialogTest.java:**
-- Test dialog instantiation
-- Test getter/setter for captured data
-- Test input validation logic (empty text, indentation)
-- Mock UNO context (if needed)
-
-**SmartArtCommandTest.java (update):**
-- Test command initialization
-- Test execute() with mocked dialog
-- Test dialog callbacks (Create/Cancel)
-
-### Integration Tests (GitHub Actions)
-**Artifact Validation (existing):**
-- Verify SmartArt.jar exists in .oxt
-- Verify all required files present
-
-**Manual Testing (local):**
-- Install extension in LibreOffice Impress
-- Open Tools → LibreImpress SmartArt
-- Verify dialog appears
-- Test input capture (hierarchy text, diagram type)
-- Test validation (error on empty text, indentation errors)
-- Test Create/Cancel buttons
+```
+SmartArt.oxt (ZIP archive)
+├── META-INF/
+│   ├── manifest.xml              # Updated: Now includes JAR reference
+│   └── MANIFEST.MF
+├── description.xml               # Extension metadata
+├── Addons.xcu                    # Menu configuration
+├── smartart.jar                  # Compiled Java code
+└── uno/
+    └── SmartArtImpl.xml           # Component descriptor
+```
 
 ---
 
-## 7. Phase 2 Deliverables
+## 6. Build Instructions
 
-At completion of Phase 2, you should have:
+```bash
+# Clean and compile
+mvn clean compile
 
-✅ **SmartArtDialog controller** - Builds dialog programmatically, shows dialog, validates input, captures data
-✅ **SmartArtCommand.execute()** - Opens dialog via UNO ProtocolHandler
-✅ **Dialog integration** - Dialog displays and responds correctly in LibreOffice
-✅ **Input validation** - Validates empty text, checks indentation consistency, shows error messages
-✅ **Unit tests** - Dialog and command tests pass locally
-✅ **Artifact validation** - Artifact tests pass in GitHub Actions
-✅ **README updated** - Phase 2 build/test instructions
-✅ **Build verification** - `mvn clean test package` succeeds
+# Package OXT
+mvn package
 
----
-
-## 8. Verification Checklist
-
-- [ ] Dialog creates and displays without errors
-- [ ] All controls appear with correct labels and layout
-- [ ] Hierarchy text area accepts multiline input
-- [ ] Diagram type dropdown has 3 options (Hierarchy, Hub & Spoke, Process Flow)
-- [ ] Input captures correctly in memory
-- [ ] Empty text validation works (shows error)
-- [ ] Indentation validation works (detects mixed spaces/tabs)
-- [ ] Create button returns true from show() when input valid
-- [ ] Cancel button returns false from show()
-- [ ] Dialog closes properly in both cases
-- [ ] Help button appears and is clickable (no-op)
-- [ ] Unit tests pass locally (`mvn test`)
-- [ ] Artifact tests pass in CI (`mvn test -Dtest=ExtensionValidationTest`)
-- [ ] Extension can be loaded into LibreOffice without errors
+# Result
+target/SmartArt.oxt               # 50-100KB with JAR included
+```
 
 ---
 
-## 9. Known Challenges & Solutions
+## 7. Testing Phase 2
 
-### Challenge 1: UNO Dialog XML Format
-**Issue:** LibreOffice dialog XML syntax is specialized  
-**Solution:** Use standard ODF dialog format, test incrementally with LibreOffice
+### Manual Testing in LibreOffice
 
-### Challenge 2: Loading Dialog from Extension
-**Issue:** Dialog must be loaded from packaged .oxt resources  
-**Solution:** Use proper `vnd.sun.star.extension://` URI protocol
+1. **Install the extension:**
+   ```bash
+   # Linux
+   cp target/SmartArt.oxt ~/.config/libreoffice/4/user/extensions/
+   
+   # Or use LibreOffice GUI:
+   Tools → Extensions → Add → Select SmartArt.oxt
+   ```
 
-### Challenge 3: Event Handling in UNO
-**Issue:** Button events require proper event listener implementation  
-**Solution:** Implement `XDialogEventHandler` with correct method signatures
+2. **Restart LibreOffice Impress**
 
-### Challenge 4: Modal Dialog Blocking
-**Issue:** Dialog must block execution until user responds  
-**Solution:** Use `XDialog.execute()` which blocks until dialog closes
+3. **Verify menu item:**
+   - Open a presentation
+   - Click Insert menu
+   - Should see "SmartArt" option
+   - Click it → Should see info message (proof of concept)
 
----
-
-## 10. Next Phase: Phase 3
-
-After Phase 2 completion:
-1. **Input validation** - Validate hierarchy text format
-2. **Parser implementation** - Convert hierarchy text to internal model
-3. **Error handling** - Show error messages to user
-4. **Default palettes** - Built-in color scheme library
+4. **Expected behavior:**
+   - Menu click triggers SmartArtCommand.execute()
+   - Displays: "SmartArt command executed!"
+   - Ready for Phase 3: dialog implementation
 
 ---
 
-## Notes for Spec Refinement
+## 8. Phase 2 Deliverables Checklist
 
-After completing Phase 2:
-1. Document any UNO API quirks encountered
-2. Verify dialog usability with test users
-3. Refine XML structure based on actual rendering
-4. Update error handling requirements
-5. Plan Phase 3 with concrete examples
+- [ ] `src/main/java/org/libreimpress/smartart/SmartArtCommand.java` — UNO component
+- [ ] `src/main/resources/uno/SmartArtImpl.xml` — Component descriptor
+- [ ] `src/main/resources/Addons.xcu` — Menu configuration
+- [ ] `src/main/resources/META-INF/manifest.xml` — Updated to reference JAR
+- [ ] `src/main/resources/assembly/oxt.xml` — Updated assembly descriptor
+- [ ] `mvn clean package` builds successfully
+- [ ] `target/SmartArt.oxt` created with JAR included
+- [ ] OXT structure verified with `unzip -l`
+- [ ] Menu item appears in Insert menu (manual testing)
+- [ ] Menu click executes SmartArtCommand
 
 ---
 
-**Version:** 0.1.0-SNAPSHOT  
-**Phase:** 2 - Dialog UI Implementation  
-**Estimated Duration:** 2-3 days  
-**Dependencies:** Phase 1 (Complete) ✅
+## 9. What's NOT in Phase 2
+
+- ❌ Dialog (Phase 3)
+- ❌ Diagram parsing (Phase 3)
+- ❌ Diagram generation (Phase 4+)
+- ❌ Icons or styling (Phase 5+)
+
+Phase 2 is purely **infrastructure** — proving the menu integration works.
+
+---
+
+## 10. Key UNO Concepts Used
+
+| Concept | Purpose | Used Here |
+|---------|---------|-----------|
+| `ProtocolHandler` | Handles URL dispatch | SmartArtCommand implements this |
+| `XDispatchProvider` | Routes commands | SmartArtCommand extends this |
+| `private:factory/smartart` | Custom URL | Dispatches to SmartArtCommand |
+| `Addons.xcu` | Menu registration | Adds Insert > SmartArt menu |
+| `uno/SmartArtImpl.xml` | Component descriptor | Tells LibreOffice about component |
+
+---
+
+## 11. Diagram: Menu Dispatch Flow
+
+```
+User clicks Insert > SmartArt
+           ↓
+LibreOffice URL dispatcher receives: private:factory/smartart
+           ↓
+Dispatcher finds ProtocolHandler for "smartart"
+           ↓
+SmartArtCommand.queryDispatch() called
+           ↓
+SmartArtCommand.dispatch() called
+           ↓
+execute() method runs
+           ↓
+Info message shown (Phase 2)
+OR Dialog opens (Phase 3+)
+```
+
+---
+
+## 12. Common Issues & Solutions
+
+### Issue: Menu item doesn't appear
+**Solution:** 
+- Verify Addons.xcu is in OXT root: `unzip -l target/SmartArt.oxt | grep Addons`
+- Check for XML syntax errors in Addons.xcu
+- Restart LibreOffice after installing
+
+### Issue: Menu item appears but clicking does nothing
+**Solution:**
+- Verify uno/SmartArtImpl.xml is in OXT: `unzip -l target/SmartArt.oxt | grep SmartArtImpl`
+- Verify smartart.jar is in OXT root: `unzip -l target/SmartArt.oxt | grep smartart.jar`
+- Check manifest.xml references the JAR
+
+### Issue: Compilation fails with UNO classes not found
+**Solution:**
+- Ensure pom.xml has UNO SDK dependencies
+- Run `mvn dependency:resolve` to verify dependencies download
+
+---
+
+## 13. Success Criteria
+
+✅ `mvn clean package` builds without errors  
+✅ `target/SmartArt.oxt` contains: smartart.jar, Addons.xcu, uno/SmartArtImpl.xml  
+✅ Insert menu shows "SmartArt" option after installation  
+✅ Clicking menu item executes SmartArtCommand.execute()  
+✅ Info message appears confirming execution  
+
+---
+
+## 14. Next Phase: Phase 3
+
+Phase 3 will:
+- Open a dialog with text input
+- Parse hierarchical text
+- Prepare for diagram generation
+
+See `Phase3_ImplementationPlan.md` (to be created)
+
+---
+
+**Status:** Ready for implementation  
+**Estimated Time:** 1-2 hours  
+**Next Phase:** Phase 3 - Dialog and Text Parsing

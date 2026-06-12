@@ -1,289 +1,248 @@
-# Phase 1: Maven Project Setup - Implementation Plan
+# Phase 1: Empty OXT Extension - Implementation Plan
 
 ## Objective
-Create a Maven project structure that compiles to a LibreOffice UNO extension (.oxt file) with proper dependencies, build configuration, and project layout.
+Create a minimal but valid LibreOffice UNO extension (.oxt file) that can be installed and recognized by LibreOffice Impress. This is the foundation upon which all subsequent phases build.
 
 ---
 
-## 1. Maven Project Structure
+## 1. What is an OXT File?
+An `.oxt` file is a ZIP archive containing:
+- LibreOffice extension metadata and configuration files
+- Optional: Java code, dialogs, icons, etc.
+
+For Phase 1, we're creating the absolute minimum.
+
+---
+
+## 2. Phase 1 Deliverables
+
+### Required Files (Minimal)
 
 ```
-LibreImpress-SmartArt/
-├── pom.xml                          # Main Maven configuration
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── org/
-│   │   │       └── libreimpress/
-│   │   │           └── smartart/
-│   │   │               ├── SmartArtCommand.java
-│   │   │               ├── SmartArtDialog.java
-│   │   │               └── helpers/
-│   │   │                   └── LibreOfficeHelper.java
-│   │   ├── resources/
-│   │   │   ├── dialogs/
-│   │   │   │   └── SmartArtDialog.xml
-│   │   │   ├── META-INF/
-│   │   │   │   └── manifest.xml        # UNO extension manifest
-│   │   │   └── images/
-│   │   │       └── extension.png       # Extension icon
-│   │   └── uno/
-│   │       └── SmartArtImpl.xml         # UNO component description
-│   └── test/
-│       └── java/
-│           └── org/libreimpress/smartart/
-│               └── [Unit tests]
-├── target/
-│   ├── classes/
-│   ├── SmartArt.oxt                    # Final deliverable
-│   └── [build artifacts]
-├── README.md
-└── .gitignore
+target/
+└── SmartArt.oxt (ZIP archive containing:)
+    ├── META-INF/
+    │   └── manifest.xml          # LibreOffice extension manifest
+    └── description.xml           # Extension metadata (name, version, etc.)
 ```
 
----
+### Source Files Needed
 
-## 2. Key Dependencies & Versions
-
-### LibreOffice UNO SDK
-- **Purpose:** Core API for LibreOffice extensions
-- **Versions available:** 7.0+, 7.4 (stable), 8.0+
-- **Recommended:** 7.4 (widely compatible)
-
-### Maven Plugins Required
-- `maven-compiler-plugin` - Java compilation
-- `maven-assembly-plugin` - Package .oxt extension
-- `maven-jar-plugin` - Create JAR
-- `maven-shade-plugin` - Optional: Bundle dependencies
-
-### Testing Dependencies
-- JUnit 4/5
-- Mockito (for mocking UNO objects)
-
----
-
-## 3. pom.xml Configuration
-
-### Key Sections:
-1. **Project metadata** - GroupId, ArtifactId, Version
-2. **Properties** - Java version (11+), UNO version, encoding (UTF-8)
-3. **Dependencies** - UNO SDK, testing libraries
-4. **Build plugins** - Compiler, JAR, assembly, UNO manifest generation
-5. **Repositories** - LibreOffice artifact repositories (if needed)
-
-### Critical Configuration:
-- Target Java version: 11 (LTS, supported by LibreOffice 7.4+)
-- Source encoding: UTF-8
-- UNO SDK location detection
-- .oxt packaging as custom assembly
-
----
-
-## 4. UNO Extension Manifest
-
-### manifest.xml (META-INF/)
-Must contain:
-- Extension metadata (name, version, author)
-- UNO component registration
-- Entry point class reference
-- Icon and description
-
-### uno/SmartArtImpl.xml
-Declares the UNO component:
-- Interface implementation
-- Service names
-- Component class path
-
-### description.xml
-Root element must declare proper XML namespaces:
-- `xmlns="http://openoffice.org/extensions/description/2006"` (default namespace)
-- `xmlns:xlink="http://www.w3.org/1999/xlink"` (for xlink references)
-
-Must contain per https://wiki.documentfoundation.org/Documentation/DevGuide/Extensions#Extension_Manager:
-- Identifier, version, and display name
-- Summary and description
-- Release notes
-- Publisher information
-- License text
-- Dependency list (e.g., com.sun.star version)
-- Registration and icon references
-
----
-
-## 5. Build Output Target
-
-### Final Deliverable: SmartArt.oxt
-Structure inside .oxt:
 ```
-SmartArt.oxt (ZIP archive)
+src/main/resources/
 ├── META-INF/
 │   └── manifest.xml
-├── content.xml
-├── SmartArt.jar              # Compiled Java code
-├── description.xml           # Extension description
-├── dialogs/
-│   └── SmartArtDialog.xml    # Dialog XML
-├── icons/
-│   └── extension.png
-└── uno/
-    └── SmartArtImpl.xml       # UNO component descriptor
+└── description.xml
+
+pom.xml                           # Maven build configuration (already exists)
 ```
 
 ---
 
-## 6. Development Environment Setup
+## 3. File Specifications
+
+### 3.1 META-INF/manifest.xml
+This file tells LibreOffice:
+- What this extension contains
+- How to load components
+- What services are provided
+
+**Minimal content for Phase 1:**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="urn:sun:star:package:manifest">
+    <entry full-path="/" media-type="application/vnd.sun.star.package:package"/>
+</manifest>
+```
+
+This is the absolute minimum—just declares the OXT as a valid extension package.
+
+### 3.2 description.xml
+This file contains extension metadata displayed in LibreOffice's Extension Manager.
+
+**Minimum required fields:**
+- `identifier` - Unique ID (e.g., `org.libreimpress.smartart`)
+- `version` - Version number (e.g., `0.1.0`)
+- `display-name` - User-friendly name
+- `summary` - Short description
+- `description` - Longer description
+- `license-text` - License information
+- `publisher` - Author/organization
+
+---
+
+## 4. Maven Configuration
+
+The existing `pom.xml` is already configured to:
+1. Compile Java code (if present)
+2. Package resources into a JAR
+3. Create the .oxt file as a ZIP archive
+
+**Key plugin:** `maven-assembly-plugin` with `oxt.xml` descriptor
+
+### 4.1 Assembly Descriptor (src/main/assembly/oxt.xml)
+
+This file tells Maven how to structure the OXT archive. Minimal version:
+```xml
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.3
+                              http://maven.apache.org/xsd/assembly-1.1.3.xsd">
+    <id>oxt</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>META-INF/**</include>
+                <include>description.xml</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>
+```
+
+---
+
+## 5. Build Instructions
 
 ### Prerequisites
-1. **Java Development Kit (JDK)**
-   - Version: 11 or higher
-   - Installation: Download from adoptopenjdk.org or eclipse.org
+- Java 11+ installed
+- Maven 3.6.0+ installed
 
-2. **Maven**
-   - Version: 3.6.0+
-   - Installation: Download from maven.apache.org
+### Build Steps
 
-3. **LibreOffice SDK**
-   - Include path for UNO headers and libraries
-   - Download from libreoffice.org (development version)
-
-4. **IDE (Optional but recommended)**
-   - IntelliJ IDEA Community (Maven support built-in)
-   - VS Code + Maven extension
-   - Eclipse + Maven plugin
-
-### Environment Variables (if needed)
 ```bash
-export JAVA_HOME=/path/to/jdk-11
-export M2_HOME=/path/to/maven
-export PATH=$JAVA_HOME/bin:$M2_HOME/bin:$PATH
+# Step 1: Navigate to project directory
+cd /path/to/LibreImpress-SmartArt
+
+# Step 2: Clean and package
+mvn clean package
+
+# Expected output:
+# - target/smartart-0.1.0-SNAPSHOT.jar
+# - target/SmartArt.oxt
+```
+
+### Verifying the OXT
+
+```bash
+# Unzip and inspect the contents
+unzip -l target/SmartArt.oxt
+
+# Expected structure:
+# Archive:  target/SmartArt.oxt
+#   Length     Date   Time    Name
+# --------  ---------- -----   ----
+#      XXX  YYYY-MM-DD HH:MM   META-INF/manifest.xml
+#      XXX  YYYY-MM-DD HH:MM   description.xml
 ```
 
 ---
 
-## 7. Build Commands
+## 6. Installation & Testing (Optional)
 
-### Commands to support in pom.xml:
+Once Phase 1 is complete, the OXT can be tested:
 
+1. **Copy OXT to LibreOffice extensions folder:**
+   ```bash
+   cp target/SmartArt.oxt ~/.config/libreoffice/4/user/extensions/
+   # (Path varies by OS and LibreOffice version)
+   ```
+
+2. **Or use LibreOffice GUI:**
+   - Tools → Extensions → Add → Select SmartArt.oxt
+   - Restart LibreOffice
+   - Tools → Extensions Manager → Verify "LibreImpress SmartArt" appears
+
+3. **Verify in Extension Manager:**
+   - LibreOffice will display the extension name and description
+   - (No functionality yet—just validates the OXT structure)
+
+---
+
+## 7. Phase 1 Deliverables Checklist
+
+- [ ] `src/main/resources/META-INF/manifest.xml` created
+- [ ] `src/main/resources/description.xml` created
+- [ ] `src/main/resources/assembly/oxt.xml` created (assembly descriptor)
+- [ ] `mvn clean package` builds successfully
+- [ ] `target/SmartArt.oxt` exists and contains correct files
+- [ ] OXT can be unzipped and inspected
+- [ ] README updated with Phase 1 completion
+
+---
+
+## 8. What's NOT in Phase 1
+
+- ❌ Java code (no SmartArtCommand, SmartArtDialog, etc.)
+- ❌ UNO component registration
+- ❌ Menu or toolbar integration
+- ❌ Dialog definitions
+- ❌ Any functionality
+
+Phase 1 is **purely structural** — proving we can build a valid OXT.
+
+---
+
+## 9. What's Next: Phase 2
+
+Phase 2 will add:
+- UNO component registration (manifest.xml with component entry)
+- SmartArtCommand.java (UNO service entry point)
+- Menu item in Insert menu
+- LibreOffice integration
+
+See `Phase2_ImplementationPlan.md`
+
+---
+
+## 10. Key Decisions for Phase 1
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| OXT vs other packaging | OXT (ZIP) | Standard LibreOffice extension format |
+| Metadata format | XML | LibreOffice standard |
+| Java code in Phase 1 | No | Separate functionality for Phase 2 |
+| Testing approach | Manual unzip + Extension Manager | Validates structure without requiring LibreOffice SDK |
+
+---
+
+## 11. Common Issues & Solutions
+
+### Issue: OXT won't install
+**Solution:** Verify manifest.xml and description.xml are in correct locations and have valid XML syntax
 ```bash
-# Clean build
-mvn clean
-
-# Compile
-mvn compile
-
-# Run unit tests (excludes artifact validation)
-mvn test
-
-# Build JAR and .oxt extension
-mvn package
-
-# Install locally (for testing in LibreOffice)
-mvn install
-
-# Full build with unit tests
-mvn clean test package
-
-# Run artifact validation tests only (after build)
-mvn test -Dtest=ExtensionValidationTest
+unzip -t target/SmartArt.oxt  # Test zip integrity
 ```
 
-### Test Organization
-- **Unit tests** (Maven): Fast, isolated tests that don't depend on the artifact
-  - `SmartArtCommandTest.java` - Tests core command and dialog classes
-  - Run during local development with `mvn test`
-  
-- **Artifact validation tests** (GitHub Actions): Tests that verify the `.oxt` package structure
-  - `ExtensionValidationTest.java` - Validates the built extension artifact
-  - Run in CI/CD pipeline after the artifact is packaged
-  - Excluded from local Maven builds to avoid circular dependencies with `mvn clean`
+### Issue: Extension doesn't appear in Extension Manager
+**Solution:** 
+- Check description.xml has all required fields
+- Verify identifier is unique (use org.libreimpress.smartart)
+- Restart LibreOffice after installation
+
+### Issue: `mvn package` fails
+**Solution:**
+- Ensure Maven can find assembly descriptor: `src/main/assembly/oxt.xml`
+- Check pom.xml assembly plugin configuration
 
 ---
 
-## 8. Configuration Decisions to Lock In
+## Success Criteria
 
-### Decision 1: Java Version
-- **Option A:** Java 8 (maximum compatibility)
-- **Option B:** Java 11 (modern, LTS, recommended)
-- **Decision:** **Java 11** (balances compatibility and modern practices)
-
-### Decision 2: Build Profile Strategy
-- **Option A:** Single pom.xml with all configuration
-- **Option B:** Separate profiles for dev/test/release
-- **Decision:** **Single pom.xml** for MVP (can add profiles later)
-
-### Decision 3: Dependency Management
-- **Option A:** Maven Central exclusively
-- **Option B:** Include LibreOffice-specific repositories
-- **Decision:** **Maven Central + LibreOffice repos** (may need both)
-
-### Decision 4: UNO Component Registration
-- **Option A:** XML-based (manual registration)
-- **Option B:** Annotation-based (if available in UNO SDK)
-- **Decision:** **XML-based** (XML manifest in META-INF/)
-
-### Decision 5: Dialog Format
-- **Option A:** LibreOffice Basic dialog (.xdl format)
-- **Option B:** UNO dialog XML (.xml format)
-- **Decision:** **XML-based UNO dialog** (more control, programmatic)
+✅ `mvn clean package` completes without errors  
+✅ `target/SmartArt.oxt` file created (size > 0 bytes)  
+✅ `unzip -l target/SmartArt.oxt` shows expected files  
+✅ Manual test: OXT can be installed in LibreOffice Extension Manager  
+✅ README.md updated documenting Phase 1
 
 ---
 
-## 9. Phase 1 Deliverables
-
-### At completion of Phase 1, you should have:
-
-✅ **pom.xml** with all dependencies and plugins configured  
-✅ **Project structure** ready for code development  
-✅ **Build verification** - `mvn clean package` compiles successfully  
-✅ **IDE integration** - Project opens in IDE without errors  
-✅ **README** documenting build steps and setup  
-✅ **.gitignore** configured for Java/Maven projects  
-✅ **Skeleton classes** - Empty SmartArtCommand.java, SmartArtDialog.java  
-✅ **Test framework ready** - JUnit configured, sample test passes  
-
----
-
-## 10. Verification Checklist
-
-- [ ] `mvn --version` runs successfully
-- [ ] `java -version` shows JDK 11+
-- [ ] Project imports in IDE without errors
-- [ ] `mvn clean compile` succeeds
-- [ ] `mvn test` runs (even if no tests yet)
-- [ ] `mvn package` generates target/ artifacts
-- [ ] Target .oxt file is created (even if incomplete)
-- [ ] Project structure matches layout above
-
----
-
-## 11. Iteration Notes for Spec Refinement
-
-After completing Phase 1, before moving to Phase 2, we'll:
-
-1. **Review** what we learned about Maven/UNO build process
-2. **Refine spec** with concrete build output details
-3. **Document** any build quirks or considerations
-4. **Delete** Phase 1 code to start fresh with Phase 2 (if desired)
-5. **Update spec** with lessons learned
-
----
-
-## Next Phase: Phase 2 - Dialog UI Implementation
-
-Phase 2 focuses on building the user-facing dialog that captures input from the user.
-
-**Deliverables:**
-- Dialog XML definition (`src/main/resources/dialogs/SmartArtDialog.xml`)
-- SmartArtDialog Java controller to show and interact with the dialog
-- SmartArtCommand.execute() implementation to trigger the dialog
-- Unit tests for dialog and command interaction
-- Dialog packaged in .oxt extension
-
-**What gets built:**
-- A LibreOffice dialog with:
-  - Multiline text area for hierarchy input
-  - Dropdown for diagram type selection (Hierarchy, Hub & Spoke, Process Flow)
-  - Optional JSON palette input field
-  - Create/Cancel/Help buttons
-
-**See:** `Phase2_ImplementationPlan.md` for detailed Phase 2 specification
+**Status:** Ready for implementation  
+**Estimated Time:** 30 minutes  
+**Next Phase:** Phase 2 - Menu and Toolbar Integration

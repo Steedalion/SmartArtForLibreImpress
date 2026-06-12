@@ -1,243 +1,107 @@
-# LibreImpress SmartArt - Phase 1 Build Setup
+# LibreImpress SmartArt
 
-Welcome to Phase 1! This document covers building and verifying the Maven project structure.
+A LibreOffice Impress UNO extension that generates structured diagrams
+(hierarchy, hub-and-spoke, process flow) from hierarchical text input.
 
-## Overview
+**Current status**
+- ✅ **Phase 1 — Empty OXT extension:** a minimal, installable `.oxt` skeleton.
+- ✅ **Phase 2 — Menu integration:** a top-level **SmartArt** menu whose
+  *Create Diagram…* item dispatches to the Java handler (`SmartArtCommand`).
+- ⏳ **Phase 3 — Dialog & text parsing:** not yet started.
 
-LibreImpress SmartArt is a LibreOffice Impress UNO extension that generates professional diagrams from hierarchical text input.
+See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
+the full document hierarchy.
 
-**Current Phase:** 2 - Dialog UI Implementation  
-**Status:** Dialog implementation complete with input validation, ready for Phase 3 (Parser)
+## Prerequisites
 
-## Quick Start
+- **JDK 11+** — `java -version`
+- **Maven 3.6+** — `mvn --version`
+- **LibreOffice 7.4+** — only needed to install/test the extension; provides the
+  `unopkg` tool used below.
 
-### Prerequisites
-
-1. **Java Development Kit (JDK 11+)**
-   ```bash
-   java -version
-   # Should show: openjdk version "11" or higher
-   ```
-
-2. **Maven 3.6.0+**
-   ```bash
-   mvn --version
-   # Should show: Apache Maven 3.6.0 or higher
-   ```
-
-3. **LibreOffice (7.4+)** - Optional for testing
-   - Required only when testing in actual LibreOffice
-   - Can be installed via system package manager
-
-### Build Commands
+## Build
 
 ```bash
-# Compile the project
-mvn clean compile
-
-# Run all tests
-mvn test
-
-# Package as JAR (with dependencies bundled)
 mvn clean package
-
-# Full build with all checks
-mvn clean test package
-
-# Build release profile (includes .oxt extension)
-mvn clean package -P release
 ```
 
-## Project Structure
+Produces **`target/SmartArt.oxt`** (the installable extension) and
+`target/smartart.jar` (the compiled component).
+
+## Install & verify
+
+The reliable way to confirm the extension registers is to install it with
+`unopkg`. Use an **isolated user profile** so testing never disturbs your real
+LibreOffice profile:
+
+```bash
+PROFILE=file:///tmp/lo-test
+
+# install
+unopkg add    --suppress-license -env:UserInstallation=$PROFILE target/SmartArt.oxt
+
+# verify — expect "Identifier: org.libreimpress.smartart"
+unopkg list   -env:UserInstallation=$PROFILE
+
+# uninstall
+unopkg remove -env:UserInstallation=$PROFILE org.libreimpress.smartart
+```
+
+To install into your **real** LibreOffice instead, drop the `-env:` argument
+(close all LibreOffice windows and the quickstarter first):
+
+```bash
+unopkg add --suppress-license target/SmartArt.oxt
+```
+
+Then open Impress — a **SmartArt** menu appears in the menu bar with
+*Create Diagram…*. (Clicking it currently prints `SmartArt command executed!`
+to the terminal where `soffice` was launched; the dialog arrives in Phase 3.)
+
+## Project structure
 
 ```
 LibreImpress-SmartArt/
-├── pom.xml                              # Maven configuration
+├── pom.xml
 ├── src/
 │   ├── main/
 │   │   ├── java/org/libreimpress/smartart/
-│   │   │   ├── SmartArtCommand.java     # Main entry point
-│   │   │   ├── SmartArtDialog.java      # Dialog controller
-│   │   │   ├── helpers/
-│   │   │   │   └── LibreOfficeHelper.java
-│   │   │   ├── models/                  # (Phase 3+)
-│   │   │   ├── parsers/                 # (Phase 3+)
-│   │   │   ├── generators/              # (Phase 5+)
-│   │   │   └── rendering/               # (Phase 5.1+)
+│   │   │   └── SmartArtCommand.java        # UNO ProtocolHandler component
+│   │   ├── assembly/
+│   │   │   └── oxt.xml                      # assembles the .oxt
 │   │   └── resources/
 │   │       ├── META-INF/
-│   │       │   └── MANIFEST.MF
-│   │       ├── uno/
-│   │       │   └── SmartArtImpl.xml      # UNO component descriptor
-│   │       ├── assembly/
-│   │       │   └── oxt.xml              # .oxt packaging config
-│   │       └── dialogs/                 # (Phase 2)
-│   └── test/
-│       └── java/org/libreimpress/smartart/
-│           └── [Unit tests]
-├── target/                              # Build output
-│   ├── classes/                         # Compiled classes
-│   ├── smartart-0.1.0-SNAPSHOT.jar     # JAR file
-│   └── SmartArt.oxt                    # LibreOffice extension (release mode)
-├── .gitignore
-├── README.md                            # This file
-└── Phase1_ImplementationPlan.md         # Detailed Phase 1 plan
+│   │       │   ├── manifest.xml            # OXT package manifest
+│   │       │   └── MANIFEST.MF             # JAR manifest (RegistrationClassName)
+│   │       ├── description.xml             # extension metadata (identifier/version)
+│   │       ├── Addons.xcu                  # menu definition
+│   │       ├── ProtocolHandler.xcu         # command-URL → handler binding
+│   │       └── uno/
+│   │           └── SmartArtImpl.xml         # UNO component descriptor
+│   └── test/                                # (unit tests arrive with later phases)
+└── target/
+    ├── smartart.jar
+    └── SmartArt.oxt
 ```
 
-## Maven Configuration Highlights
+## Continuous integration
 
-### Dependencies
-- **UNO SDK 7.4** - LibreOffice extension API
-- **GSON 2.10.1** - JSON parsing for palettes
-- **JUnit 4** - Unit testing
-- **Mockito 4.8** - Mocking for tests
+`.github/workflows/build-and-validate.yml` runs on every push: it builds the
+`.oxt`, validates its structure, installs LibreOffice, and then performs
+`unopkg add` / `list` / `remove` under `xvfb`. A registration regression
+(wrong component namespace, bad identifier, missing file) fails CI rather than
+only surfacing during a manual install.
 
-### Plugins
-- **Maven Compiler** - Java 11 compilation with UTF-8 encoding
-- **Maven Jar** - Package compiled code
-- **Maven Shade** - Bundle dependencies into single JAR
-- **Maven Assembly** - Package .oxt extension (ZIP format)
-- **Maven Surefire** - Run unit tests
+## Documentation
 
-### Build Profiles
-- **dev** (default) - Normal development build with tests
-- **release** - Full build with .oxt extension packaging
-
-## Testing Strategy
-
-**Local Tests (Maven):** Fast unit tests that don't depend on the compiled artifact
-- `SmartArtCommandTest.java` - Tests core classes
-- Run with `mvn test`
-
-**Artifact Validation Tests (GitHub Actions):** Validates the `.oxt` extension package structure after build
-- `ExtensionValidationTest.java` - Validates zip structure, manifests, required files
-- Runs automatically on push/PR via `.github/workflows/build-and-validate.yml`
-- Excluded from local `mvn test` to avoid circular dependencies with `mvn clean`
-
-## Verification Checklist
-
-After cloning/setting up, verify everything works:
-
-```bash
-# 1. Check prerequisites
-java -version
-mvn --version
-
-# 2. Compile
-mvn clean compile
-# Expected: BUILD SUCCESS
-
-# 3. Run unit tests
-mvn test
-# Expected: Unit tests run and pass
-
-# 4. Package
-mvn package
-# Expected: target/smartart-0.1.0-SNAPSHOT.jar and target/SmartArt.oxt created
-
-# 5. Full build with tests
-mvn clean test package
-# Expected: All unit tests pass and artifact is created
-```
-
-**Note:** Artifact validation tests run in GitHub Actions on each push/PR. See `.github/workflows/build-and-validate.yml`
-
-## IDE Setup
-
-### IntelliJ IDEA
-1. File → Open → Select project root
-2. IDEA auto-detects Maven project
-3. Right-click pom.xml → "Add as Maven Project"
-4. Maven panel appears on right side
-5. Verify project compiles: Run → Run Tests or Ctrl+Shift+F10
-
-### VS Code
-1. Install "Maven for Java" extension (vscjava.maven-for-java)
-2. File → Open Folder → Select project root
-3. VS Code detects pom.xml automatically
-4. Maven view appears in Explorer
-5. Click "build workspace" to compile
-
-### Eclipse
-1. File → Import → Existing Maven Projects
-2. Select project root
-3. Finish
-4. Right-click project → Run As → Maven clean
-5. Then right-click → Run As → Maven build...
-
-## Phase 1 Deliverables ✅
-
-This Phase 1 setup provides:
-
-- ✅ Maven project structure (ready for Java development)
-- ✅ UNO SDK dependencies configured
-- ✅ Build pipeline (compile → test → package → .oxt)
-- ✅ Skeleton classes (SmartArtCommand, SmartArtDialog, LibreOfficeHelper)
-- ✅ IDE-ready (IntelliJ, VS Code, Eclipse compatible)
-- ✅ .oxt packaging configured (LibreOffice extension format)
-- ✅ Test framework ready (JUnit + Mockito)
-
-## Phase 2: Dialog UI ✅ COMPLETE
-
-Phase 2 is now complete! The dialog implementation includes:
-
-**Delivered:**
-- SmartArtDialog controller with programmatic UNO dialog creation
-- Input validation: empty text check, indentation consistency (spaces vs tabs)
-- SmartArtCommand.execute() opens dialog and handles user interaction
-- 12 unit tests (4 original + 8 new validation tests)
-- Full build pipeline working: `mvn clean test package` succeeds
-
-**Test Results:**
-- 12 unit tests pass
-- SmartArt.oxt created successfully (1.9MB with UNO SDK bundled)
-
-**What's Next → Phase 3: Parser**
-- Parse hierarchy text into internal data model
-- Validate nesting depth and structure
-- Create diagram objects from parsed hierarchy
-
-See documentation:
-- `Phase1_ImplementationPlan.md` - Phase 1 project setup
-- `Phase2_ImplementationPlan.md` - Phase 2 dialog implementation
-- `Phase3_ImplementationPlan.md` - Phase 3 parser (coming soon)
-
-## Troubleshooting
-
-### Issue: `mvn: command not found`
-**Solution:** Maven not installed or not in PATH
-```bash
-export PATH=$PATH:/path/to/maven/bin
-mvn --version  # Should work now
-```
-
-### Issue: `[ERROR] COMPILATION ERROR`
-**Solution:** Check Java version (need 11+)
-```bash
-java -version   # Should show 11 or higher
-```
-
-### Issue: UNO SDK dependencies not found
-**Solution:** Ensure internet connection for Maven Central
-```bash
-mvn dependency:tree  # Shows all dependencies and versions
-```
-
-### Issue: Build hangs or is very slow
-**Solution:** First build is slow (downloads dependencies). Try:
-```bash
-mvn clean compile -T 1C  # Use single thread for troubleshooting
-```
-
-## Support & Documentation
-
-- **UNO API Docs:** https://api.libreoffice.org/
-- **Maven Docs:** https://maven.apache.org/
-- **Project Architecture:** See `Architecture_VDiagram.md`
-- **Specification:** See `impressSmartArt.md`
+| Document | Purpose |
+|----------|---------|
+| [`impressSmartArt.md`](impressSmartArt.md) | Master specification + packaging/registration rules |
+| [`Phase1_ImplementationPlan.md`](Phase1_ImplementationPlan.md) | Phase 1 — empty OXT extension |
+| [`Phase2_ImplementationPlan.md`](Phase2_ImplementationPlan.md) | Phase 2 — menu integration |
+| [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
+| [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 
 ---
 
-**Version:** 0.1.0-SNAPSHOT  
-**Last Updated:** 2026-06-11  
-**Maintainer:** LibreImpress SmartArt Team
+**Version:** 0.1.0-SNAPSHOT

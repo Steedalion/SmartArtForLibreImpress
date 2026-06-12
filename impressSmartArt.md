@@ -6,6 +6,32 @@
 **Purpose:** A UNO extension for LibreOffice Impress that enables users to quickly create structured diagrams from hierarchical text input.  
 **Architecture:** UNO Extension (Java/Python-based or native)
 
+### 1.1 Specification Document Hierarchy
+
+This file (`impressSmartArt.md`) is the **master specification** — the single
+source of truth for *what* the plugin does and the packaging/registration rules
+it must satisfy (§5.5). All other documents sit beneath it and must stay
+consistent with it:
+
+```
+impressSmartArt.md                 ← master spec (this file): scope, behaviour, packaging rules
+│
+├── Phase plans (how each phase is built, in order)
+│   ├── Phase1_ImplementationPlan.md   — Phase 1: Empty OXT extension (installable skeleton)
+│   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (Insert/menu entry → dispatch)
+│   └── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing (not yet written)
+│
+├── Architecture_VDiagram.md       — architecture overview & V-model development process
+├── TESTING_STRATEGY.md            — testing approach (unit, structural, install verification)
+└── README.md                      — build, install, and run instructions
+```
+
+**Conventions:**
+- Each phase delivers one installable increment; later phases build on earlier ones.
+- There is exactly one plan per phase (no "revised"/duplicate variants).
+- When the master spec and a phase plan disagree, the master spec wins; update
+  the phase plan to match.
+
 ---
 
 ## 2. Core Functionality
