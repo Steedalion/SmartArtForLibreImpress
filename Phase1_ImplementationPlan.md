@@ -268,9 +268,22 @@ After completing Phase 1, before moving to Phase 2, we'll:
 
 ---
 
-## Next Phase: Phase 2 - Dialog UI
+## Next Phase: Phase 2 - Dialog UI Implementation
 
-Once Phase 1 is complete:
-- Create Dialog XML in resources/dialogs/
-- Implement SmartArtDialog controller
-- Test dialog opens/closes in LibreOffice
+Phase 2 focuses on building the user-facing dialog that captures input from the user.
+
+**Deliverables:**
+- Dialog XML definition (`src/main/resources/dialogs/SmartArtDialog.xml`)
+- SmartArtDialog Java controller to show and interact with the dialog
+- SmartArtCommand.execute() implementation to trigger the dialog
+- Unit tests for dialog and command interaction
+- Dialog packaged in .oxt extension
+
+**What gets built:**
+- A LibreOffice dialog with:
+  - Multiline text area for hierarchy input
+  - Dropdown for diagram type selection (Hierarchy, Hub & Spoke, Process Flow)
+  - Optional JSON palette input field
+  - Create/Cancel/Help buttons
+
+**See:** `Phase2_ImplementationPlan.md` for detailed Phase 2 specification

@@ -177,14 +177,25 @@ This Phase 1 setup provides:
 - ✅ .oxt packaging configured (LibreOffice extension format)
 - ✅ Test framework ready (JUnit + Mockito)
 
-## Next Steps → Phase 2
+## Next Steps → Phase 2: Dialog UI
 
-Once Phase 1 verification completes:
-1. We'll delete the skeleton code
-2. Iterate on the specification with lessons learned
-3. Begin Phase 2: Dialog UI implementation
+Phase 1 is complete! Phase 2 focuses on building the user-facing dialog.
 
-See `Phase1_ImplementationPlan.md` for detailed Phase 1 documentation.
+**Phase 2 will deliver:**
+- Dialog XML for capturing user input (hierarchy text, diagram type, colors)
+- SmartArtDialog Java controller to manage dialog lifecycle
+- SmartArtCommand.execute() to trigger the dialog
+- Unit tests for dialog interaction
+
+**Start Phase 2:**
+```bash
+mvn clean test package  # Verify Phase 1 still works
+# Then see Phase2_ImplementationPlan.md for detailed instructions
+```
+
+See:
+- `Phase1_ImplementationPlan.md` for Phase 1 details
+- `Phase2_ImplementationPlan.md` for Phase 2 detailed plan
 
 ## Troubleshooting
 
