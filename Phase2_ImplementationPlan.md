@@ -31,12 +31,6 @@ Implement the LibreOffice dialog UI that allows users to input their hierarchy t
 │ Diagram Type:  [ Hierarchy ▼ ]                          │
 │   Options: Hierarchy, Hub & Spoke, Process Flow         │
 │                                                          │
-│ Color Palette (Optional):                                │
-│ ┌────────────────────────────────────────────────────┐ │
-│ │ Paste custom JSON or leave blank for defaults     │ │
-│ │ {"level1": "#FF6B6B", "level2": "#4ECDC4", ...}  │ │
-│ └────────────────────────────────────────────────────┘ │
-│                                                          │
 │  [ Create Diagram ]  [ Cancel ]  [ Help ]              │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
@@ -52,133 +46,46 @@ Implement the LibreOffice dialog UI that allows users to input their hierarchy t
    - Options: "Hierarchy", "Hub & Spoke", "Process Flow"
    - Default: "Hierarchy"
 
-3. **Color Palette Text Field** - TextField
-   - Optional JSON palette
-   - Placeholder shows example format
-   - Validated in Phase 3
-
-4. **Buttons**
+3. **Buttons**
    - "Create Diagram" - Primary action (CAN_DEFAULT=true)
    - "Cancel" - Close dialog
-   - "Help" - Open documentation (Phase 4+)
+   - "Help" - No-op placeholder (Phase 4+)
 
 ---
 
-## 2. LibreOffice Dialog XML Format
+## 2. Dialog Implementation Approach
 
-### File: `src/main/resources/dialogs/SmartArtDialog.xml`
+### Programmatic Dialog Construction (Java-based)
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<dialog xmlns="http://openoffice.org/2010/dialog"
-        xmlns:script="http://openoffice.org/2010/script"
-        id="SmartArtDialog"
-        left="0" top="0" width="600" height="450"
-        closeable="true" moveable="true" resizable="false"
-        title="LibreImpress SmartArt Diagram Generator">
+Instead of using XML, we'll build the dialog entirely in Java code. This approach:
+- Eliminates need for separate dialog XML files
+- Simpler resource management (no XML parsing)
+- More code, but easier to understand and debug
+- Aligns with our UNO integration strategy
 
-    <!-- Hierarchy Text Area Label -->
-    <label id="hierarchyLabel">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlFixedTextModel</property>
-        <property name="PositionX">10</property>
-        <property name="PositionY">10</property>
-        <property name="Width">150</property>
-        <property name="Height">14</property>
-        <property name="Label">Hierarchy Text:</property>
-    </label>
+The `SmartArtDialog.show()` method will:
+1. Create UNO `XDialog` instance
+2. Programmatically add all controls (labels, text fields, dropdowns, buttons)
+3. Set properties (position, size, text, callbacks)
+4. Show dialog modally
+5. Capture user input and return result
 
-    <!-- Hierarchy Text Input Area -->
-    <textfield id="hierarchyText">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlEditModel</property>
-        <property name="PositionX">10</property>
-        <property name="PositionY">25</property>
-        <property name="Width">580</property>
-        <property name="Height">150</property>
-        <property name="MultiLine">true</property>
-        <property name="VScroll">true</property>
-        <property name="HScroll">true</property>
-        <property name="Text"></property>
-        <property name="HelpText">Enter your hierarchy with indentation. Indent with spaces or tabs to create levels.</property>
-    </textfield>
+### Dialog Structure (programmatic)
 
-    <!-- Diagram Type Label -->
-    <label id="diagramTypeLabel">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlFixedTextModel</property>
-        <property name="PositionX">10</property>
-        <property name="PositionY">185</property>
-        <property name="Width">100</property>
-        <property name="Height">14</property>
-        <property name="Label">Diagram Type:</property>
-    </label>
-
-    <!-- Diagram Type Dropdown -->
-    <combobox id="diagramType">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlComboBoxModel</property>
-        <property name="PositionX">120</property>
-        <property name="PositionY">183</property>
-        <property name="Width">200</property>
-        <property name="Height">14</property>
-        <property name="StringItemList">["Hierarchy", "Hub &amp; Spoke", "Process Flow"]</property>
-        <property name="Text">Hierarchy</property>
-        <property name="Dropdown">true</property>
-    </combobox>
-
-    <!-- Color Palette Label -->
-    <label id="paletteLabel">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlFixedTextModel</property>
-        <property name="PositionX">10</property>
-        <property name="PositionY">210</property>
-        <property name="Width">200</property>
-        <property name="Height">14</property>
-        <property name="Label">Color Palette (Optional JSON):</property>
-    </label>
-
-    <!-- Color Palette Input -->
-    <textfield id="palette">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlEditModel</property>
-        <property name="PositionX">10</property>
-        <property name="PositionY">225</property>
-        <property name="Width">580</property>
-        <property name="Height">60</property>
-        <property name="MultiLine">true</property>
-        <property name="VScroll">true</property>
-        <property name="Text"></property>
-        <property name="HelpText">Optional: Custom color palette as JSON. Example: {"level1": "#FF6B6B", "level2": "#4ECDC4"}</property>
-    </textfield>
-
-    <!-- Create Button -->
-    <button id="createButton">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlButtonModel</property>
-        <property name="PositionX">350</property>
-        <property name="PositionY">295</property>
-        <property name="Width">70</property>
-        <property name="Height">18</property>
-        <property name="Label">Create Diagram</property>
-        <property name="DefaultButton">true</property>
-    </button>
-
-    <!-- Cancel Button -->
-    <button id="cancelButton">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlButtonModel</property>
-        <property name="PositionX">430</property>
-        <property name="PositionY">295</property>
-        <property name="Width">60</property>
-        <property name="Height">18</property>
-        <property name="Label">Cancel</property>
-    </button>
-
-    <!-- Help Button -->
-    <button id="helpButton">
-        <property name="DefaultControl">com.sun.star.awt.UnoControlButtonModel</property>
-        <property name="PositionX">500</property>
-        <property name="PositionY">295</property>
-        <property name="Width">50</property>
-        <property name="Height">18</property>
-        <property name="Label">Help</property>
-    </button>
-
-</dialog>
 ```
+SmartArtDialog {
+  XDialog dialog
+  XTextComponent hierarchyText        // Multiline text area
+  XComboBox diagramType              // Dropdown: Hierarchy, Hub & Spoke, Process Flow
+  XButton createButton               // Primary action
+  XButton cancelButton               // Dismiss
+  XButton helpButton                 // No-op in Phase 2 (Phase 4+)
+}
+```
+
+### Note: Color Palettes
+
+Color palette selection deferred to Phase 3+. Phase 2 uses default colors only.
 
 ---
 
@@ -187,56 +94,79 @@ Implement the LibreOffice dialog UI that allows users to input their hierarchy t
 ### SmartArtDialog.java - Dialog Controller
 
 Key responsibilities:
-1. Load dialog XML from resources
-2. Create UNO dialog instance
-3. Bind button handlers
+1. Build dialog programmatically (no XML)
+2. Create and show UNO dialog
+3. Validate input in real-time (Phase 2)
 4. Capture user input
-5. Return results (user clicked Create or Cancel)
+5. Return results (true if Create, false if Cancel)
 
-Implementation approach:
-- Use `com.sun.star.ui.dialogs.UnoDialogControl` or `com.sun.star.awt.XDialog`
-- Load dialog descriptor from `dialogs/SmartArtDialog.xml`
-- Implement `com.sun.star.awt.XDialogEventHandler` for button callbacks
-- Store captured input in member variables
-- Return true/false on `show()` method
+Implementation details:
+- Extends/implements UNO dialog handling
+- `show(XComponentContext context)` creates dialog, shows modally, returns boolean
+- Real-time validation: Check hierarchy not empty, consistent indentation
+- Show error messages in dialog via `XMessageBox` if validation fails
+- Button handlers close dialog with appropriate result code
+
+Input validation (Phase 2):
+- **Hierarchy text**: Not empty, basic indentation check (consistent spacing)
+- **Diagram type**: Required (dropdown always has selection)
+- **Color palette**: Not validated (preset selection always valid)
+- Error display: Show message box if validation fails, don't allow Create
 
 ```java
-// Pseudocode for show() method:
-public boolean show(XComponentContext context) {
-    // 1. Load dialog XML from resources
-    // 2. Create dialog from descriptor
-    // 3. Set up event handlers
-    // 4. Show dialog modally (blocks until user input)
-    // 5. Capture text from controls
-    // 6. Return true if Create clicked, false if Cancel
+public class SmartArtDialog {
+    private String hierarchyText;
+    private String diagramType = "Hierarchy";
+    
+    public boolean show(XComponentContext context) {
+        // 1. Create dialog programmatically
+        // 2. Create controls (labels, text area, dropdown, buttons)
+        // 3. Set event handlers for buttons
+        // 4. Show dialog modally
+        // 5. Validate input on Create click
+        // 6. Return true if Create valid, false if Cancel
+    }
+    
+    private boolean validateInput() {
+        if (hierarchyText == null || hierarchyText.trim().isEmpty()) {
+            showError("Hierarchy text cannot be empty");
+            return false;
+        }
+        if (!validateIndentation(hierarchyText)) {
+            showError("Indentation must be consistent (use spaces or tabs, not mixed)");
+            return false;
+        }
+        return true;
+    }
+    
+    private boolean validateIndentation(String text) {
+        // Check indentation is consistent (all spaces or all tabs, not mixed)
+        // Allow reasonable nesting depth
+    }
 }
 ```
 
 ### SmartArtCommand.java - Command Executor
 
 Key responsibilities:
-1. Receive UNO protocol handler dispatch request
-2. Create dialog instance
-3. Show dialog to user
-4. If user clicked Create:
-   - Validate input (Phase 3)
-   - Pass to parser (Phase 3)
-5. If user clicked Cancel:
-   - Cleanup and return
+1. Act as UNO ProtocolHandler entry point
+2. Create and show dialog
+3. On user Create: Store input for Phase 3 processing
+4. On user Cancel: Cleanup and return
 
-Implementation approach:
 ```java
-// Pseudocode for execute():
-public void execute(XComponentContext context) {
-    SmartArtDialog dialog = new SmartArtDialog();
-    if (dialog.show(context)) {
-        // User clicked Create
-        String hierarchy = dialog.getHierarchyText();
-        String type = dialog.getDiagramType();
-        String palette = dialog.getPalette();
-        // TODO: Pass to parser in Phase 3
+public class SmartArtCommand {
+    public void execute(XComponentContext context) {
+        SmartArtDialog dialog = new SmartArtDialog();
+        if (dialog.show(context)) {
+            // User clicked Create - input is validated
+            String hierarchy = dialog.getHierarchyText();
+            String type = dialog.getDiagramType();
+            // TODO: Pass to parser in Phase 3
+            System.out.println("Creating " + type + " diagram");
+        }
+        // If Cancel, method returns and dialog closes
     }
-    // If Cancel, method returns and dialog closes
 }
 ```
 
@@ -244,44 +174,55 @@ public void execute(XComponentContext context) {
 
 ## 4. UNO Integration
 
-### Dialog Loading Mechanism
-- Dialog XML stored in: `src/main/resources/dialogs/SmartArtDialog.xml`
-- Loaded via UNO `DialogProvider` service
-- URL: `vnd.sun.star.extension://org.libreimpress.smartart/dialogs/SmartArtDialog.xml`
+### Dialog Creation Mechanism
+- No XML file needed; dialog built entirely in Java
+- `SmartArtDialog.show()` creates `XDialog` and adds controls programmatically
+- Simpler packaging (no extra XML resources to manage)
 
 ### Event Handling
-- Button events trigger dialog close
-- Create button: closes with OK result
-- Cancel button: closes with CANCEL result
-- Help button: opens documentation (deferred to Phase 4)
+- Button click listeners capture user action
+- Create button: Validates input, returns true if valid, false if error
+- Cancel button: Returns false immediately
+- Help button: No-op in Phase 2 (clickable, does nothing)
 
 ### Context Flow
 ```
-ProtocolHandler (SmartArtCommand)
+ProtocolHandler dispatch (LibreOffice)
   ↓
-XComponentContext (provided by LibreOffice)
+SmartArtCommand.execute(XComponentContext)
   ↓
-SmartArtDialog.show()
+Create SmartArtDialog instance
   ↓
-UNO DialogProvider
+SmartArtDialog.show(context)
   ↓
-Load SmartArtDialog.xml
+Build XDialog programmatically
   ↓
-Create and show dialog modally
+Add controls (text area, dropdown, buttons)
   ↓
-Wait for user action
+Set event handlers
   ↓
-Return user's choice + captured data
+Show dialog modally (blocks)
+  ↓
+User interacts, clicks button
+  ↓
+Validate input (if Create)
+  ↓
+Return boolean result + captured data
 ```
+
+### Required UNO Interfaces
+- `com.sun.star.awt.XDialog` - Dialog window
+- `com.sun.star.awt.XTextComponent` - Text input field
+- `com.sun.star.awt.XComboBox` - Dropdown list
+- `com.sun.star.awt.XButton` - Buttons
+- `com.sun.star.awt.XMessageBox` - Error messages during validation
 
 ---
 
 ## 5. Build & Packaging
 
-### Assembly Configuration
-Update `src/main/assembly/oxt.xml` to include:
-- Dialog XML files in `dialogs/` directory
-- Dialog resources are packaged at root level of .oxt
+### No Assembly Changes Needed
+Dialog is built programmatically in Java, no additional resources required. Existing `src/main/assembly/oxt.xml` configuration is sufficient.
 
 ### .oxt Structure (Phase 2)
 ```
@@ -290,8 +231,6 @@ SmartArt.oxt (ZIP)
 ├── SmartArt.jar                      # Contains SmartArtCommand, SmartArtDialog
 ├── SmartArtImpl.xml                   # UNO component registration
 ├── description.xml                   # Extension metadata
-├── dialogs/
-│   └── SmartArtDialog.xml            # Dialog UI definition
 └── icons/
     └── extension.png                 # Extension icon
 ```
@@ -304,23 +243,25 @@ SmartArt.oxt (ZIP)
 **SmartArtDialogTest.java:**
 - Test dialog instantiation
 - Test getter/setter for captured data
+- Test input validation logic (empty text, indentation)
 - Mock UNO context (if needed)
 
 **SmartArtCommandTest.java (update):**
 - Test command initialization
 - Test execute() with mocked dialog
-- Test dialog callbacks
+- Test dialog callbacks (Create/Cancel)
 
 ### Integration Tests (GitHub Actions)
 **Artifact Validation (existing):**
-- Verify `dialogs/SmartArtDialog.xml` exists in .oxt
-- Verify XML is well-formed
+- Verify SmartArt.jar exists in .oxt
+- Verify all required files present
 
 **Manual Testing (local):**
 - Install extension in LibreOffice Impress
 - Open Tools → LibreImpress SmartArt
 - Verify dialog appears
-- Test input capture (hierarchy, type, palette)
+- Test input capture (hierarchy text, diagram type)
+- Test validation (error on empty text, indentation errors)
 - Test Create/Cancel buttons
 
 ---
@@ -329,12 +270,12 @@ SmartArt.oxt (ZIP)
 
 At completion of Phase 2, you should have:
 
-✅ **Dialog XML** - `src/main/resources/dialogs/SmartArtDialog.xml`
-✅ **SmartArtDialog controller** - Loads and shows dialog, captures input
-✅ **SmartArtCommand.execute()** - Opens dialog via UNO
-✅ **Dialog integration** - Dialog loads and displays correctly in LibreOffice
+✅ **SmartArtDialog controller** - Builds dialog programmatically, shows dialog, validates input, captures data
+✅ **SmartArtCommand.execute()** - Opens dialog via UNO ProtocolHandler
+✅ **Dialog integration** - Dialog displays and responds correctly in LibreOffice
+✅ **Input validation** - Validates empty text, checks indentation consistency, shows error messages
 ✅ **Unit tests** - Dialog and command tests pass locally
-✅ **Artifact tests** - Dialog XML present in .oxt (GitHub Actions)
+✅ **Artifact validation** - Artifact tests pass in GitHub Actions
 ✅ **README updated** - Phase 2 build/test instructions
 ✅ **Build verification** - `mvn clean test package` succeeds
 
@@ -342,17 +283,19 @@ At completion of Phase 2, you should have:
 
 ## 8. Verification Checklist
 
-- [ ] Dialog XML is well-formed (parseable)
-- [ ] Dialog loads without runtime errors
+- [ ] Dialog creates and displays without errors
 - [ ] All controls appear with correct labels and layout
+- [ ] Hierarchy text area accepts multiline input
+- [ ] Diagram type dropdown has 3 options (Hierarchy, Hub & Spoke, Process Flow)
 - [ ] Input captures correctly in memory
-- [ ] Create button returns true from show()
+- [ ] Empty text validation works (shows error)
+- [ ] Indentation validation works (detects mixed spaces/tabs)
+- [ ] Create button returns true from show() when input valid
 - [ ] Cancel button returns false from show()
 - [ ] Dialog closes properly in both cases
-- [ ] Help button appears (may be no-op in Phase 2)
+- [ ] Help button appears and is clickable (no-op)
 - [ ] Unit tests pass locally (`mvn test`)
 - [ ] Artifact tests pass in CI (`mvn test -Dtest=ExtensionValidationTest`)
-- [ ] .oxt file contains dialog XML
 - [ ] Extension can be loaded into LibreOffice without errors
 
 ---
