@@ -1,2 +1,3 @@
 Manifest-Version: 1.0
 Created-By: LibreImpress SmartArt Build
+RegistrationClassName: org.libreimpress.smartart.SmartArtCommand

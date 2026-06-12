@@ -1,7 +1,10 @@
 package org.libreimpress.smartart;
 
 import com.sun.star.lang.XServiceInfo;
+import com.sun.star.lang.XSingleComponentFactory;
+import com.sun.star.lib.uno.helper.Factory;
 import com.sun.star.lib.uno.helper.WeakBase;
+import com.sun.star.registry.XRegistryKey;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.frame.XDispatchProvider;
 import com.sun.star.frame.XDispatch;
@@ -16,6 +19,27 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
     public SmartArtCommand(XComponentContext xComponentContext) {
         this.xComponentContext = xComponentContext;
+    }
+
+    /**
+     * Returns a factory for creating this component. Called by the UNO Java2
+     * loader when the service is requested.
+     */
+    public static XSingleComponentFactory __getComponentFactory(String sImplementationName) {
+        XSingleComponentFactory xFactory = null;
+        if (sImplementationName.equals(IMPLEMENTATION_NAME)) {
+            xFactory = Factory.createComponentFactory(SmartArtCommand.class,
+                    new String[]{SERVICE_NAME});
+        }
+        return xFactory;
+    }
+
+    /**
+     * Writes the service registration information into the given registry key.
+     */
+    public static boolean __writeRegistryServiceInfo(XRegistryKey xRegistryKey) {
+        return Factory.writeRegistryServiceInfo(IMPLEMENTATION_NAME,
+                new String[]{SERVICE_NAME}, xRegistryKey);
     }
 
     @Override

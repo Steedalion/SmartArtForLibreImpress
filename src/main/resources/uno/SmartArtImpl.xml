@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <components xmlns="http://openoffice.org/2010/component">
-    <component loader="com.sun.star.loader.Java2" uri="jar:*smartart.jar!/org/libreimpress/smartart/SmartArtCommand.class">
+    <component loader="com.sun.star.loader.Java2" uri="smartart.jar">
         <implementation name="org.libreimpress.smartart.SmartArtCommand">
             <service name="com.sun.star.frame.ProtocolHandler"/>
         </implementation>
