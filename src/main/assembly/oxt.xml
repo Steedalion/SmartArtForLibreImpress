@@ -22,8 +22,11 @@
             </includes>
         </fileSet>
         <fileSet>
+            <!-- The jar must sit beside uno/SmartArtImpl.xml: the descriptor's
+                 uri="smartart.jar" is resolved relative to the descriptor's own
+                 location, so the jar has to live in uno/ too. -->
             <directory>${project.build.directory}</directory>
-            <outputDirectory>/</outputDirectory>
+            <outputDirectory>/uno</outputDirectory>
             <includes>
                 <include>smartart.jar</include>
             </includes>

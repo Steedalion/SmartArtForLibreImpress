@@ -123,6 +123,13 @@ This tells LibreOffice:
 > 2. **`uri` must be the bare jar name (`smartart.jar`)** — *not*
 >    `jar:*smartart.jar!/...Class`. The `jar:*...!/...class` form is not valid
 >    in this schema.
+>
+> And a third, separate trap at *load* time (not install time): the **`uri` is
+> resolved relative to the descriptor's own folder**, so the jar must be
+> packaged in `uno/` *beside* `SmartArtImpl.xml` (i.e. `uno/smartart.jar`). If it
+> is at the OXT root instead, the component fails with
+> `java.io.FileNotFoundException: …/uno/smartart.jar`, `queryDispatch` returns
+> null, and the menu item is silently hidden (empty submenu).
 
 ### 3.4 New: Menu Configuration (Addons.xcu)
 
@@ -273,13 +280,14 @@ RegistrationClassName: org.libreimpress.smartart.SmartArtCommand
 ```
 SmartArt.oxt (ZIP archive)
 ├── META-INF/
-│   ├── manifest.xml              # Updated: Now includes JAR reference
-│   └── MANIFEST.MF
+│   ├── manifest.xml              # registers the .xcu files + the component descriptor
+│   └── MANIFEST.MF               # JAR manifest (RegistrationClassName)
 ├── description.xml               # Extension metadata
 ├── Addons.xcu                    # Menu configuration
-├── smartart.jar                  # Compiled Java code
+├── ProtocolHandler.xcu           # command-URL → handler binding
 └── uno/
-    └── SmartArtImpl.xml           # Component descriptor
+    ├── SmartArtImpl.xml           # Component descriptor (uri="smartart.jar")
+    └── smartart.jar               # Compiled Java code — MUST sit beside the descriptor
 ```
 
 ---
@@ -395,13 +403,26 @@ OR Dialog opens (Phase 3+)
 - Restart LibreOffice after installing
 
 ### Issue: Top-level SmartArt menu appears but its submenu is empty
-**Solution:**
+LibreOffice **hides** an addon menu item whose command URL cannot be dispatched,
+so an empty submenu usually means the dispatch is failing. Check, in order:
+- **Jar location (most common).** The component must actually load. The
+  descriptor's `uri="smartart.jar"` resolves *relative to the descriptor*, so the
+  jar must be packaged at `uno/smartart.jar`. If it is at the OXT root, loading
+  fails with `java.io.FileNotFoundException: …/uno/smartart.jar` and the item is
+  hidden. Verify the dispatch resolves (see the probe below).
 - Each `Title` prop in `Addons.xcu` must have a bare `<value/>` default *before*
-  the `<value xml:lang="en-US">…</value>`. Without it the item's title cannot be
-  resolved for the running locale and the item is silently dropped (the menu
-  container still shows because it falls back to the node name).
+  the `<value xml:lang="en-US">…</value>`; otherwise the title cannot be resolved
+  for the running locale and the item is dropped.
 - Confirm the submenu item's `Context` matches the module you are testing in
   (`com.sun.star.presentation.PresentationDocument` for Impress).
+
+**Diagnose without the GUI** — install into an isolated profile, start a headless
+listening instance, and ask the frame whether the command dispatches:
+```python
+disp = frame.queryDispatch(url, "_self", 0)   # url.Complete = "org.libreimpress.smartart:CreateDiagram"
+# None  -> component/dispatch broken (jar location, registration) -> menu item hidden
+# object-> dispatch OK; the item will appear
+```
 
 ### Issue: Menu item appears but clicking does nothing
 **Solution:**

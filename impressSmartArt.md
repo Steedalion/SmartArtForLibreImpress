@@ -192,7 +192,7 @@ failure mode encountered during development.
 | `Addons.xcu` | Adds the menu entry to the LibreOffice UI |
 | `ProtocolHandler.xcu` | Binds the command-URL protocol to the Java handler |
 | `uno/SmartArtImpl.xml` | UNO component descriptor (which class implements which service) |
-| `smartart.jar` | Compiled Java code |
+| `uno/smartart.jar` | Compiled Java code (must sit beside the descriptor — see §5.5.3 rule 2) |
 
 ### 5.5.2 Name-matching contract (the part that made the menu hard)
 
@@ -210,7 +210,7 @@ change a token in *all* its locations at once:
 | Command protocol prefix | `org.libreimpress.smartart` | `ProtocolHandler.xcu` `Protocols` (as `…:*`) · the part of the `Addons.xcu` menu `URL` before the `:` · the Java `dispatch`/`queryDispatch` `startsWith(...)` guard |
 | Full command URL | `org.libreimpress.smartart:CreateDiagram` | `Addons.xcu` menu item `URL` value |
 | Extension identifier | `org.libreimpress.smartart` | `description.xml` `<identifier value>` · the argument to `unopkg remove` |
-| Component jar name | `smartart.jar` | `SmartArtImpl.xml` `uri` · assembly `oxt.xml` include · pom jar `finalName` |
+| Component jar name | `smartart.jar` | `SmartArtImpl.xml` `uri` · assembly `oxt.xml` include · pom jar `finalName` (packaged as `uno/smartart.jar`, beside the descriptor — see §5.5.3 rule 2) |
 
 > The command **protocol prefix** and the **extension identifier** happen to be
 > the same text (`org.libreimpress.smartart`) but are independent roles: the
@@ -224,7 +224,13 @@ change a token in *all* its locations at once:
    level` (the C++ parser rejects the root element before reading attributes).
    This is the same namespace LibreOffice's own `program/services.rdb` uses.
 2. **Component `uri`** — must be the bare jar name, `uri="smartart.jar"` (not a
-   `jar:*…!/…Class` URL).
+   `jar:*…!/…Class` URL). **The `uri` is resolved relative to the descriptor's
+   own location**, so the jar must sit in the *same directory* as
+   `SmartArtImpl.xml`. Because the descriptor lives in `uno/`, the jar is
+   packaged as `uno/smartart.jar`. Get this wrong and the component fails to load
+   with `java.io.FileNotFoundException: …/uno/smartart.jar`; the dispatch then
+   returns null and LibreOffice **silently hides the menu item** (the top-level
+   menu shows but its submenu is empty — identical symptom to rule 6).
 3. **`description.xml` identifier/version use `value` attributes** —
    `<identifier value="org.libreimpress.smartart"/>` and
    `<version value="0.1.0"/>`. Using element *text*
