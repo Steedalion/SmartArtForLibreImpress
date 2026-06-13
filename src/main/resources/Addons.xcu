@@ -28,6 +28,22 @@
                             <value>com.sun.star.presentation.PresentationDocument</value>
                         </prop>
                     </node>
+                    <!-- DEV ONLY: remove m2 node to strip the demo feature -->
+                    <node oor:name="m2" oor:op="replace">
+                        <prop oor:name="URL" oor:type="xs:string">
+                            <value>org.libreimpress.smartart:Demo</value>
+                        </prop>
+                        <prop oor:name="Title" oor:type="xs:string">
+                            <value/>
+                            <value xml:lang="en-US">Demo (Dev)…</value>
+                        </prop>
+                        <prop oor:name="Target" oor:type="xs:string">
+                            <value>_self</value>
+                        </prop>
+                        <prop oor:name="Context" oor:type="xs:string">
+                            <value>com.sun.star.presentation.PresentationDocument</value>
+                        </prop>
+                    </node>
                 </node>
             </node>
         </node>

@@ -76,7 +76,15 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
     @Override
     public void dispatch(URL aURL, PropertyValue[] aArguments) {
-        if (aURL.Complete.startsWith("org.libreimpress.smartart:")) {
+        if ("org.libreimpress.smartart:Demo".equals(aURL.Complete)) {
+            // DEV ONLY — remove this branch together with DemoRunner.java and Addons.xcu m2.
+            try {
+                new DemoRunner(xComponentContext).run();
+            } catch (Exception e) {
+                LibreOfficeHelper.showMessage(xComponentContext,
+                        "SmartArt Demo – Error", String.valueOf(e), true);
+            }
+        } else if (aURL.Complete.startsWith("org.libreimpress.smartart:")) {
             execute();
         }
     }
