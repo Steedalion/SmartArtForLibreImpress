@@ -26,6 +26,9 @@ text input.
 - ✅ **Phase 10 — User colour palette:** the dialog has an optional *Colours*
   field; entering `1=#4472C4` (one level per line) overrides the built-in
   palette for that level.
+- ✅ **Phase 11 — Cycle diagram:** nodes arranged clockwise in a ring, joined
+  by straight directed arrows that wrap back to the first node. Level-2+
+  children are placed radially outward from their parent.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
@@ -38,6 +41,7 @@ the full document hierarchy.
 | **Hub & Spoke** | Central circle hub with spoke circles radiating outward, connected by straight lines | ![Hub & Spoke](docs/screenshots/hub-and-spoke.png) |
 | **Process Flow** | Left-to-right sequence of rectangles joined by connectors, with sub-steps below each | ![Process Flow](docs/screenshots/process-flow.png) |
 | **Sequential Chevron** | Horizontal arrow-chevron sequence (first step is a flat-back pentagon; subsequent steps are notched chevrons) with sub-items below | ![Sequential Chevron](docs/screenshots/sequential-chevron.png) |
+| **Cycle** | Clockwise ring of rectangles connected by directed arrows, with level-2+ children radiating outward | ![Cycle](docs/screenshots/cycle.png) |
 
 ## Prerequisites
 
@@ -173,6 +177,7 @@ only surfacing during a manual install.
 | [`Phase8_ImplementationPlan.md`](Phase8_ImplementationPlan.md) | Phase 8 — Hub & Spoke children |
 | [`Phase9_ImplementationPlan.md`](Phase9_ImplementationPlan.md) | Phase 9 — Sequential Chevron level-3+ children |
 | [`Phase10_ImplementationPlan.md`](Phase10_ImplementationPlan.md) | Phase 10 — user colour palette |
+| [`Phase11_ImplementationPlan.md`](Phase11_ImplementationPlan.md) | Phase 11 — Cycle diagram type |
 | [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
 | [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 

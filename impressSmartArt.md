@@ -26,7 +26,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 │   ├── Phase7_ImplementationPlan.md   — Phase 7: Process Flow sub-items
 │   ├── Phase8_ImplementationPlan.md   — Phase 8: Hub & Spoke children
 │   ├── Phase9_ImplementationPlan.md   — Phase 9: Sequential Chevron level-3+ children
-│   └── Phase10_ImplementationPlan.md  — Phase 10: User colour palette via dialog
+│   ├── Phase10_ImplementationPlan.md  — Phase 10: User colour palette via dialog
+│   └── Phase11_ImplementationPlan.md  — Phase 11: Cycle diagram type
 │
 ├── Architecture_VDiagram.md       — architecture overview & V-model development process
 ├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)
@@ -57,15 +58,16 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 8 | Hub & Spoke level-3+ children stacked radially outward from their spoke | ✅ Done |
 | 9 | Sequential Chevron level-3+ children stacked below sub-items | ✅ Done |
 | 10 | User-provided colour palette via dialog (optional, per-level hex colours) | ✅ Done |
+| 11 | Cycle diagram: clockwise ring of rectangles with directed arrows | ✅ Done |
 
 **What works today:** clicking **SmartArt → Create Diagram…** opens a
 programmatic dialog (diagram-type dropdown + multiline text + optional colour
 palette field); on **Create** the indented text is parsed into a validated
 hierarchy and the chosen diagram type is rendered as grouped, editable shapes on
-the current slide. All four diagram types are fully implemented with unlimited
+the current slide. All five diagram types are fully implemented with unlimited
 sub-item depth, a built-in colour palette, font sizing by level, directional
-arrow connectors on Process Flow, and per-level colour overrides via the palette
-field (format: `1=#4472C4`).
+arrow connectors on Process Flow and Cycle, and per-level colour overrides via
+the palette field (format: `1=#4472C4`).
 Sections 2–8 below describe the target product.
 
 ### 1.3 How these documents are written (and the one-shot goal)
