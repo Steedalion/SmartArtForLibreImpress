@@ -97,16 +97,28 @@ def add_ellipse(doc, page, x, y, w, h, label, color=BLUE):
     return s
 
 
-def add_polygon(doc, page, pts, label, color=BLUE):
-    s = doc.createInstance("com.sun.star.drawing.PolyPolygonShape")
+def add_chevron_shape(doc, page, x, y, w, h, kind, label, color=BLUE):
+    """Create a LibreOffice built-in chevron/pentagon CustomShape.
+    kind: 'pentagon-right' (first step) or 'chevron' (subsequent steps).
+    Attribute assignment carries the correct UNO type tag for
+    CustomShapeGeometry — same mechanism as Java's statically-typed array.
+    Text colour is left as default (black) so it is visible even in the
+    transparent notch area of a chevron.
+    """
+    from com.sun.star.beans import PropertyValue as PV
+    s = doc.createInstance("com.sun.star.drawing.CustomShape")
     page.add(s)
-    s.PolyPolygon = (tuple(pts),)
+    s.setSize(sz(w, h))
+    s.setPosition(pt(x, y))
+    pv = PV(); pv.Name = "Type"; pv.Value = kind
+    s.CustomShapeGeometry = (pv,)
     try:
         s.setString(label)
     except Exception:
         pass
     solid_fill(s, color)
-    text_color(s, 0xFFFFFF)
+    # No text_color override: let LibreOffice auto-colour so text is readable
+    # in both the filled body and the transparent notch area.
     return s
 
 
@@ -119,17 +131,6 @@ def add_connector(doc, page, start_shape, end_shape):
     c.setPropertyValue("EndGluePointIndex", -1)
     c.setPropertyValue("LineColor", GREY)
     return c
-
-
-def pentagon_pts(x, y, w, h):
-    t = w // 4
-    return [pt(x, y), pt(x+w-t, y), pt(x+w, y+h//2), pt(x+w-t, y+h), pt(x, y+h)]
-
-
-def chevron_pts(x, y, w, h):
-    t = w // 4; n = w // 6
-    return [pt(x+n, y), pt(x+w-t, y), pt(x+w, y+h//2), pt(x+w-t, y+h),
-            pt(x+n, y+h), pt(x, y+h//2)]
 
 
 def export_png(doc, path):
@@ -150,12 +151,12 @@ def draw_sequential_chevron(doc, page):
     sub_w, sub_h = W - 400, 900
 
     steps = [
-        (MARGIN,                   1000, "Alpha",  pentagon_pts, ["Bravo", "Charlie"], BLUE),
-        (MARGIN + W + GAP,         1000, "Delta",  chevron_pts,  ["Echo", "Foxtrot"],  BLUE2),
-        (MARGIN + 2*(W + GAP),     1000, "Golf",   chevron_pts,  [],                   BLUE3),
+        (MARGIN,               1000, "Alpha", "pentagon-right", ["Bravo", "Charlie"], BLUE),
+        (MARGIN + W + GAP,     1000, "Delta", "chevron",        ["Echo", "Foxtrot"],  BLUE2),
+        (MARGIN + 2*(W + GAP), 1000, "Golf",  "chevron",        [],                   BLUE3),
     ]
-    for x, y, label, pts_fn, subs, color in steps:
-        add_polygon(doc, page, pts_fn(x, y, W, H), label, color)
+    for x, y, label, kind, subs, color in steps:
+        add_chevron_shape(doc, page, x, y, W, H, kind, label, color)
         sy = y + H + 700
         for sl in subs:
             add_rect(doc, page, x + 200, sy, sub_w, sub_h, sl, GREEN)
