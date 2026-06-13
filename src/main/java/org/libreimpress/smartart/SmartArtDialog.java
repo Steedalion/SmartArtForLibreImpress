@@ -55,8 +55,14 @@ public class SmartArtDialog {
 
     /** The field starts as — and is kept as — an indented list. */
     private static final String SEED_TEXT =
-            "Main idea\n" + OutlineEditor.INDENT + "Supporting point\n"
-                    + OutlineEditor.INDENT + OutlineEditor.INDENT + "Detail";
+            "Alpha\n"
+            + OutlineEditor.INDENT + "Bravo\n"
+            + OutlineEditor.INDENT + OutlineEditor.INDENT + "Charlie\n"
+            + "Delta\n"
+            + OutlineEditor.INDENT + "Echo\n"
+            + OutlineEditor.INDENT + "Foxtrot\n"
+            + OutlineEditor.INDENT + OutlineEditor.INDENT + "Golf\n"
+            + OutlineEditor.INDENT + OutlineEditor.INDENT + "Hotel";
 
     private final XComponentContext context;
 
