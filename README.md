@@ -74,7 +74,7 @@ LibreImpress-SmartArt/
 │   │   │   ├── SmartArtDialog.java         # programmatic UNO input dialog (outline editor)
 │   │   │   ├── models/                     # DiagramNode, DiagramType
 │   │   │   ├── parsers/                     # HierarchyParser, ParseResult (pure Java)
-│   │   │   ├── editing/                     # OutlineEditor — Tab/Shift+Tab/Enter transforms (pure Java)
+│   │   │   ├── editing/                     # OutlineEditor — indent/outdent/newline transforms (pure Java)
 │   │   │   └── helpers/                     # LibreOfficeHelper (message boxes)
 │   │   ├── assembly/
 │   │   │   └── oxt.xml                      # assembles the .oxt

@@ -1,10 +1,13 @@
 package org.libreimpress.smartart;
 
+import com.sun.star.awt.ActionEvent;
 import com.sun.star.awt.Key;
 import com.sun.star.awt.KeyEvent;
 import com.sun.star.awt.KeyModifier;
 import com.sun.star.awt.PushButtonType;
 import com.sun.star.awt.Selection;
+import com.sun.star.awt.XActionListener;
+import com.sun.star.awt.XButton;
 import com.sun.star.awt.XControl;
 import com.sun.star.awt.XControlContainer;
 import com.sun.star.awt.XControlModel;
@@ -84,14 +87,17 @@ public class SmartArtDialog {
         XNameContainer container =
                 UnoRuntime.queryInterface(XNameContainer.class, dialogModel);
 
-        addLabel(modelFactory, container, "lblType", "Diagram type:", 8, 8, 70, 12);
-        addListBox(modelFactory, container, "lstType", 80, 6, 142, 14);
-        addLabel(modelFactory, container, "lblText",
-                "Points (Enter = new item · Tab / Shift+Tab = level):", 8, 28, 214, 12);
-        addEdit(modelFactory, container, "txtInput", 8, 42, 214, 116);
-        addButton(modelFactory, container, "btnOk", "Create", 110, 166, 54, 16,
+        addLabel(modelFactory, container, "lblType", "Diagram type:", 8, 8, 60, 12);
+        addListBox(modelFactory, container, "lstType", 70, 6, 152, 14);
+        addLabel(modelFactory, container, "lblText", "List points:", 8, 28, 96, 12);
+        addButton(modelFactory, container, "btnOutdent", "← Outdent", 106, 26, 56, 14,
+                PushButtonType.STANDARD_value, false);
+        addButton(modelFactory, container, "btnIndent", "Indent →", 164, 26, 58, 14,
+                PushButtonType.STANDARD_value, false);
+        addEdit(modelFactory, container, "txtInput", 8, 44, 214, 110);
+        addButton(modelFactory, container, "btnOk", "Create", 110, 162, 54, 16,
                 PushButtonType.OK_value, true);
-        addButton(modelFactory, container, "btnCancel", "Cancel", 168, 166, 54, 16,
+        addButton(modelFactory, container, "btnCancel", "Cancel", 168, 162, 54, 16,
                 PushButtonType.CANCEL_value, false);
 
         Object dialog = smgr.createInstanceWithContext(
@@ -104,17 +110,24 @@ public class SmartArtDialog {
         XToolkit toolkit = UnoRuntime.queryInterface(XToolkit.class, toolkitObj);
         control.createPeer(toolkit, null);
 
-        // Make Tab/Shift+Tab/Enter behave like an outline editor in the text box.
+        // Drive the text box as an outline list. Level changes come from the
+        // Indent/Outdent buttons (always work) and Ctrl+] / Ctrl+[ (the key
+        // handler can intercept these; Tab can't be — it's focus traversal).
         XControlContainer controls = UnoRuntime.queryInterface(XControlContainer.class, dialog);
         XControl editControl = controls.getControl("txtInput");
         XTextComponent editText = UnoRuntime.queryInterface(XTextComponent.class, editControl);
         XWindow2 editWindow = UnoRuntime.queryInterface(XWindow2.class, editControl);
+        OutlineEditing editing = new OutlineEditing(editText, editWindow);
+
         XExtendedToolkit extToolkit =
                 UnoRuntime.queryInterface(XExtendedToolkit.class, toolkitObj);
-        XKeyHandler keyHandler = new OutlineKeyHandler(editText, editWindow);
+        XKeyHandler keyHandler = new OutlineKeyHandler(editing);
         if (extToolkit != null) {
             extToolkit.addKeyHandler(keyHandler);
         }
+
+        bindButton(controls, "btnIndent", new LevelButtonListener(editing, OutlineEditing.Op.INDENT));
+        bindButton(controls, "btnOutdent", new LevelButtonListener(editing, OutlineEditing.Op.OUTDENT));
 
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
         try {
@@ -138,53 +151,43 @@ public class SmartArtDialog {
         }
     }
 
+    private void bindButton(XControlContainer controls, String name,
+            XActionListener listener) {
+        XButton button = UnoRuntime.queryInterface(XButton.class, controls.getControl(name));
+        if (button != null) {
+            button.addActionListener(listener);
+        }
+    }
+
     /**
-     * Repurposes Tab / Shift+Tab / Enter inside the text box so it edits as an
-     * indented outline (a list that stays a list). Only acts while the text box
-     * has focus; all other keys pass through. The actual text transforms live in
-     * {@link OutlineEditor}.
+     * Applies the {@link OutlineEditor} transforms to the dialog's text control.
+     * Shared by the key handler and the Indent/Outdent buttons.
      */
-    private static final class OutlineKeyHandler implements XKeyHandler {
+    private static final class OutlineEditing {
+        enum Op { INDENT, OUTDENT, NEWLINE }
+
         private final XTextComponent edit;
         private final XWindow2 window;
 
-        OutlineKeyHandler(XTextComponent edit, XWindow2 window) {
+        OutlineEditing(XTextComponent edit, XWindow2 window) {
             this.edit = edit;
             this.window = window;
         }
 
-        @Override
-        public boolean keyPressed(KeyEvent event) {
-            if (edit == null || window == null || !window.hasFocus()) {
-                return false;
-            }
-            if (event.KeyCode == Key.TAB) {
-                boolean shift = (event.Modifiers & KeyModifier.SHIFT) != 0;
-                apply(shift ? Op.OUTDENT : Op.INDENT);
-                return true;
-            }
-            if (event.KeyCode == Key.RETURN && event.Modifiers == 0) {
-                apply(Op.NEWLINE);
-                return true;
-            }
-            return false;
+        boolean editFocused() {
+            return edit != null && window != null && window.hasFocus();
         }
 
-        @Override
-        public boolean keyReleased(KeyEvent event) {
-            // Consume Tab's release too, so focus never leaves the box.
-            return edit != null && window != null && window.hasFocus()
-                    && event.KeyCode == Key.TAB;
+        void focusEdit() {
+            if (window != null) {
+                window.setFocus();
+            }
         }
 
-        @Override
-        public void disposing(com.sun.star.lang.EventObject event) {
-            // nothing to release
-        }
-
-        private enum Op { INDENT, OUTDENT, NEWLINE }
-
-        private void apply(Op op) {
+        void apply(Op op) {
+            if (edit == null) {
+                return;
+            }
             String text = edit.getText();
             Selection sel = edit.getSelection();
             int min = Math.min(sel.Min, sel.Max);
@@ -206,6 +209,76 @@ public class SmartArtDialog {
         }
     }
 
+    /**
+     * Keyboard shortcuts inside the text box, active only while it has focus:
+     * Ctrl+] indents, Ctrl+[ outdents, Enter starts a new item at the current
+     * level. Tab is intentionally NOT handled — a UNO dialog reserves it for
+     * focus traversal and it cannot be reliably intercepted; the Indent/Outdent
+     * buttons cover that case. All other keys pass through.
+     */
+    private static final class OutlineKeyHandler implements XKeyHandler {
+        private final OutlineEditing editing;
+
+        OutlineKeyHandler(OutlineEditing editing) {
+            this.editing = editing;
+        }
+
+        @Override
+        public boolean keyPressed(KeyEvent event) {
+            if (!editing.editFocused()) {
+                return false;
+            }
+            if ((event.Modifiers & KeyModifier.MOD1) != 0) { // Ctrl
+                char c = event.KeyChar;
+                if (c == ']' || c == 0x1d) { // ']' or Ctrl+] control char
+                    editing.apply(OutlineEditing.Op.INDENT);
+                    return true;
+                }
+                if (c == '[' || c == 0x1b) { // '[' or Ctrl+[ control char
+                    editing.apply(OutlineEditing.Op.OUTDENT);
+                    return true;
+                }
+            }
+            if (event.KeyCode == Key.RETURN && event.Modifiers == 0) {
+                editing.apply(OutlineEditing.Op.NEWLINE);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean keyReleased(KeyEvent event) {
+            return false;
+        }
+
+        @Override
+        public void disposing(com.sun.star.lang.EventObject event) {
+            // nothing to release
+        }
+    }
+
+    /** Indent/Outdent button click → apply the transform, then return focus. */
+    private static final class LevelButtonListener implements XActionListener {
+        private final OutlineEditing editing;
+        private final OutlineEditing.Op op;
+
+        LevelButtonListener(OutlineEditing editing, OutlineEditing.Op op) {
+            this.editing = editing;
+            this.op = op;
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent event) {
+            editing.apply(op);
+            editing.focusEdit();
+        }
+
+        @Override
+        public void disposing(com.sun.star.lang.EventObject event) {
+            // nothing to release
+        }
+    }
+
     private void addLabel(XMultiServiceFactory factory, XNameContainer container,
             String name, String caption, int x, int y, int w, int h) throws Exception {
         XPropertySet p = newControl(factory, container,
@@ -220,6 +293,9 @@ public class SmartArtDialog {
         p.setPropertyValue("MultiLine", Boolean.TRUE);
         p.setPropertyValue("VScroll", Boolean.TRUE);
         p.setPropertyValue("HideInactiveSelection", Boolean.TRUE);
+        p.setPropertyValue("HelpText",
+                "One item per line. Enter = new item; Ctrl+] / Ctrl+[ or the "
+                        + "Indent/Outdent buttons change the level.");
         p.setPropertyValue("Text", SEED_TEXT);
     }
 

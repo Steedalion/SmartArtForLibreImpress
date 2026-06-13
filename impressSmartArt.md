@@ -165,9 +165,11 @@ The dialog collects, with **Create** and **Cancel** actions:
 - **Text points** — a multi-line field that **is a list and stays a list**: it
   opens pre-filled with a starter outline, each line is one node, and leading
   indentation expresses nesting (per the rules in §5.2). It behaves as an outline
-  editor — **Enter** starts a new item at the current level, **Tab** indents the
-  current line one level deeper, **Shift+Tab** moves it one level shallower (Tab
-  never moves focus out of the field). For example:
+  editor — **Enter** starts a new item at the current level, and the level of the
+  current line is changed with the **Indent / Outdent buttons** or the keyboard
+  shortcuts **Ctrl+]** (deeper) / **Ctrl+[** (shallower). (Tab is *not* used for
+  indentation — in a LibreOffice dialog it moves focus between controls.) For
+  example:
   - Level 1 Item
     - Level 2 Item
       - Level 3 Item

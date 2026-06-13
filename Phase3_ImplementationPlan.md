@@ -20,7 +20,7 @@ from an `.xdl`.
    UNO; turns indented text into a `DiagramNode` tree with validation.
 3. **Dialog** (`SmartArtDialog`) — a programmatic `UnoControlDialog` collecting
    the text and diagram type, with a **list-enforcing outline editor** (§3.8).
-4. **Outline editing** (`editing/OutlineEditor`) — pure-Java Tab/Shift+Tab/Enter
+4. **Outline editing** (`editing/OutlineEditor`) — pure-Java indent/outdent/newline
    text transforms that keep the input a list.
 5. **Wiring** — `SmartArtCommand.execute()` now shows the dialog, parses the
    input, and displays the parsed tree or the validation error in a message box
@@ -100,14 +100,20 @@ the parser already reads (one level = four spaces, `OutlineEditor.INDENT`).
 - **`editing/OutlineEditor`** (pure Java, unit-tested): the text transforms —
   `indent`, `outdent`, and `newlineKeepingIndent` — each returning the new text
   plus caret/selection offsets. No UNO, so it is covered by `OutlineEditorTest`.
-- **`SmartArtDialog`** seeds the edit with a 3-level starter outline and registers
-  an `XKeyHandler` (via `XExtendedToolkit.addKeyHandler`, removed when the dialog
-  closes). While the edit has focus:
-  - **Tab** → `OutlineEditor.indent` (consume the event so focus does not move);
-  - **Shift+Tab** → `OutlineEditor.outdent`;
-  - **Enter** → `OutlineEditor.newlineKeepingIndent` (new item at the same level).
-  All other keys pass through. The handler only acts when the edit reports focus
-  (`XWindow2.hasFocus()`), so it never disturbs other controls.
+- **`SmartArtDialog`** seeds the edit with a 3-level starter outline and offers
+  two ways to change a line's level, because **Tab cannot be repurposed in a UNO
+  dialog** (it is reserved for focus traversal and the toolkit key handler cannot
+  veto it):
+  - **Indent / Outdent buttons** — the reliable path. Each button has an
+    `XActionListener` that calls `OutlineEditing.apply(INDENT|OUTDENT)` on the
+    text box's current selection, then returns focus to the box.
+  - **Ctrl+] / Ctrl+[ and Enter** — an `XKeyHandler` (registered via
+    `XExtendedToolkit.addKeyHandler`, removed on close) that, while the edit has
+    focus (`XWindow2.hasFocus()`), maps Ctrl+] → indent, Ctrl+[ → outdent, and
+    Enter → `newlineKeepingIndent`. These are interceptable because they are not
+    focus-traversal keys. All other keys pass through.
+  Both paths share one `OutlineEditing` helper that wraps the `OutlineEditor`
+  transforms around the dialog's `XTextComponent`.
 
 The parser (§3.4) is unchanged: it already accepts the space-indented outline the
 editor produces. Only the text transforms are unit-testable; the key-event wiring
