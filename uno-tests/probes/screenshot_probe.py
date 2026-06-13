@@ -5,6 +5,7 @@ Called by scripts/make-screenshots.sh:
     python3 uno-tests/probes/screenshot_probe.py <port> <out-dir>
 
 Outputs:
+    <out-dir>/cycle.png
     <out-dir>/sequential-chevron.png
     <out-dir>/hub-and-spoke.png
     <out-dir>/process-flow.png
@@ -321,11 +322,34 @@ def draw_hierarchy(doc, page):
             add_connector(doc, page, cs, gs)
 
 
+def draw_cycle(doc, page):
+    """5 nodes in a clockwise ring joined by directed straight arrows."""
+    NODE_W, NODE_H = 3500, 1400
+    RING_R = 6000
+    CX, CY = 25400 // 2, 19050 // 2
+    labels = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
+    colors = [BLUE, BLUE2, BLUE3, BLUE, BLUE2]
+    nodes = []
+    for i, (label, color) in enumerate(zip(labels, colors)):
+        angle = math.radians(-90 + i * 360 / len(labels))
+        nx = CX + int(RING_R * math.cos(angle))
+        ny = CY + int(RING_R * math.sin(angle))
+        s = add_rect(doc, page, nx - NODE_W // 2, ny - NODE_H // 2,
+                     NODE_W, NODE_H, label, color)
+        font_size(s, 14)
+        nodes.append(s)
+    # Directed arrows: i → i+1, last → 0
+    for i in range(len(nodes)):
+        c = add_connector(doc, page, nodes[i], nodes[(i + 1) % len(nodes)],
+                          straight=True, arrow_end=True)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 DIAGRAMS = [
+    ("cycle",              draw_cycle),
     ("sequential-chevron", draw_sequential_chevron),
     ("hub-and-spoke",      draw_hub_and_spoke),
     ("process-flow",       draw_process_flow),

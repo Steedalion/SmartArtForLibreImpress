@@ -10,7 +10,8 @@ public enum DiagramType {
     HIERARCHY("Hierarchy"),
     HUB_AND_SPOKE("Hub & Spoke"),
     PROCESS_FLOW("Process Flow"),
-    SEQUENTIAL_CHEVRON("Sequential Chevron");
+    SEQUENTIAL_CHEVRON("Sequential Chevron"),
+    CYCLE("Cycle");
 
     private final String label;
 
