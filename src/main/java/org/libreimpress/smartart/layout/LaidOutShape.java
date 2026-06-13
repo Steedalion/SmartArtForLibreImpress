@@ -13,13 +13,22 @@ public final class LaidOutShape {
     private final int width;
     private final int height;
     private final ShapeKind kind;
+    /** Clockwise rotation in 1/100 degrees (0 = no rotation). */
+    private final int rotateAngle100;
+    /** Arc span in 1/100 degrees; only meaningful for CIRCULAR_ARROW shapes. */
+    private final int arcSpan100;
 
     public LaidOutShape(String text, int level, int x, int y, int width, int height) {
-        this(text, level, x, y, width, height, ShapeKind.RECTANGLE);
+        this(text, level, x, y, width, height, ShapeKind.RECTANGLE, 0, 0);
     }
 
     public LaidOutShape(String text, int level, int x, int y, int width, int height,
             ShapeKind kind) {
+        this(text, level, x, y, width, height, kind, 0, 0);
+    }
+
+    public LaidOutShape(String text, int level, int x, int y, int width, int height,
+            ShapeKind kind, int rotateAngle100, int arcSpan100) {
         this.text = text;
         this.level = level;
         this.x = x;
@@ -27,41 +36,24 @@ public final class LaidOutShape {
         this.width = width;
         this.height = height;
         this.kind = kind;
+        this.rotateAngle100 = rotateAngle100;
+        this.arcSpan100 = arcSpan100;
     }
 
-    public String getText() {
-        return text;
-    }
+    public String getText() { return text; }
+    public int getLevel()   { return level; }
+    public int getX()       { return x; }
+    public int getY()       { return y; }
+    public int getWidth()   { return width; }
+    public int getHeight()  { return height; }
+    public ShapeKind getKind() { return kind; }
 
-    public int getLevel() {
-        return level;
-    }
+    public int centerX() { return x + width / 2; }
+    public int centerY() { return y + height / 2; }
 
-    public int getX() {
-        return x;
-    }
+    /** Clockwise rotation in 1/100 degrees (0 = upright). */
+    public int getRotateAngle100() { return rotateAngle100; }
 
-    public int getY() {
-        return y;
-    }
-
-    public int getWidth() {
-        return width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public int centerX() {
-        return x + width / 2;
-    }
-
-    public int centerY() {
-        return y + height / 2;
-    }
-
-    public ShapeKind getKind() {
-        return kind;
-    }
+    /** Arc span in 1/100 degrees; only meaningful for {@link ShapeKind#CIRCULAR_ARROW}. */
+    public int getArcSpan100() { return arcSpan100; }
 }

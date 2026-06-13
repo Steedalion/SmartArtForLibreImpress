@@ -4,6 +4,7 @@ package org.libreimpress.smartart.layout;
 public enum ShapeKind {
     RECTANGLE,
     ELLIPSE,
-    PENTAGON,  // Flat-left, pointed-right first step in Sequential Chevron
-    CHEVRON    // Notched-left, pointed-right intermediate step
+    PENTAGON,         // Flat-left, pointed-right first step in Sequential Chevron
+    CHEVRON,          // Notched-left, pointed-right intermediate step
+    CIRCULAR_ARROW    // Block-arrow arc from the Block Arrows gallery
 }
