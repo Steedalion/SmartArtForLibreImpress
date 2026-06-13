@@ -96,7 +96,7 @@ public class SlideRenderer {
             if (s.getKind() == ShapeKind.ELLIPSE) {
                 service = "com.sun.star.drawing.EllipseShape";
             } else if (s.getKind() == ShapeKind.CHEVRON) {
-                service = "com.sun.star.drawing.PolyPolygonShape";
+                service = "com.sun.star.drawing.BlockArrowShape";
             } else {
                 service = "com.sun.star.drawing.RectangleShape";
             }
