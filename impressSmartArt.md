@@ -4,7 +4,7 @@
 
 **Project:** LibreImpress SmartArt Plugin  
 **Purpose:** A UNO extension for LibreOffice Impress that enables users to quickly create structured diagrams from hierarchical text input.  
-**Architecture:** UNO Extension (Java/Python-based or native)
+**Architecture:** UNO extension implemented in **Java**, packaged as a `.oxt`.
 
 ### 1.1 Specification Document Hierarchy
 
@@ -18,11 +18,11 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 │
 ├── Phase plans (how each phase is built, in order)
 │   ├── Phase1_ImplementationPlan.md   — Phase 1: Empty OXT extension (installable skeleton)
-│   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (Insert/menu entry → dispatch)
+│   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (top-level menu entry → dispatch)
 │   └── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing
 │
 ├── Architecture_VDiagram.md       — architecture overview & V-model development process
-├── TESTING_STRATEGY.md            — testing approach (unit, structural, install verification)
+├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)
 └── README.md                      — build, install, and run instructions
 ```
 
@@ -31,6 +31,24 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 - There is exactly one plan per phase (no "revised"/duplicate variants).
 - When the master spec and a phase plan disagree, the master spec wins; update
   the phase plan to match.
+
+### 1.2 Implementation Status (as of 2026-06-13)
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 | Empty, installable `.oxt` skeleton | ✅ Done |
+| 2 | Top-level **SmartArt** menu → dispatch to the Java handler | ✅ Done |
+| 3 | Input dialog + hierarchy parser (validate, preview the parsed tree) | ✅ Done |
+| 4 | Render the parsed tree as grouped, editable shapes on the slide | ⏳ Next |
+| later | Per-level colour palette & styling; Hub & Spoke / Process Flow layouts | ⏳ Planned |
+
+**What works today:** clicking **SmartArt → Create Diagram…** opens a
+programmatic dialog (diagram-type dropdown + multiline text); on **Create** the
+indented text is parsed into a validated hierarchy (each indentation step = one
+level; ≥ 3 nodes and ≥ 3 levels required) and the parsed tree — or a specific
+error — is shown. **Shapes are not drawn yet** (Phase 4), and the colour-palette
+input described in §3.2 / §5.1 is deferred to a later phase. Sections 2–8 below
+describe the *target* product; see this table for what is implemented now.
 
 ---
 
@@ -84,6 +102,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
   - **Process Flow:** Rectangles for steps, diamonds for decisions
 
 ### 3.2 Styling & Color Palette
+> ⏳ *Target feature — not yet implemented (deferred to a later phase). The
+> current dialog has no palette field.*
 - **Input:** Optional `@paletteObject` parameter
 - **Default Behavior:** If no palette provided, use LibreOffice template defaults
 - **Palette Structure:**
@@ -96,16 +116,18 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 ## 4. User Workflow
 
 ### 4.1 Triggering the Plugin
-1. User opens LibreImpress presentation
-2. User selects menu: **Insert > SmartArt** (or similar)
+1. User opens a LibreImpress presentation
+2. User selects **SmartArt → Create Diagram…** from the menu bar
 3. Plugin dialog opens
 
 ### 4.2 Creating a Diagram
 1. User selects diagram type (Hierarchy / Hub & Spoke / Process Flow)
 2. User enters text points in multi-line input with indentation
-3. User (optionally) provides color palette object
+3. User (optionally) provides a color palette object *(planned; not in the
+   current dialog)*
 4. User clicks **Create**
-5. Plugin generates diagram on current slide
+5. Plugin generates the diagram on the current slide *(Phase 4; the current
+   build instead previews the parsed hierarchy and reports validation errors)*
 
 ### 4.3 Output
 - Grouped shape object containing all nodes and connectors
@@ -327,15 +349,17 @@ install. See `TESTING_STRATEGY.md` for the full three-layer test plan.
 
 ## 9. Success Criteria
 
-✅ Plugin loads without errors  
+Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
+
+✅ Plugin loads / installs without errors (verified by `tools/verify-extension.sh`)  
 ✅ Dialog accepts text input with indentation  
-✅ All three diagram types generate correctly  
-✅ Hierarchy is visually reflected in output  
-✅ Color palette (when provided) is applied  
-✅ Default styling applied when palette missing  
-✅ Output is grouped and editable  
-✅ Minimum 3 levels supported  
+✅ Minimum 3 levels supported (enforced by the parser)  
 ✅ User-friendly error messages  
-✅ UNO extension architecture implemented
+✅ UNO extension architecture implemented  
+⏳ Hierarchy is visually reflected in output — Phase 4  
+⏳ Output is grouped and editable — Phase 4  
+⏳ All three diagram types generate correctly — Phase 4+  
+⏳ Color palette (when provided) is applied — later phase  
+⏳ Default styling applied when palette missing — later phase
 
 
