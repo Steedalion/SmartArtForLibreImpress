@@ -168,18 +168,56 @@ its children.
 - Covered by `ProcessFlowLayoutTest` (9 cases: including edges use right-to-left
   glue points).
 
+### Sequential Chevron (`SequentialChevronLayout`)
+
+Level-1 nodes become the chevron/arrow steps arranged left-to-right. The first
+step uses `ShapeKind.PENTAGON` (flat left, pointed right) and subsequent steps
+use `ShapeKind.CHEVRON` (notched left, pointed right). Level-2 children are
+placed as sub-item rectangles below their parent chevron.
+
+#### Critical implementation note — `CustomShapeGeometry` type tagging
+
+Chevron and pentagon shapes are `com.sun.star.drawing.CustomShape` instances
+with their built-in LibreOffice geometry applied via the `CustomShapeGeometry`
+property. **This property is deceptively hard to set correctly.**
+
+The shape type string values (confirmed from `/usr/lib/libreoffice/share/registry/main.xcd`):
+- First step (flat left, pointed right): `"pentagon-right"`
+- Subsequent steps (notched left, pointed right): `"chevron"`
+
+**What works** — `setPropertyValue("CustomShapeGeometry", new PropertyValue[]{typeVal})`:
+Java's statically-typed `PropertyValue[]` array is passed to the UNO bridge,
+which wraps it in an `Any` tagged as `sequence<com.sun.star.beans.PropertyValue>`.
+This tag is what LibreOffice's C++ shape engine checks; without it the property
+is silently ignored and the shape renders as a plain rectangle.
+
+**What does NOT work** — `setPropertyValue("CustomShapeGeometry", tuple)` in
+Python, where `tuple` is a plain Python tuple: the bridge does not infer the
+correct type tag, so the property appears to be set but the shape stays a
+rectangle. Python's equivalent that *does* work is attribute assignment
+`shape.CustomShapeGeometry = (pv,)`, which carries the tag.
+
+This was discovered after extensive investigation with 8+ approaches tried in
+headless UNO probes (see `uno-tests/probes/find_chevron_probe.py` and related
+files). The probe files are kept in the repo as a reference.
+
+**Text centering in CustomShape** — unlike `RectangleShape`, `CustomShape` text
+defaults to top-left. Two separate settings are required:
+1. `TextVerticalAdjust = CENTER` on the shape's `XPropertySet`.
+2. `ParaAdjust = CENTER` on the `XTextCursor` spanning the full text.
+
 ### Wiring (`SmartArtCommand`)
-`execute()` calls `buildLayout(type, root)` which dispatches to the three
+`execute()` calls `buildLayout(type, root)` which dispatches to the four
 layout classes via a `switch` on `DiagramType`. The renderer path is unchanged.
 
 ### Testing
-- All 41 unit tests pass (`mvn test`).
+- All unit tests pass (`mvn test`).
 - **Manual (required):** verify in Impress that selecting Hub & Spoke renders a
-  central box with spokes radiating outward, and Process Flow renders a
-  left-to-right sequence of boxes with connecting arrows — both grouped as one
-  editable object.
+  central circle with spoke circles radiating outward; Process Flow renders a
+  left-to-right sequence of boxes; Sequential Chevron renders pentagon + chevron
+  arrow shapes — all grouped as one editable object.
 
 ### Not in 4.4
-- ❌ Per-level colour palette & styling; ❌ wrapping for >4 process-flow steps
-  on one row (would stack rows); ❌ connectors from spokes to their children
+- ❌ Per-level colour palette & styling (Phase 5); ❌ wrapping for >4
+  process-flow steps on one row; ❌ connectors from spokes to their children
   in Hub & Spoke (edges only go hub→spoke).
