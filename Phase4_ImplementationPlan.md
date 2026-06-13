@@ -175,36 +175,53 @@ step uses `ShapeKind.PENTAGON` (flat left, pointed right) and subsequent steps
 use `ShapeKind.CHEVRON` (notched left, pointed right). Level-2 children are
 placed as sub-item rectangles below their parent chevron.
 
-#### Critical implementation note — `CustomShapeGeometry` type tagging
+#### Implementation note — LibreOffice chevron shapes
 
-Chevron and pentagon shapes are `com.sun.star.drawing.CustomShape` instances
-with their built-in LibreOffice geometry applied via the `CustomShapeGeometry`
-property. **This property is deceptively hard to set correctly.**
+**Service:** chevron and pentagon steps are `com.sun.star.drawing.CustomShape`,
+not `RectangleShape` or `PolyPolygonShape`. Only `CustomShape` supports the
+built-in geometry presets LibreOffice ships with.
 
-The shape type string values (confirmed from `/usr/lib/libreoffice/share/registry/main.xcd`):
-- First step (flat left, pointed right): `"pentagon-right"`
-- Subsequent steps (notched left, pointed right): `"chevron"`
+**Geometry type names** (confirmed from
+`/usr/lib/libreoffice/share/registry/main.xcd`, `BlockArrows` section):
 
-**What works** — `setPropertyValue("CustomShapeGeometry", new PropertyValue[]{typeVal})`:
-Java's statically-typed `PropertyValue[]` array is passed to the UNO bridge,
-which wraps it in an `Any` tagged as `sequence<com.sun.star.beans.PropertyValue>`.
-This tag is what LibreOffice's C++ shape engine checks; without it the property
-is silently ignored and the shape renders as a plain rectangle.
+| Step | Shape | Type string |
+|------|-------|-------------|
+| First (flat left, pointed right) | Pentagon | `"pentagon-right"` |
+| Subsequent (notched left, pointed right) | Chevron | `"chevron"` |
 
-**What does NOT work** — `setPropertyValue("CustomShapeGeometry", tuple)` in
-Python, where `tuple` is a plain Python tuple: the bridge does not infer the
-correct type tag, so the property appears to be set but the shape stays a
-rectangle. Python's equivalent that *does* work is attribute assignment
-`shape.CustomShapeGeometry = (pv,)`, which carries the tag.
+**Applying the geometry** — set the `CustomShapeGeometry` property with a
+`PropertyValue[]` array containing a single entry `Name="Type"`, `Value=<type string>`:
 
-This was discovered after extensive investigation with 8+ approaches tried in
-headless UNO probes (see `uno-tests/probes/find_chevron_probe.py` and related
-files). The probe files are kept in the repo as a reference.
+```java
+com.sun.star.beans.PropertyValue typeVal = new com.sun.star.beans.PropertyValue();
+typeVal.Name  = "Type";
+typeVal.Value = "chevron";   // or "pentagon-right"
+XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
+props.setPropertyValue("CustomShapeGeometry",
+        new com.sun.star.beans.PropertyValue[]{ typeVal });
+```
 
-**Text centering in CustomShape** — unlike `RectangleShape`, `CustomShape` text
-defaults to top-left. Two separate settings are required:
-1. `TextVerticalAdjust = CENTER` on the shape's `XPropertySet`.
-2. `ParaAdjust = CENTER` on the `XTextCursor` spanning the full text.
+The `PropertyValue[]` array is critical: the UNO bridge tags it as
+`sequence<com.sun.star.beans.PropertyValue>`, which is the type LibreOffice's
+shape engine requires. Passing any other container type causes the property to
+be silently ignored and the shape stays a plain rectangle with no error thrown.
+
+**Text centering** — unlike `RectangleShape`, `CustomShape` text defaults to
+top-left. Two separate settings are required:
+
+```java
+// 1. Vertical centering on the shape
+shapeProps.setPropertyValue("TextVerticalAdjust",
+        com.sun.star.drawing.TextVerticalAdjust.CENTER);
+
+// 2. Horizontal centering via a text cursor spanning all content
+com.sun.star.text.XTextCursor cursor = xText.createTextCursor();
+cursor.gotoStart(false);
+cursor.gotoEnd(true);
+XPropertySet cursorProps = UnoRuntime.queryInterface(XPropertySet.class, cursor);
+cursorProps.setPropertyValue("ParaAdjust",
+        com.sun.star.style.ParagraphAdjust.CENTER);
+```
 
 ### Wiring (`SmartArtCommand`)
 `execute()` calls `buildLayout(type, root)` which dispatches to the four
