@@ -6,18 +6,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Lays out a Hub & Spoke diagram: the first level-1 node sits at the centre of
- * the slide as the hub; its level-2 children (plus any extra level-1 siblings)
- * are placed as spokes arranged evenly around a circle. Pure Java (no UNO).
+ * Lays out a Hub & Spoke diagram: each level-1 node is a hub, with its
+ * children (spokes) arranged in a circle around it. Multiple hubs are
+ * placed left-to-right across the slide. Pure Java (no UNO).
  * Units are 1/100 mm.
  */
 public final class HubAndSpokeLayout {
 
     static final int NODE_W = 4000;
     static final int NODE_H = 1500;
-    static final int CENTER_X = 12700; // centre of a 254 mm wide slide
-    static final int CENTER_Y = 9525;  // centre of a 190.5 mm tall slide
-    static final int SPOKE_RADIUS = 5500; // hub-centre to spoke-centre distance
+    static final int SPOKE_RADIUS = 3500; // hub-centre to spoke-centre distance
+    static final int HUB_SPACING = 16000; // space from one hub centre to the next
 
     private HubAndSpokeLayout() {
     }
@@ -32,31 +31,38 @@ public final class HubAndSpokeLayout {
             return out;
         }
 
-        DiagramNode hubNode = level1.get(0);
+        // Calculate the bounding box to fit all hubs left-to-right.
+        int slideW = 25400; // standard Impress slide width in 1/100 mm
+        int numHubs = level1.size();
+        int totalHubWidth = numHubs * HUB_SPACING;
+        int startX = (slideW - totalHubWidth) / 2 + HUB_SPACING / 2;
+        int centerY = 9525; // centre Y of slide
 
-        // Spokes = hub's own children, then any extra level-1 siblings.
-        List<DiagramNode> spokesNodes = new ArrayList<>(hubNode.getChildren());
-        for (int i = 1; i < level1.size(); i++) {
-            spokesNodes.add(level1.get(i));
-        }
+        for (int h = 0; h < numHubs; h++) {
+            DiagramNode hubNode = level1.get(h);
+            int hubCX = startX + h * HUB_SPACING;
+            int hubCY = centerY;
 
-        LaidOutShape hubShape = new LaidOutShape(
-                hubNode.getText(), 1,
-                CENTER_X - NODE_W / 2, CENTER_Y - NODE_H / 2, NODE_W, NODE_H,
-                ShapeKind.ELLIPSE);
-        int hubIndex = out.addShape(hubShape);
-
-        int n = spokesNodes.size();
-        for (int i = 0; i < n; i++) {
-            double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
-            int spokeCX = CENTER_X + (int) Math.round(SPOKE_RADIUS * Math.cos(angle));
-            int spokeCY = CENTER_Y + (int) Math.round(SPOKE_RADIUS * Math.sin(angle));
-            LaidOutShape spokeShape = new LaidOutShape(
-                    spokesNodes.get(i).getText(), 2,
-                    spokeCX - NODE_W / 2, spokeCY - NODE_H / 2, NODE_W, NODE_H,
+            LaidOutShape hubShape = new LaidOutShape(
+                    hubNode.getText(), 1,
+                    hubCX - NODE_W / 2, hubCY - NODE_H / 2, NODE_W, NODE_H,
                     ShapeKind.ELLIPSE);
-            int spokeIndex = out.addShape(spokeShape);
-            out.addEdge(hubIndex, spokeIndex);
+            int hubIndex = out.addShape(hubShape);
+
+            List<DiagramNode> spokes = hubNode.getChildren();
+            int n = spokes.size();
+            for (int i = 0; i < n; i++) {
+                double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
+                int spokeCX = hubCX + (int) Math.round(SPOKE_RADIUS * Math.cos(angle));
+                int spokeCY = hubCY + (int) Math.round(SPOKE_RADIUS * Math.sin(angle));
+                DiagramNode spokeNode = spokes.get(i);
+                LaidOutShape spokeShape = new LaidOutShape(
+                        spokeNode.getText(), spokeNode.getLevel(),
+                        spokeCX - NODE_W / 2, spokeCY - NODE_H / 2, NODE_W, NODE_H,
+                        ShapeKind.ELLIPSE);
+                int spokeIndex = out.addShape(spokeShape);
+                out.addEdge(hubIndex, spokeIndex);
+            }
         }
 
         return out;
