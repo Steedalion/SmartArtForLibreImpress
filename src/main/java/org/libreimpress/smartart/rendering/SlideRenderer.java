@@ -111,6 +111,9 @@ public class SlideRenderer {
             XText xText = UnoRuntime.queryInterface(XText.class, shape);
             if (xText != null) {
                 xText.setString(s.getText());
+                if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
+                    centerChevronText(shape, xText);
+                }
             }
             boxes[i] = xShape;
             created.add(xShape);
@@ -152,6 +155,20 @@ public class SlideRenderer {
         XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
         props.setPropertyValue("CustomShapeGeometry",
                 new com.sun.star.beans.PropertyValue[]{ typeVal });
+    }
+
+    /** Centers text both vertically and horizontally inside a chevron/pentagon. */
+    private static void centerChevronText(Object shape, XText xText) throws Exception {
+        XPropertySet shapeProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
+        shapeProps.setPropertyValue("TextVerticalAdjust",
+                com.sun.star.drawing.TextVerticalAdjust.CENTER);
+
+        com.sun.star.text.XTextCursor cursor = xText.createTextCursor();
+        cursor.gotoStart(false);
+        cursor.gotoEnd(true);
+        XPropertySet cursorProps = UnoRuntime.queryInterface(XPropertySet.class, cursor);
+        cursorProps.setPropertyValue("ParaAdjust",
+                com.sun.star.style.ParagraphAdjust.CENTER);
     }
 
     /** Groups all the diagram's shapes into one editable group on the page. */

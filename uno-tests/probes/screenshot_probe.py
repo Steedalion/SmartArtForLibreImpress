@@ -117,8 +117,18 @@ def add_chevron_shape(doc, page, x, y, w, h, kind, label, color=BLUE):
     except Exception:
         pass
     solid_fill(s, color)
-    # No text_color override: let LibreOffice auto-colour so text is readable
-    # in both the filled body and the transparent notch area.
+    # Centre text vertically (shape property) and horizontally (paragraph property),
+    # mirroring SlideRenderer.centerChevronText.
+    try:
+        s.setPropertyValue("TextVerticalAdjust",
+            uno.Enum("com.sun.star.drawing.TextVerticalAdjust", "CENTER"))
+        cursor = s.createTextCursor()
+        cursor.gotoStart(False)
+        cursor.gotoEnd(True)
+        cursor.setPropertyValue("ParaAdjust",
+            uno.Enum("com.sun.star.style.ParagraphAdjust", "CENTER"))
+    except Exception:
+        pass
     return s
 
 
