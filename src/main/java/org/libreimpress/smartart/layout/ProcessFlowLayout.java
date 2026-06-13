@@ -2,6 +2,7 @@ package org.libreimpress.smartart.layout;
 
 import org.libreimpress.smartart.models.DiagramNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,6 +25,10 @@ public final class ProcessFlowLayout {
     /**
      * @param root the synthetic root (level 0) produced by the parser; its
      *             children are the level-1 nodes that become the flow steps.
+     *
+     * <p>Layout: level-1 steps sit on the top row, centred horizontally.
+     * Any level-2+ children are placed below their parent step, indented,
+     * in a vertical sub-tree. Edges run from steps to children and between siblings.
      */
     public static DiagramLayout layout(DiagramNode root) {
         DiagramLayout out = new DiagramLayout();
@@ -35,19 +40,51 @@ public final class ProcessFlowLayout {
 
         int totalWidth = n * NODE_W + (n - 1) * H_GAP;
         int startX = Math.max(MARGIN_X, (SLIDE_W - totalWidth) / 2);
-        int y = (SLIDE_H - NODE_H) / 2;
+        int topY = (SLIDE_H - NODE_H) / 2;
 
-        int[] indices = new int[n];
+        int[] topIndices = new int[n];
         for (int i = 0; i < n; i++) {
             int x = startX + i * (NODE_W + H_GAP);
-            indices[i] = out.addShape(
-                    new LaidOutShape(steps.get(i).getText(), 1, x, y, NODE_W, NODE_H));
+            topIndices[i] = out.addShape(
+                    new LaidOutShape(steps.get(i).getText(), 1, x, topY, NODE_W, NODE_H));
         }
-        // Glue right-side(1) of each box to left-side(3) of the next so connectors
-        // route horizontally rather than auto-routing top/bottom.
+
+        // Connect the top-level steps horizontally.
         for (int i = 0; i < n - 1; i++) {
-            out.addEdge(indices[i], indices[i + 1], 1, 3);
+            out.addEdge(topIndices[i], topIndices[i + 1], 1, 3);
         }
+
+        // Add children of each step, placed vertically below.
+        for (int i = 0; i < n; i++) {
+            DiagramNode step = steps.get(i);
+            int stepX = startX + i * (NODE_W + H_GAP);
+            placeChildren(step, stepX, topY + NODE_H + H_GAP, topIndices[i], out);
+        }
+
         return out;
+    }
+
+    /** Recursively place children of a node, indented below the parent. */
+    private static void placeChildren(DiagramNode parent, int parentX, int y,
+            int parentIndex, DiagramLayout out) {
+        List<DiagramNode> children = parent.getChildren();
+        if (children.isEmpty()) {
+            return;
+        }
+        // Place children directly below the parent, slightly indented.
+        int childX = parentX;
+        int[] childIndices = new int[children.size()];
+        for (int i = 0; i < children.size(); i++) {
+            childIndices[i] = out.addShape(
+                    new LaidOutShape(children.get(i).getText(), children.get(i).getLevel(),
+                            childX, y, NODE_W, NODE_H));
+            out.addEdge(parentIndex, childIndices[i]);
+            childX += NODE_W + H_GAP;
+        }
+        // Recursively place grandchildren below.
+        for (int i = 0; i < children.size(); i++) {
+            placeChildren(children.get(i), parentX + i * (NODE_W + H_GAP),
+                    y + NODE_H + H_GAP, childIndices[i], out);
+        }
     }
 }

@@ -145,28 +145,28 @@ rather than always falling back to the hierarchy tree.
 ### Hub & Spoke (`HubAndSpokeLayout`)
 The first level-1 node becomes the **hub**, placed at the slide centre
 (12700, 9525 in 1/100 mm — the centre of a standard 254 × 190.5 mm slide).
-Its level-2 children, plus any extra level-1 siblings, become the **spokes**,
-arranged evenly on a circle of radius 5500 around the hub. The first spoke
-starts directly above the hub (angle −π/2) and the rest continue clockwise.
-An edge runs from the hub to each spoke.
+Its immediate children (at any level ≥ 2), plus any extra level-1 siblings,
+become the **spokes**, arranged evenly on a circle of radius 5500 around the hub.
+The first spoke starts directly above the hub (angle −π/2) and the rest continue
+clockwise. An edge runs from the hub to each spoke. Each spoke can have
+arbitrarily deep descendants.
 
 - Constants: `NODE_W = 4000`, `NODE_H = 1500`, `SPOKE_RADIUS = 5500`.
-- Covered by `HubAndSpokeLayoutTest` (8 cases: empty, hub-only, 4 spokes,
-  hub position, single-spoke direction, cardinal positions, extra level-1
-  siblings, equidistance).
+- Supports: hub + any-level children, level-1 siblings as additional spokes.
+- Covered by `HubAndSpokeLayoutTest` (9 cases: including all-shapes-are-ellipses).
 
 ### Process Flow (`ProcessFlowLayout`)
 The level-1 nodes become the **flow steps**, arranged left-to-right in a single
-horizontal row centred on the slide. The sequence is centred horizontally:
-`startX = max(MARGIN_X, (SLIDE_W − totalWidth) / 2)` where
-`totalWidth = n × NODE_W + (n−1) × H_GAP`. All boxes share the same Y:
-`(SLIDE_H − NODE_H) / 2`. An edge runs from each step to the next.
+horizontal row centred on the slide. Children of each step are placed vertically
+below it in an indented sub-tree: level-2 children sit one row down, level-3+
+sit below that. Edges run from each step to the next, and from each parent to
+its children.
 
 - Constants: `NODE_W = 4000`, `NODE_H = 1500`, `H_GAP = 1500`,
   `SLIDE_W = 25400`, `SLIDE_H = 19050`, `MARGIN_X = 1000`.
-- Covered by `ProcessFlowLayoutTest` (8 cases: empty, single step, three steps,
-  shared Y, even spacing, horizontal centring of one step and of the sequence,
-  vertical centring).
+- Supports: level-1 steps as the main row, then arbitrary depth of children below.
+- Covered by `ProcessFlowLayoutTest` (9 cases: including edges use right-to-left
+  glue points).
 
 ### Wiring (`SmartArtCommand`)
 `execute()` calls `buildLayout(type, root)` which dispatches to the three
@@ -180,5 +180,6 @@ layout classes via a `switch` on `DiagramType`. The renderer path is unchanged.
   editable object.
 
 ### Not in 4.4
-- ❌ Per-level colour palette & styling; ❌ wrapping for >4 process-flow steps;
-  ❌ level-3+ sub-spokes in Hub & Spoke.
+- ❌ Per-level colour palette & styling; ❌ wrapping for >4 process-flow steps
+  on one row (would stack rows); ❌ connectors from spokes to their children
+  in Hub & Spoke (edges only go hub→spoke).
