@@ -5,19 +5,31 @@ import org.libreimpress.smartart.models.DiagramNode;
 /**
  * Lays out a parsed hierarchy as a top-down tree: each level sits on its own
  * row, leaves are spread left-to-right, and every parent is centred over its
- * children. Pure Java (no UNO), so the positioning is unit-testable; a renderer
- * turns the result into shapes. Units are 1/100 mm.
+ * children. Optimized for 2-level hierarchies (parent → children) but supports
+ * arbitrary depth. Pure Java (no UNO), so the positioning is unit-testable;
+ * a renderer turns the result into shapes. Units are 1/100 mm.
  */
 public final class HierarchyLayout {
 
-    static final int NODE_W = 4000;
-    static final int NODE_H = 1500;
+    static final int BASE_NODE_W = 4000;
+    static final int BASE_NODE_H = 1500;
+    static final int SIZE_DECREMENT = 30; // reduce size by 30 per level depth
     static final int H_GAP = 1500; // gap between adjacent boxes on a row
     static final int V_GAP = 1500; // gap between rows
     static final int MARGIN_X = 1000;
     static final int MARGIN_Y = 1000;
 
     private HierarchyLayout() {
+    }
+
+    /** Calculate node width based on level (reduces 30/level from base). */
+    private static int nodeWidth(int level) {
+        return Math.max(1500, BASE_NODE_W - (level - 1) * SIZE_DECREMENT);
+    }
+
+    /** Calculate node height based on level (reduces 30/level from base). */
+    private static int nodeHeight(int level) {
+        return Math.max(600, BASE_NODE_H - (level - 1) * SIZE_DECREMENT);
     }
 
     /**
@@ -35,11 +47,13 @@ public final class HierarchyLayout {
 
     /** Places {@code node} and its subtree; returns its shape index. */
     private static int place(DiagramNode node, DiagramLayout out, int[] leafCursor) {
+        int nodeW = nodeWidth(node.getLevel());
+        int nodeH = nodeHeight(node.getLevel());
         int centerX;
         int[] childIndices = new int[node.getChildren().size()];
 
         if (node.getChildren().isEmpty()) {
-            centerX = MARGIN_X + NODE_W / 2 + leafCursor[0] * (NODE_W + H_GAP);
+            centerX = MARGIN_X + nodeW / 2 + leafCursor[0] * (nodeW + H_GAP);
             leafCursor[0]++;
         } else {
             int firstCenter = Integer.MIN_VALUE;
@@ -57,9 +71,9 @@ public final class HierarchyLayout {
             centerX = (firstCenter + lastCenter) / 2;
         }
 
-        int y = MARGIN_Y + (node.getLevel() - 1) * (NODE_H + V_GAP);
+        int y = MARGIN_Y + (node.getLevel() - 1) * (nodeH + V_GAP);
         LaidOutShape shape = new LaidOutShape(
-                node.getText(), node.getLevel(), centerX - NODE_W / 2, y, NODE_W, NODE_H);
+                node.getText(), node.getLevel(), centerX - nodeW / 2, y, nodeW, nodeH);
         int myIndex = out.addShape(shape);
         for (int childIndex : childIndices) {
             out.addEdge(myIndex, childIndex);
