@@ -19,7 +19,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 ├── Phase plans (how each phase is built, in order)
 │   ├── Phase1_ImplementationPlan.md   — Phase 1: Empty OXT extension (installable skeleton)
 │   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (top-level menu entry → dispatch)
-│   └── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing
+│   ├── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing
+│   └── Phase4_ImplementationPlan.md   — Phase 4: Shape rendering (4.1 single shape → layout → grouping)
 │
 ├── Architecture_VDiagram.md       — architecture overview & V-model development process
 ├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)
@@ -39,8 +40,9 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 1 | Empty, installable `.oxt` skeleton | ✅ Done |
 | 2 | Top-level **SmartArt** menu → dispatch to the Java handler | ✅ Done |
 | 3 | Input dialog + hierarchy parser (validate, preview the parsed tree) | ✅ Done |
-| 4 | Render the parsed tree as grouped, editable shapes on the slide | ⏳ Next |
-| later | Per-level colour palette & styling; Hub & Spoke / Process Flow layouts | ⏳ Planned |
+| 4 | Render the parsed tree as grouped, editable shapes on the slide | ⏳ In progress |
+| 4.1 | Draw a single rectangle on the current slide (prove the drawing pipeline) | ✅ Done |
+| later | Layout, connectors, grouping (4.2–4.4); colour palette & styling; Hub & Spoke / Process Flow | ⏳ Planned |
 
 **What works today:** clicking **SmartArt → Create Diagram…** opens a
 programmatic dialog (diagram-type dropdown + multiline text); on **Create** the

@@ -10,8 +10,10 @@ A LibreOffice Impress UNO extension that generates structured diagrams
 - ✅ **Phase 3 — Dialog & text parsing:** *Create Diagram…* opens an input
   dialog (text + diagram-type dropdown); on Create the indented text is parsed
   into a validated hierarchy and the parsed tree (or a clear error) is shown.
-- ⏳ **Phase 4 — Shape rendering:** draw the parsed tree as grouped, editable
-  shapes on the slide. Not yet started.
+- 🚧 **Phase 4 — Shape rendering:** draw the parsed tree as grouped, editable
+  shapes on the slide. **4.1 done** — Create now adds a single rectangle to the
+  current slide (labelled with the first node); layout, connectors and grouping
+  are next (4.2–4.4).
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
@@ -75,6 +77,7 @@ LibreImpress-SmartArt/
 │   │   │   ├── models/                     # DiagramNode, DiagramType
 │   │   │   ├── parsers/                     # HierarchyParser, ParseResult (pure Java)
 │   │   │   ├── editing/                     # OutlineEditor — indent/outdent/newline transforms (pure Java)
+│   │   │   ├── rendering/                    # SlideRenderer — draws shapes on the current slide
 │   │   │   └── helpers/                     # LibreOfficeHelper (message boxes)
 │   │   ├── assembly/
 │   │   │   └── oxt.xml                      # assembles the .oxt
@@ -114,6 +117,7 @@ only surfacing during a manual install.
 | [`Phase1_ImplementationPlan.md`](Phase1_ImplementationPlan.md) | Phase 1 — empty OXT extension |
 | [`Phase2_ImplementationPlan.md`](Phase2_ImplementationPlan.md) | Phase 2 — menu integration |
 | [`Phase3_ImplementationPlan.md`](Phase3_ImplementationPlan.md) | Phase 3 — dialog & text parsing |
+| [`Phase4_ImplementationPlan.md`](Phase4_ImplementationPlan.md) | Phase 4 — shape rendering (4.1 single shape) |
 | [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
 | [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 

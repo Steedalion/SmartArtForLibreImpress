@@ -16,6 +16,7 @@ import org.libreimpress.smartart.helpers.LibreOfficeHelper;
 import org.libreimpress.smartart.models.DiagramNode;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
+import org.libreimpress.smartart.rendering.SlideRenderer;
 
 public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDispatch, XServiceInfo {
     private XComponentContext xComponentContext;
@@ -106,11 +107,11 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
             ParseResult parsed = new HierarchyParser().parse(result.getText());
             if (parsed.isValid()) {
+                // Phase 4.1: draw a single rectangle from the first top-level node.
                 DiagramNode root = parsed.getRoot();
-                String summary = "Parsed " + root.countDescendants() + " nodes across "
-                        + root.depth() + " levels (" + result.getType().getLabel() + "):\n\n"
-                        + HierarchyParser.toOutline(root);
-                LibreOfficeHelper.showMessage(xComponentContext, "SmartArt", summary, false);
+                String label = root.getChildren().isEmpty()
+                        ? "SmartArt" : root.getChildren().get(0).getText();
+                new SlideRenderer(xComponentContext).drawRectangle(label);
             } else {
                 LibreOfficeHelper.showMessage(xComponentContext,
                         "SmartArt – Invalid input", parsed.getErrorMessage(), true);
