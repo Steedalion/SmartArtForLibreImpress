@@ -16,7 +16,7 @@ import org.libreimpress.smartart.models.DiagramNode;
  */
 public class HierarchyParser {
 
-    public static final int MIN_LEVELS = 3;
+    public static final int MIN_LEVELS = 2;
     public static final int MIN_NODES = 3;
 
     private static final class Frame {

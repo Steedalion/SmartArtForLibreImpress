@@ -96,10 +96,10 @@ public class HierarchyParserTest {
     }
 
     @Test
-    public void rejectsFewerThanThreeLevels() {
+    public void acceptsTwoLevels() {
         ParseResult r = parser.parse("Root\n  Child\n  Child2");
-        assertFalse(r.isValid());
-        assertTrue(r.getErrorMessage().contains("3 levels"));
+        assertTrue(r.getErrorMessage(), r.isValid());
+        assertEquals(2, r.getRoot().depth()); // Root is level 1, children are level 2
     }
 
     @Test
