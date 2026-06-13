@@ -98,6 +98,52 @@ public class HubAndSpokeLayoutTest {
     }
 
     @Test
+    public void spokeChildrenArePlacedBeyondTheSpoke() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode hub  = new DiagramNode("Hub", 1);
+        DiagramNode spoke = new DiagramNode("Spoke", 2);
+        spoke.addChild(new DiagramNode("Child", 3));
+        hub.addChild(spoke);
+        root.addChild(hub);
+
+        DiagramLayout layout = HubAndSpokeLayout.layout(root);
+        assertEquals(3, layout.getShapes().size()); // hub + spoke + child
+        assertEquals(2, layout.getEdges().size());  // hub→spoke + spoke→child
+
+        LaidOutShape hubShape   = layout.getShapes().get(0);
+        LaidOutShape spokeShape = layout.getShapes().get(1);
+        LaidOutShape childShape = layout.getShapes().get(2);
+
+        // Child must be further from hub centre than the spoke is.
+        double spokeDistFromHub = distance(hubShape.centerX(), hubShape.centerY(),
+                                           spokeShape.centerX(), spokeShape.centerY());
+        double childDistFromHub = distance(hubShape.centerX(), hubShape.centerY(),
+                                           childShape.centerX(), childShape.centerY());
+        assertTrue("child should be further from hub than spoke",
+                childDistFromHub > spokeDistFromHub);
+    }
+
+    @Test
+    public void spokeChildrenAreStraightConnected() {
+        DiagramNode root  = new DiagramNode("", 0);
+        DiagramNode hub   = new DiagramNode("Hub", 1);
+        DiagramNode spoke = new DiagramNode("Spoke", 2);
+        spoke.addChild(new DiagramNode("Child", 3));
+        hub.addChild(spoke);
+        root.addChild(hub);
+
+        DiagramLayout layout = HubAndSpokeLayout.layout(root);
+        for (Edge e : layout.getEdges()) {
+            assertTrue("all hub-and-spoke edges should be straight", e.isStraight());
+        }
+    }
+
+    private static double distance(int x1, int y1, int x2, int y2) {
+        double dx = x2 - x1, dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    @Test
     public void threeHubsWithMultipleSpokes() {
         DiagramNode root = new DiagramNode("", 0);
         for (String hubName : new String[]{"H1", "H2", "H3"}) {

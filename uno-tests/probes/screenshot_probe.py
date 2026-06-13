@@ -187,23 +187,43 @@ def draw_sequential_chevron(doc, page):
 
 
 def draw_hub_and_spoke(doc, page):
-    """Hub circle in the centre; 5 spoke circles around it."""
-    HUB_D   = 2200   # hub diameter (equal width & height → circle)
-    SPOKE_D = 1500   # spoke diameter
-    CX, CY  = 12700, 9000   # centre of slide (254 mm × 190 mm → 25400 × 19050)
-    RADIUS  = 5000
+    """Hub circle in the centre; 5 spoke circles; first spoke has one child."""
+    HUB_D    = 2200   # hub diameter
+    SPOKE_D  = 1500   # spoke diameter
+    CHILD_D  = 1200   # level-3 child diameter
+    CHILD_GAP = 600   # gap between spoke edge and child edge
+    CX, CY   = 12700, 9000
+    RADIUS   = 5000
 
     hub = add_ellipse(doc, page, CX - HUB_D//2, CY - HUB_D//2, HUB_D, HUB_D,
                       "Alpha", BLUE)
     font_size(hub, 14)
-    spokes_labels = ["Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
-    for i, label in enumerate(spokes_labels):
-        angle = math.radians(-90 + i * 360 / len(spokes_labels))
-        sx = int(CX + RADIUS * math.cos(angle)) - SPOKE_D // 2
-        sy = int(CY + RADIUS * math.sin(angle)) - SPOKE_D // 2
-        spoke = add_ellipse(doc, page, sx, sy, SPOKE_D, SPOKE_D, label, BLUE2)
+    spokes_data = [
+        ("Bravo",   ["Golf"]),   # first spoke has one child
+        ("Charlie", []),
+        ("Delta",   []),
+        ("Echo",    []),
+        ("Foxtrot", []),
+    ]
+    for i, (label, children) in enumerate(spokes_data):
+        angle = math.radians(-90 + i * 360 / len(spokes_data))
+        scx = int(CX + RADIUS * math.cos(angle))
+        scy = int(CY + RADIUS * math.sin(angle))
+        spoke = add_ellipse(doc, page, scx - SPOKE_D//2, scy - SPOKE_D//2,
+                            SPOKE_D, SPOKE_D, label, BLUE2)
         font_size(spoke, 11)
         add_connector(doc, page, hub, spoke, straight=True)
+
+        # Level-3 children radially outward from this spoke
+        dist = SPOKE_D // 2 + CHILD_GAP + CHILD_D // 2
+        for child_label in children:
+            ccx = scx + int(dist * math.cos(angle))
+            ccy = scy + int(dist * math.sin(angle))
+            child = add_ellipse(doc, page, ccx - CHILD_D//2, ccy - CHILD_D//2,
+                                CHILD_D, CHILD_D, child_label, BLUE3)
+            font_size(child, 9)
+            add_connector(doc, page, spoke, child, straight=True)
+            dist += CHILD_D + CHILD_GAP
 
 
 def draw_process_flow(doc, page):
