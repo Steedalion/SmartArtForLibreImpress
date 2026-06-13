@@ -97,7 +97,7 @@ public class CycleLayoutTest {
     }
 
     @Test
-    public void level2ChildrenArePlacedOutwardFromParent() {
+    public void level2ChildrenAreIgnored() {
         DiagramNode root = new DiagramNode("", 0);
         DiagramNode a = new DiagramNode("A", 1);
         a.addChild(new DiagramNode("A1", 2));
@@ -106,19 +106,9 @@ public class CycleLayoutTest {
         root.addChild(new DiagramNode("C", 1));
 
         DiagramLayout layout = CycleLayout.layout(root);
-        // 3 level-1 + 1 level-2 child = 4 shapes, 3 cycle edges + 1 child edge = 4 edges
-        assertEquals(4, layout.getShapes().size());
-        assertEquals(4, layout.getEdges().size());
-
-        // The child (index 1, placed after A=0) should be further from centre than A.
-        int cx = CycleLayout.SLIDE_W / 2;
-        int cy = CycleLayout.SLIDE_H / 2;
-        LaidOutShape parent = layout.getShapes().get(0); // A
-        LaidOutShape child  = layout.getShapes().get(1); // A1
-        double parentDist = distance(parent.centerX(), parent.centerY(), cx, cy);
-        double childDist  = distance(child.centerX(),  child.centerY(),  cx, cy);
-        assertTrue("child should be further from centre than its cycle-node parent",
-                childDist > parentDist);
+        // Sub-items are dropped; only the 3 cycle nodes and 3 cycle edges appear.
+        assertEquals(3, layout.getShapes().size());
+        assertEquals(3, layout.getEdges().size());
     }
 
     private static double distance(int x1, int y1, int x2, int y2) {
