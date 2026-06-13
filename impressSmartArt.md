@@ -43,7 +43,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 4 | Render the parsed tree as grouped, editable shapes on the slide | ⏳ In progress |
 | 4.1 | Draw a single rectangle on the current slide (prove the drawing pipeline) | ✅ Done |
 | 4.2 | Multi-level Hierarchy: a box per node as a top-down tree + connectors | ✅ Done |
-| later | Grouping (4.3); Hub & Spoke / Process Flow layouts (4.4); colour palette & styling | ⏳ Planned |
+| 4.3 | Group the diagram's shapes into one editable group object | ✅ Done |
+| later | Hub & Spoke / Process Flow layouts (4.4); colour palette & styling | ⏳ Planned |
 
 **What works today:** clicking **SmartArt → Create Diagram…** opens a
 programmatic dialog (diagram-type dropdown + multiline text); on **Create** the
@@ -289,9 +290,9 @@ Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
 ✅ Minimum 3 levels supported (enforced by the parser)  
 ✅ User-friendly error messages  
 ✅ UNO extension architecture implemented  
-⏳ Hierarchy is visually reflected in output — Phase 4  
-⏳ Output is grouped and editable — Phase 4  
-⏳ All three diagram types generate correctly — Phase 4+  
+✅ Hierarchy is visually reflected in output (Phase 4.2)  
+✅ Output is grouped and editable (Phase 4.3)  
+⏳ All three diagram types generate correctly — Hierarchy done; Hub & Spoke / Process Flow in Phase 4.4  
 ⏳ Color palette (when provided) is applied — later phase  
 ⏳ Default styling applied when palette missing — later phase
 

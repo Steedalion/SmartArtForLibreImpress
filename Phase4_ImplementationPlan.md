@@ -10,7 +10,7 @@ its own.
 |---|-------|--------|
 | 4.1 | Draw a **single** rectangle on the current slide (prove the UNO drawing pipeline) | ✅ done |
 | 4.2 | Multi-level **Hierarchy**: a box per node laid out as a top-down tree + parent→child connectors | ✅ done |
-| 4.3 | Group all shapes into one editable group object | planned |
+| 4.3 | Group all shapes into one editable group object | ✅ done |
 | 4.4 | Diagram-type shapes/layouts (Hub & Spoke circle+spokes, Process Flow sequence) | planned |
 | later | Per-level colour palette & styling | planned |
 
@@ -108,3 +108,27 @@ diagram types use it for now; type-specific layouts come in 4.4.
 ### Not in 4.2
 - ❌ Grouping into one object (4.3); ❌ Hub & Spoke / Process Flow (4.4);
   ❌ colour/styling.
+
+---
+
+## 4.3 — Group the shapes
+
+### Goal
+Collect all of a diagram's boxes and connectors into a single editable group, so
+the user moves/deletes the diagram as one object (and can still double-click in to
+edit a member). Satisfies the spec criterion "output is grouped and editable".
+
+### Approach
+`SlideRenderer.drawHierarchy` now records every shape it creates (boxes +
+connectors), then groups them:
+- create a `com.sun.star.drawing.ShapeCollection` — **from the global service
+  manager** (`XComponentContext.getServiceManager()`), not the document factory
+  (the document does not provide that service);
+- add every created shape to the collection;
+- `XShapeGrouper.group(collection)` on the draw page returns the group.
+
+Validated headlessly first: grouping 5 shapes collapsed the page's top level from
+7 to 3 (a group containing the 5).
+
+### Not in 4.3
+- ❌ Hub & Spoke / Process Flow (4.4); ❌ colour/styling.

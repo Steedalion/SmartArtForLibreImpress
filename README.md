@@ -11,10 +11,10 @@ A LibreOffice Impress UNO extension that generates structured diagrams
   dialog (text + diagram-type dropdown); on Create the indented text is parsed
   into a validated hierarchy and the parsed tree (or a clear error) is shown.
 - 🚧 **Phase 4 — Shape rendering:** draw the parsed tree as grouped, editable
-  shapes on the slide. **4.1–4.2 done** — Create now renders a multi-level
-  **Hierarchy**: a labelled box per node laid out as a top-down tree with
-  parent→child connectors. Grouping (4.3) and the other diagram types (4.4) are
-  next.
+  shapes on the slide. **4.1–4.3 done** — Create renders a multi-level
+  **Hierarchy** (a labelled box per node as a top-down tree with parent→child
+  connectors) and groups it into one editable object. The other diagram types
+  (4.4) are next.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.

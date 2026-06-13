@@ -6,6 +6,7 @@ import com.sun.star.beans.XPropertySet;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawView;
 import com.sun.star.drawing.XShape;
+import com.sun.star.drawing.XShapeGrouper;
 import com.sun.star.drawing.XShapes;
 import com.sun.star.frame.XController;
 import com.sun.star.frame.XDesktop;
@@ -17,6 +18,7 @@ import com.sun.star.text.XText;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.libreimpress.smartart.layout.DiagramLayout;
@@ -71,8 +73,8 @@ public class SlideRenderer {
 
     /**
      * Draws a laid-out hierarchy: one rectangle per node and a connector glued
-     * between each parent and child. The connectors auto-route between the
-     * boxes (glue indices left at -1).
+     * between each parent and child (connectors auto-route, glue indices -1),
+     * then groups the whole diagram into one editable group object.
      */
     public void drawHierarchy(DiagramLayout layout) throws Exception {
         XComponent document = currentComponent();
@@ -83,9 +85,10 @@ public class SlideRenderer {
         XMultiServiceFactory factory =
                 UnoRuntime.queryInterface(XMultiServiceFactory.class, document);
         XShapes shapes = UnoRuntime.queryInterface(XShapes.class, page);
+        List<XShape> created = new ArrayList<>();
 
         List<LaidOutShape> laidOut = layout.getShapes();
-        XShape[] created = new XShape[laidOut.size()];
+        XShape[] boxes = new XShape[laidOut.size()];
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
             Object shape = factory.createInstance("com.sun.star.drawing.RectangleShape");
@@ -97,7 +100,8 @@ public class SlideRenderer {
             if (xText != null) {
                 xText.setString(s.getText());
             }
-            created[i] = xShape;
+            boxes[i] = xShape;
+            created.add(xShape);
         }
 
         for (Edge edge : layout.getEdges()) {
@@ -105,10 +109,32 @@ public class SlideRenderer {
             XShape xConnector = UnoRuntime.queryInterface(XShape.class, connector);
             shapes.add(xConnector);
             XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, connector);
-            props.setPropertyValue("StartShape", created[edge.getParent()]);
-            props.setPropertyValue("EndShape", created[edge.getChild()]);
+            props.setPropertyValue("StartShape", boxes[edge.getParent()]);
+            props.setPropertyValue("EndShape", boxes[edge.getChild()]);
             props.setPropertyValue("StartGluePointIndex", Integer.valueOf(-1));
             props.setPropertyValue("EndGluePointIndex", Integer.valueOf(-1));
+            created.add(xConnector);
+        }
+
+        groupShapes(page, created);
+    }
+
+    /** Groups all the diagram's shapes into one editable group on the page. */
+    private void groupShapes(XDrawPage page, List<XShape> created) throws Exception {
+        if (created.size() < 2) {
+            return; // nothing meaningful to group
+        }
+        // ShapeCollection is a global service, not a document one.
+        XMultiComponentFactory smgr = context.getServiceManager();
+        Object collectionObj =
+                smgr.createInstanceWithContext("com.sun.star.drawing.ShapeCollection", context);
+        XShapes collection = UnoRuntime.queryInterface(XShapes.class, collectionObj);
+        for (XShape shape : created) {
+            collection.add(shape);
+        }
+        XShapeGrouper grouper = UnoRuntime.queryInterface(XShapeGrouper.class, page);
+        if (grouper != null) {
+            grouper.group(collection);
         }
     }
 
