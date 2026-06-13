@@ -71,9 +71,10 @@ LibreImpress-SmartArt/
 │   ├── main/
 │   │   ├── java/org/libreimpress/smartart/
 │   │   │   ├── SmartArtCommand.java        # UNO ProtocolHandler component + dispatch
-│   │   │   ├── SmartArtDialog.java         # programmatic UNO input dialog
+│   │   │   ├── SmartArtDialog.java         # programmatic UNO input dialog (outline editor)
 │   │   │   ├── models/                     # DiagramNode, DiagramType
 │   │   │   ├── parsers/                     # HierarchyParser, ParseResult (pure Java)
+│   │   │   ├── editing/                     # OutlineEditor — Tab/Shift+Tab/Enter transforms (pure Java)
 │   │   │   └── helpers/                     # LibreOfficeHelper (message boxes)
 │   │   ├── assembly/
 │   │   │   └── oxt.xml                      # assembles the .oxt
@@ -87,7 +88,8 @@ LibreImpress-SmartArt/
 │   │       └── uno/
 │   │           └── SmartArtImpl.xml         # UNO component descriptor
 │   └── test/java/org/libreimpress/smartart/
-│       └── parsers/HierarchyParserTest.java # parser unit tests (run in mvn package)
+│       ├── parsers/HierarchyParserTest.java # parser unit tests (run in mvn package)
+│       └── editing/OutlineEditorTest.java   # outline-editing unit tests
 ├── tools/
 │   ├── verify-extension.sh                 # install + headless UNO dispatch test
 │   └── probe_extension.py                  # UNO probe (config merge + queryDispatch)

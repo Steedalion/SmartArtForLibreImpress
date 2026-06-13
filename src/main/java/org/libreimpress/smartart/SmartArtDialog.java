@@ -1,10 +1,19 @@
 package org.libreimpress.smartart;
 
+import com.sun.star.awt.Key;
+import com.sun.star.awt.KeyEvent;
+import com.sun.star.awt.KeyModifier;
 import com.sun.star.awt.PushButtonType;
+import com.sun.star.awt.Selection;
 import com.sun.star.awt.XControl;
+import com.sun.star.awt.XControlContainer;
 import com.sun.star.awt.XControlModel;
 import com.sun.star.awt.XDialog;
+import com.sun.star.awt.XExtendedToolkit;
+import com.sun.star.awt.XKeyHandler;
+import com.sun.star.awt.XTextComponent;
 import com.sun.star.awt.XToolkit;
+import com.sun.star.awt.XWindow2;
 import com.sun.star.beans.XPropertySet;
 import com.sun.star.container.XNameContainer;
 import com.sun.star.lang.XMultiComponentFactory;
@@ -12,6 +21,7 @@ import com.sun.star.lang.XMultiServiceFactory;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
+import org.libreimpress.smartart.editing.OutlineEditor;
 import org.libreimpress.smartart.models.DiagramType;
 
 /**
@@ -39,6 +49,11 @@ public class SmartArtDialog {
             return type;
         }
     }
+
+    /** The field starts as — and is kept as — an indented list. */
+    private static final String SEED_TEXT =
+            "Main idea\n" + OutlineEditor.INDENT + "Supporting point\n"
+                    + OutlineEditor.INDENT + OutlineEditor.INDENT + "Detail";
 
     private final XComponentContext context;
 
@@ -71,8 +86,8 @@ public class SmartArtDialog {
 
         addLabel(modelFactory, container, "lblType", "Diagram type:", 8, 8, 70, 12);
         addListBox(modelFactory, container, "lstType", 80, 6, 142, 14);
-        addLabel(modelFactory, container, "lblText", "Text points (indent to nest):",
-                8, 28, 214, 12);
+        addLabel(modelFactory, container, "lblText",
+                "Points (Enter = new item · Tab / Shift+Tab = level):", 8, 28, 214, 12);
         addEdit(modelFactory, container, "txtInput", 8, 42, 214, 116);
         addButton(modelFactory, container, "btnOk", "Create", 110, 166, 54, 16,
                 PushButtonType.OK_value, true);
@@ -89,6 +104,18 @@ public class SmartArtDialog {
         XToolkit toolkit = UnoRuntime.queryInterface(XToolkit.class, toolkitObj);
         control.createPeer(toolkit, null);
 
+        // Make Tab/Shift+Tab/Enter behave like an outline editor in the text box.
+        XControlContainer controls = UnoRuntime.queryInterface(XControlContainer.class, dialog);
+        XControl editControl = controls.getControl("txtInput");
+        XTextComponent editText = UnoRuntime.queryInterface(XTextComponent.class, editControl);
+        XWindow2 editWindow = UnoRuntime.queryInterface(XWindow2.class, editControl);
+        XExtendedToolkit extToolkit =
+                UnoRuntime.queryInterface(XExtendedToolkit.class, toolkitObj);
+        XKeyHandler keyHandler = new OutlineKeyHandler(editText, editWindow);
+        if (extToolkit != null) {
+            extToolkit.addKeyHandler(keyHandler);
+        }
+
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
         try {
             short ret = xDialog.execute();
@@ -100,11 +127,82 @@ public class SmartArtDialog {
             int index = (selected != null && selected.length > 0) ? selected[0] : 0;
             return new Result(text == null ? "" : text, DiagramType.fromIndex(index));
         } finally {
+            if (extToolkit != null) {
+                extToolkit.removeKeyHandler(keyHandler);
+            }
             com.sun.star.lang.XComponent disposable =
                     UnoRuntime.queryInterface(com.sun.star.lang.XComponent.class, dialog);
             if (disposable != null) {
                 disposable.dispose();
             }
+        }
+    }
+
+    /**
+     * Repurposes Tab / Shift+Tab / Enter inside the text box so it edits as an
+     * indented outline (a list that stays a list). Only acts while the text box
+     * has focus; all other keys pass through. The actual text transforms live in
+     * {@link OutlineEditor}.
+     */
+    private static final class OutlineKeyHandler implements XKeyHandler {
+        private final XTextComponent edit;
+        private final XWindow2 window;
+
+        OutlineKeyHandler(XTextComponent edit, XWindow2 window) {
+            this.edit = edit;
+            this.window = window;
+        }
+
+        @Override
+        public boolean keyPressed(KeyEvent event) {
+            if (edit == null || window == null || !window.hasFocus()) {
+                return false;
+            }
+            if (event.KeyCode == Key.TAB) {
+                boolean shift = (event.Modifiers & KeyModifier.SHIFT) != 0;
+                apply(shift ? Op.OUTDENT : Op.INDENT);
+                return true;
+            }
+            if (event.KeyCode == Key.RETURN && event.Modifiers == 0) {
+                apply(Op.NEWLINE);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean keyReleased(KeyEvent event) {
+            // Consume Tab's release too, so focus never leaves the box.
+            return edit != null && window != null && window.hasFocus()
+                    && event.KeyCode == Key.TAB;
+        }
+
+        @Override
+        public void disposing(com.sun.star.lang.EventObject event) {
+            // nothing to release
+        }
+
+        private enum Op { INDENT, OUTDENT, NEWLINE }
+
+        private void apply(Op op) {
+            String text = edit.getText();
+            Selection sel = edit.getSelection();
+            int min = Math.min(sel.Min, sel.Max);
+            int max = Math.max(sel.Min, sel.Max);
+            OutlineEditor.Edit result;
+            switch (op) {
+                case INDENT:
+                    result = OutlineEditor.indent(text, min, max);
+                    break;
+                case OUTDENT:
+                    result = OutlineEditor.outdent(text, min, max);
+                    break;
+                default:
+                    result = OutlineEditor.newlineKeepingIndent(text, min, max);
+                    break;
+            }
+            edit.setText(result.text);
+            edit.setSelection(new Selection(result.selStart, result.selEnd));
         }
     }
 
@@ -121,6 +219,8 @@ public class SmartArtDialog {
                 "com.sun.star.awt.UnoControlEditModel", name, x, y, w, h);
         p.setPropertyValue("MultiLine", Boolean.TRUE);
         p.setPropertyValue("VScroll", Boolean.TRUE);
+        p.setPropertyValue("HideInactiveSelection", Boolean.TRUE);
+        p.setPropertyValue("Text", SEED_TEXT);
     }
 
     private void addListBox(XMultiServiceFactory factory, XNameContainer container,

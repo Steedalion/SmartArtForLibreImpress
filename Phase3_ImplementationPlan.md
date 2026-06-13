@@ -19,11 +19,14 @@ from an `.xdl`.
 2. **Parser** (`parsers/HierarchyParser`, `parsers/ParseResult`) — pure Java, no
    UNO; turns indented text into a `DiagramNode` tree with validation.
 3. **Dialog** (`SmartArtDialog`) — a programmatic `UnoControlDialog` collecting
-   the text and diagram type.
-4. **Wiring** — `SmartArtCommand.execute()` now shows the dialog, parses the
+   the text and diagram type, with a **list-enforcing outline editor** (§3.8).
+4. **Outline editing** (`editing/OutlineEditor`) — pure-Java Tab/Shift+Tab/Enter
+   text transforms that keep the input a list.
+5. **Wiring** — `SmartArtCommand.execute()` now shows the dialog, parses the
    input, and displays the parsed tree or the validation error in a message box
    (via `helpers/LibreOfficeHelper`).
-5. **Unit tests** (`HierarchyParserTest`) — run during `mvn package`/CI.
+6. **Unit tests** (`HierarchyParserTest`, `OutlineEditorTest`) — run during
+   `mvn package`/CI.
 
 ---
 
@@ -78,6 +81,9 @@ Builds a `com.sun.star.awt.UnoControlDialogModel` at runtime with: a type label
 (`PushButtonType.OK`/`CANCEL`). `Result show()` runs the dialog modally and
 returns `{text, type}` on Create or `null` on Cancel.
 
+The text box is a **list that stays a list** (see §3.8): it is seeded with a
+starter outline and edits as an outline via a key handler.
+
 ### 3.6 `helpers/LibreOfficeHelper`
 `showMessage(ctx, title, message, isError)` using the toolkit
 `XMessageBoxFactory` against the current frame window.
@@ -85,10 +91,33 @@ returns `{text, type}` on Create or `null` on Cancel.
 ### 3.7 `SmartArtCommand.execute()`
 Show dialog → if cancelled, return → parse → show outline (info) or error.
 
+### 3.8 List-enforcing input (revision)
+The input must be a list from the start and remain one. Approach: a plain
+multi-line edit driven as an outline by a key handler — no rich-list widget
+(UNO dialogs do not offer one), no bullet glyphs; the "list" is the indentation
+the parser already reads (one level = four spaces, `OutlineEditor.INDENT`).
+
+- **`editing/OutlineEditor`** (pure Java, unit-tested): the text transforms —
+  `indent`, `outdent`, and `newlineKeepingIndent` — each returning the new text
+  plus caret/selection offsets. No UNO, so it is covered by `OutlineEditorTest`.
+- **`SmartArtDialog`** seeds the edit with a 3-level starter outline and registers
+  an `XKeyHandler` (via `XExtendedToolkit.addKeyHandler`, removed when the dialog
+  closes). While the edit has focus:
+  - **Tab** → `OutlineEditor.indent` (consume the event so focus does not move);
+  - **Shift+Tab** → `OutlineEditor.outdent`;
+  - **Enter** → `OutlineEditor.newlineKeepingIndent` (new item at the same level).
+  All other keys pass through. The handler only acts when the edit reports focus
+  (`XWindow2.hasFocus()`), so it never disturbs other controls.
+
+The parser (§3.4) is unchanged: it already accepts the space-indented outline the
+editor produces. Only the text transforms are unit-testable; the key-event wiring
+itself needs a manual GUI check.
+
 ---
 
 ## 4. Build & verify
-- `mvn clean package` compiles the new code and runs `HierarchyParserTest`.
+- `mvn clean package` compiles the new code and runs `HierarchyParserTest` and
+  `OutlineEditorTest`.
 - Install check (unchanged contract, but confirm the jar still loads): run
   `tools/verify-extension.sh` (see `TESTING_STRATEGY.md`).
 - Manual: SmartArt → Create Diagram… → type a 3-level outline → Create →

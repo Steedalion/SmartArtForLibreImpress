@@ -162,8 +162,12 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 The dialog collects, with **Create** and **Cancel** actions:
 
 - **Diagram type** — one of Hierarchy, Hub & Spoke, or Process Flow (a dropdown).
-- **Text points** — a multi-line field in which each line is one node and leading
-  indentation expresses nesting (per the rules in §5.2), e.g.:
+- **Text points** — a multi-line field that **is a list and stays a list**: it
+  opens pre-filled with a starter outline, each line is one node, and leading
+  indentation expresses nesting (per the rules in §5.2). It behaves as an outline
+  editor — **Enter** starts a new item at the current level, **Tab** indents the
+  current line one level deeper, **Shift+Tab** moves it one level shallower (Tab
+  never moves focus out of the field). For example:
   - Level 1 Item
     - Level 2 Item
       - Level 3 Item
