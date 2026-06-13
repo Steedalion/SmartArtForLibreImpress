@@ -69,6 +69,13 @@ def text_color(s, color=0xFFFFFF):
         pass
 
 
+def font_size(s, pts):
+    try:
+        s.setPropertyValue("CharHeight", float(pts))
+    except Exception:
+        pass
+
+
 def add_rect(doc, page, x, y, w, h, label, color=GREEN):
     s = doc.createInstance("com.sun.star.drawing.RectangleShape")
     page.add(s)
@@ -132,7 +139,7 @@ def add_chevron_shape(doc, page, x, y, w, h, kind, label, color=BLUE):
     return s
 
 
-def add_connector(doc, page, start_shape, end_shape, straight=False):
+def add_connector(doc, page, start_shape, end_shape, straight=False, arrow_end=False):
     c = doc.createInstance("com.sun.star.drawing.ConnectorShape")
     page.add(c)
     c.setPropertyValue("StartShape", start_shape)
@@ -143,6 +150,9 @@ def add_connector(doc, page, start_shape, end_shape, straight=False):
     if straight:
         c.setPropertyValue("EdgeKind",
             uno.Enum("com.sun.star.drawing.ConnectorType", "LINE"))
+    if arrow_end:
+        c.setPropertyValue("LineEndName", "Arrow")
+        c.setPropertyValue("LineEndWidth", 300)
     return c
 
 
@@ -185,12 +195,14 @@ def draw_hub_and_spoke(doc, page):
 
     hub = add_ellipse(doc, page, CX - HUB_D//2, CY - HUB_D//2, HUB_D, HUB_D,
                       "Alpha", BLUE)
+    font_size(hub, 14)
     spokes_labels = ["Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
     for i, label in enumerate(spokes_labels):
         angle = math.radians(-90 + i * 360 / len(spokes_labels))
         sx = int(CX + RADIUS * math.cos(angle)) - SPOKE_D // 2
         sy = int(CY + RADIUS * math.sin(angle)) - SPOKE_D // 2
         spoke = add_ellipse(doc, page, sx, sy, SPOKE_D, SPOKE_D, label, BLUE2)
+        font_size(spoke, 11)
         add_connector(doc, page, hub, spoke, straight=True)
 
 
@@ -205,10 +217,12 @@ def draw_process_flow(doc, page):
     nodes = []
     for i, (label, color) in enumerate(zip(labels, colors)):
         x = start_x + i * (W + GAP)
-        nodes.append(add_rect(doc, page, x, Y, W, H, label, color))
+        s = add_rect(doc, page, x, Y, W, H, label, color)
+        font_size(s, 14)
+        nodes.append(s)
 
     for i in range(len(nodes) - 1):
-        c = add_connector(doc, page, nodes[i], nodes[i + 1])
+        c = add_connector(doc, page, nodes[i], nodes[i + 1], arrow_end=True)
         c.setPropertyValue("StartGluePointIndex", 1)   # right
         c.setPropertyValue("EndGluePointIndex",   3)   # left
 
@@ -220,6 +234,7 @@ def draw_hierarchy(doc, page):
     CX = 25400 // 2
 
     root = add_rect(doc, page, CX - RW//2, 1200, RW, RH, "Alpha", BLUE)
+    font_size(root, 14)
 
     children = [("Delta", BLUE2), ("Golf", BLUE2)]
     # Space children wide enough to hold two grandchildren each
@@ -233,6 +248,7 @@ def draw_hierarchy(doc, page):
         group_start = CX - child_total // 2 + i * (child_span + child_gap)
         cx = group_start + child_span // 2 - CW // 2
         cs = add_rect(doc, page, cx, child_y, CW, CH, label, color)
+        font_size(cs, 12)
         child_shapes.append((group_start, child_span, cs))
         add_connector(doc, page, root, cs)
 
@@ -244,6 +260,7 @@ def draw_hierarchy(doc, page):
         for j, gl in enumerate(glabels):
             gx = g_start + j * (GW + GAP_X)
             gs = add_rect(doc, page, gx, grand_y, GW, GH, gl, ORANGE)
+            font_size(gs, 10)
             add_connector(doc, page, cs, gs)
 
 

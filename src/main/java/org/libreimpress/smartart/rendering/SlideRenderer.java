@@ -109,11 +109,13 @@ public class SlideRenderer {
             if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
                 applyChevronGeometry(shape, s.getKind());
                 applyStyle(shape, DefaultPalette.chevronFill(chevronSeq++),
-                        DefaultPalette.TEXT_WHITE);
+                        DefaultPalette.TEXT_WHITE,
+                        DefaultPalette.fontSize(s.getLevel()));
             } else {
                 applyStyle(shape,
                         DefaultPalette.fill(s.getKind(), s.getLevel()),
-                        DefaultPalette.TEXT_WHITE);
+                        DefaultPalette.TEXT_WHITE,
+                        DefaultPalette.fontSize(s.getLevel()));
             }
             XText xText = UnoRuntime.queryInterface(XText.class, shape);
             if (xText != null) {
@@ -141,20 +143,25 @@ public class SlideRenderer {
                 props.setPropertyValue("EdgeKind",
                         com.sun.star.drawing.ConnectorType.LINE);
             }
+            if (edge.hasArrowEnd()) {
+                props.setPropertyValue("LineEndName", "Arrow");
+                props.setPropertyValue("LineEndWidth", Integer.valueOf(300));
+            }
             created.add(xConnector);
         }
 
         groupShapes(page, created);
     }
 
-    /** Applies solid fill colour and white text to a shape. */
-    private static void applyStyle(Object shape, int fillColor, int textColor)
-            throws Exception {
+    /** Applies solid fill, text colour, and font size to a shape. */
+    private static void applyStyle(Object shape, int fillColor, int textColor,
+                                   float fontSize) throws Exception {
         XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
         props.setPropertyValue("FillStyle",
                 com.sun.star.drawing.FillStyle.SOLID);
         props.setPropertyValue("FillColor", Integer.valueOf(fillColor));
         props.setPropertyValue("CharColor", Integer.valueOf(textColor));
+        props.setPropertyValue("CharHeight", Float.valueOf(fontSize));
         props.setPropertyValue("LineStyle",
                 com.sun.star.drawing.LineStyle.NONE);
     }

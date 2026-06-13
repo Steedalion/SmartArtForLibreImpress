@@ -60,9 +60,9 @@ public final class ProcessFlowLayout {
                     new LaidOutShape(steps.get(i).getText(), 1, x, y, w1, h1));
         }
 
-        // Connect the steps horizontally.
+        // Connect the steps horizontally with a right→left arrow.
         for (int i = 0; i < n - 1; i++) {
-            out.addEdge(indices[i], indices[i + 1], 1, 3);
+            out.addEdge(new Edge(indices[i], indices[i + 1], 1, 3, false, true));
         }
 
         return out;

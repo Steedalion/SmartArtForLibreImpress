@@ -34,6 +34,15 @@ public final class DefaultPalette {
         return CHEVRON_BLUES[sequenceIndex % CHEVRON_BLUES.length];
     }
 
+    /** Font size in points, decreasing by level for visual hierarchy. */
+    public static float fontSize(int level) {
+        switch (level) {
+            case 1:  return 14f;
+            case 2:  return 11f;
+            default: return 9f;
+        }
+    }
+
     /** Fill colour for a non-chevron shape, chosen by kind and level. */
     public static int fill(ShapeKind kind, int level) {
         if (kind == ShapeKind.ELLIPSE) {

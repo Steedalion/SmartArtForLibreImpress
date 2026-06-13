@@ -1,6 +1,7 @@
 package org.libreimpress.smartart.layout;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 import org.libreimpress.smartart.models.DiagramNode;
@@ -84,6 +85,14 @@ public class ProcessFlowLayoutTest {
         for (Edge e : layout.getEdges()) {
             assertEquals("start glue should be right-side (1)", 1, e.getStartGlue());
             assertEquals("end glue should be left-side (3)", 3, e.getEndGlue());
+        }
+    }
+
+    @Test
+    public void stepEdgesHaveArrowAtEnd() {
+        DiagramLayout layout = ProcessFlowLayout.layout(root("A", "B", "C"));
+        for (Edge e : layout.getEdges()) {
+            assertTrue("step connectors should have an arrowhead", e.hasArrowEnd());
         }
     }
 
