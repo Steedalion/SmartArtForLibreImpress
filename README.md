@@ -21,6 +21,11 @@ text input.
   stacked vertically below it, connected top-to-bottom.
 - ✅ **Phase 8 — Hub & Spoke children:** level-3+ descendants of each spoke are
   placed radially outward along the same angle, connected with straight lines.
+- ✅ **Phase 9 — Sequential Chevron deep children:** level-3+ descendants of
+  each sub-item are stacked vertically below it, connected bottom-to-top.
+- ✅ **Phase 10 — User colour palette:** the dialog has an optional *Colours*
+  field; entering `1=#4472C4` (one level per line) overrides the built-in
+  palette for that level.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
@@ -166,6 +171,8 @@ only surfacing during a manual install.
 | [`Phase6_ImplementationPlan.md`](Phase6_ImplementationPlan.md) | Phase 6 — arrow heads & font size scaling |
 | [`Phase7_ImplementationPlan.md`](Phase7_ImplementationPlan.md) | Phase 7 — Process Flow sub-items |
 | [`Phase8_ImplementationPlan.md`](Phase8_ImplementationPlan.md) | Phase 8 — Hub & Spoke children |
+| [`Phase9_ImplementationPlan.md`](Phase9_ImplementationPlan.md) | Phase 9 — Sequential Chevron level-3+ children |
+| [`Phase10_ImplementationPlan.md`](Phase10_ImplementationPlan.md) | Phase 10 — user colour palette |
 | [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
 | [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 
