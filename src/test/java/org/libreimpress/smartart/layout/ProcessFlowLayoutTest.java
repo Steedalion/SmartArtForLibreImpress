@@ -97,11 +97,58 @@ public class ProcessFlowLayoutTest {
     }
 
     @Test
-    public void stepsAreCentredVertically() {
+    public void stepsAreAtTopMargin() {
         DiagramLayout layout = ProcessFlowLayout.layout(root("A", "B"));
-        int expectedY = (ProcessFlowLayout.SLIDE_H - ProcessFlowLayout.BASE_NODE_H) / 2;
         for (LaidOutShape s : layout.getShapes()) {
-            assertEquals(expectedY, s.getY());
+            assertEquals(ProcessFlowLayout.MARGIN_Y, s.getY());
         }
+    }
+
+    @Test
+    public void childrenArePlacedBelowParentStep() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode step = new DiagramNode("Step", 1);
+        step.addChild(new DiagramNode("Sub1", 2));
+        step.addChild(new DiagramNode("Sub2", 2));
+        root.addChild(step);
+
+        DiagramLayout layout = ProcessFlowLayout.layout(root);
+        assertEquals(3, layout.getShapes().size()); // 1 step + 2 children
+
+        LaidOutShape s = layout.getShapes().get(0); // the step
+        LaidOutShape c1 = layout.getShapes().get(1);
+        LaidOutShape c2 = layout.getShapes().get(2);
+
+        assertTrue("child 1 should be below step", c1.getY() > s.getY());
+        assertTrue("child 2 should be below child 1", c2.getY() > c1.getY());
+        assertEquals("children centred under step", s.centerX(), c1.centerX());
+        assertEquals("children centred under step", s.centerX(), c2.centerX());
+    }
+
+    @Test
+    public void parentToChildEdgesArePresent() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode step = new DiagramNode("Step", 1);
+        step.addChild(new DiagramNode("Sub", 2));
+        root.addChild(step);
+
+        DiagramLayout layout = ProcessFlowLayout.layout(root);
+        // 1 step-to-step edge (none here, single step) + 1 parent→child edge
+        assertEquals(1, layout.getEdges().size());
+        assertEquals(0, layout.getEdges().get(0).getParent()); // step
+        assertEquals(1, layout.getEdges().get(0).getChild());  // child
+    }
+
+    @Test
+    public void childEdgesUseBottomToTopGluePoints() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode step = new DiagramNode("Step", 1);
+        step.addChild(new DiagramNode("Sub", 2));
+        root.addChild(step);
+
+        DiagramLayout layout = ProcessFlowLayout.layout(root);
+        Edge childEdge = layout.getEdges().get(0);
+        assertEquals("parent glue should be bottom (2)", 2, childEdge.getStartGlue());
+        assertEquals("child glue should be top (0)", 0, childEdge.getEndGlue());
     }
 }

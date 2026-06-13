@@ -6,18 +6,22 @@ import java.util.List;
 
 /**
  * Lays out a Process Flow diagram: the level-1 nodes are placed as a
- * left-to-right sequence of equally-sized boxes, centred on the slide, with a
- * connector from each box to the next. Pure Java (no UNO). Units are 1/100 mm.
+ * left-to-right sequence of equally-sized boxes near the top of the slide,
+ * with an arrow connector from each box to the next. Level-2 children of each
+ * step are stacked vertically below their parent. Pure Java (no UNO).
+ * Units are 1/100 mm.
  */
 public final class ProcessFlowLayout {
 
     static final int BASE_NODE_W = 4000;
     static final int BASE_NODE_H = 1500;
     static final int SIZE_DECREMENT = 30; // reduce size by 30 per level depth
-    static final int H_GAP = 1500;  // space between consecutive boxes
+    static final int H_GAP = 1500;  // space between consecutive step boxes
+    static final int V_GAP = 800;   // vertical gap between parent and child rows
     static final int SLIDE_W = 25400; // standard Impress slide: 254 mm
     static final int SLIDE_H = 19050; // standard Impress slide: 190.5 mm
     static final int MARGIN_X = 1000;
+    static final int MARGIN_Y = 1000;
 
     private ProcessFlowLayout() {
     }
@@ -36,8 +40,10 @@ public final class ProcessFlowLayout {
      * @param root the synthetic root (level 0) produced by the parser; its
      *             children are the level-1 nodes that become the flow steps.
      *
-     * <p>Layout: level-1 steps only, arranged left-to-right on a single row,
-     * centred on the slide. Edges connect adjacent steps horizontally.
+     * <p>Level-1 steps are arranged left-to-right near the top of the slide.
+     * Level-2 children of each step are stacked vertically below their parent,
+     * centred on the parent's X. Edges connect adjacent steps horizontally
+     * (with arrowheads) and each parent to its children vertically.
      */
     public static DiagramLayout layout(DiagramNode root) {
         DiagramLayout out = new DiagramLayout();
@@ -51,18 +57,37 @@ public final class ProcessFlowLayout {
         int h1 = nodeHeight(1);
         int totalWidth = n * w1 + (n - 1) * H_GAP;
         int startX = Math.max(MARGIN_X, (SLIDE_W - totalWidth) / 2);
-        int y = (SLIDE_H - h1) / 2;
+        int y1 = MARGIN_Y;
 
-        int[] indices = new int[n];
+        // Place level-1 steps and record their centre-X for sub-item alignment.
+        int[] indices  = new int[n];
+        int[] stepCXs  = new int[n];
         for (int i = 0; i < n; i++) {
             int x = startX + i * (w1 + H_GAP);
+            stepCXs[i] = x + w1 / 2;
             indices[i] = out.addShape(
-                    new LaidOutShape(steps.get(i).getText(), 1, x, y, w1, h1));
+                    new LaidOutShape(steps.get(i).getText(), 1, x, y1, w1, h1));
         }
 
-        // Connect the steps horizontally with a right→left arrow.
+        // Connect the steps horizontally with right→left arrowhead connectors.
         for (int i = 0; i < n - 1; i++) {
             out.addEdge(new Edge(indices[i], indices[i + 1], 1, 3, false, true));
+        }
+
+        // Place level-2 children below each step, stacked vertically.
+        int w2 = nodeWidth(2);
+        int h2 = nodeHeight(2);
+        for (int i = 0; i < n; i++) {
+            List<DiagramNode> children = steps.get(i).getChildren();
+            int childY = y1 + h1 + V_GAP;
+            for (DiagramNode child : children) {
+                int childX = stepCXs[i] - w2 / 2;
+                int childIdx = out.addShape(
+                        new LaidOutShape(child.getText(), 2, childX, childY, w2, h2));
+                // bottom of parent (glue 2) → top of child (glue 0)
+                out.addEdge(indices[i], childIdx, 2, 0);
+                childY += h2 + V_GAP;
+            }
         }
 
         return out;

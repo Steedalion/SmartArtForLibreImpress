@@ -207,17 +207,22 @@ def draw_hub_and_spoke(doc, page):
 
 
 def draw_process_flow(doc, page):
-    """4 nodes in a horizontal row joined by connectors."""
-    W, H = 4000, 1800; GAP = 1200; Y = 8000
-    labels = ["Alpha", "Delta", "Golf", "Juliet"]
-    total_w = len(labels) * W + (len(labels) - 1) * GAP
+    """4 steps in a horizontal row with arrow connectors; first two have sub-items."""
+    W, H = 4000, 1500; GAP = 1500; Y1 = 1000
+    W2, H2 = 3970, 1470; V_GAP = 800
+    steps = [
+        ("Alpha",  BLUE,  ["Bravo", "Charlie"]),
+        ("Delta",  BLUE2, ["Echo"]),
+        ("Golf",   BLUE3, []),
+        ("Juliet", BLUE,  []),
+    ]
+    total_w = len(steps) * W + (len(steps) - 1) * GAP
     start_x = (25400 - total_w) // 2
-    colors = [BLUE, BLUE2, BLUE3, BLUE]
 
     nodes = []
-    for i, (label, color) in enumerate(zip(labels, colors)):
+    for i, (label, color, _) in enumerate(steps):
         x = start_x + i * (W + GAP)
-        s = add_rect(doc, page, x, Y, W, H, label, color)
+        s = add_rect(doc, page, x, Y1, W, H, label, color)
         font_size(s, 14)
         nodes.append(s)
 
@@ -225,6 +230,19 @@ def draw_process_flow(doc, page):
         c = add_connector(doc, page, nodes[i], nodes[i + 1], arrow_end=True)
         c.setPropertyValue("StartGluePointIndex", 1)   # right
         c.setPropertyValue("EndGluePointIndex",   3)   # left
+
+    # Sub-items stacked below each step
+    for i, (_, _, subs) in enumerate(steps):
+        x = start_x + i * (W + GAP)
+        cx = x + W // 2
+        child_y = Y1 + H + V_GAP
+        for sub in subs:
+            cs = add_rect(doc, page, cx - W2 // 2, child_y, W2, H2, sub, GREEN)
+            font_size(cs, 11)
+            c = add_connector(doc, page, nodes[i], cs)
+            c.setPropertyValue("StartGluePointIndex", 2)   # bottom
+            c.setPropertyValue("EndGluePointIndex",   0)   # top
+            child_y += H2 + V_GAP
 
 
 def draw_hierarchy(doc, page):
