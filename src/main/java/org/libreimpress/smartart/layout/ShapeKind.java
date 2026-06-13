@@ -4,5 +4,6 @@ package org.libreimpress.smartart.layout;
 public enum ShapeKind {
     RECTANGLE,
     ELLIPSE,
-    CHEVRON  // Pentagon/chevron shape for Sequential Chevron diagram
+    PENTAGON,  // Flat-left, pointed-right first step in Sequential Chevron
+    CHEVRON    // Notched-left, pointed-right intermediate step
 }

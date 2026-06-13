@@ -53,15 +53,16 @@ public class SequentialChevronLayoutTest {
     }
 
     @Test
-    public void allChevronShapesAreChevronKind() {
+    public void firstShapeIsPentagonRestAreChevrons() {
         DiagramNode root = new DiagramNode("", 0);
         root.addChild(new DiagramNode("Step1", 1));
         root.addChild(new DiagramNode("Step2", 1));
+        root.addChild(new DiagramNode("Step3", 1));
         DiagramLayout layout = SequentialChevronLayout.layout(root);
-        // First two shapes are the chevrons (level-1)
-        for (int i = 0; i < 2; i++) {
-            assertEquals(ShapeKind.CHEVRON, layout.getShapes().get(i).getKind());
-        }
+        // First step uses a flat-back pentagon, subsequent steps use notched chevrons
+        assertEquals(ShapeKind.PENTAGON, layout.getShapes().get(0).getKind());
+        assertEquals(ShapeKind.CHEVRON,  layout.getShapes().get(1).getKind());
+        assertEquals(ShapeKind.CHEVRON,  layout.getShapes().get(2).getKind());
     }
 
     @Test

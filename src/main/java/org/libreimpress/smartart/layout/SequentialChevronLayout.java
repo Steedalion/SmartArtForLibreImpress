@@ -65,8 +65,8 @@ public final class SequentialChevronLayout {
             int chevronX = chevronStartX + i * (w1 + CHEVRON_SPACING);
             int chevronCX = chevronX + w1 / 2; // center X for positioning subitems
 
-            // First chevron is a pentagon; rest are standard chevrons.
-            ShapeKind shape = (i == 0) ? ShapeKind.CHEVRON : ShapeKind.CHEVRON;
+            // First chevron is a flat-back pentagon; rest are notched chevrons.
+            ShapeKind shape = (i == 0) ? ShapeKind.PENTAGON : ShapeKind.CHEVRON;
             LaidOutShape chevronShape = new LaidOutShape(
                     chevronNode.getText(), 1,
                     chevronX, chevronY, w1, h1,
