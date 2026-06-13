@@ -29,7 +29,7 @@ public final class SmartArtConfig {
         seedText = buildDefaultSeedText();
     }
 
-    /** The built-in default: 2-level hierarchy with NATO phonetic alphabet names. */
+    /** The built-in default: 3-level hierarchy with NATO phonetic alphabet names. */
     private static String buildDefaultSeedText() {
         return "Alpha\n"
                 + OutlineEditor.INDENT + "Bravo\n"
@@ -37,7 +37,7 @@ public final class SmartArtConfig {
                 + "Delta\n"
                 + OutlineEditor.INDENT + "Echo\n"
                 + OutlineEditor.INDENT + "Foxtrot\n"
-                + OutlineEditor.INDENT + "Golf\n"
-                + OutlineEditor.INDENT + "Hotel";
+                + OutlineEditor.INDENT + OutlineEditor.INDENT + "Golf\n"
+                + OutlineEditor.INDENT + OutlineEditor.INDENT + "Hotel";
     }
 }
