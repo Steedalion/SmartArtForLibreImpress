@@ -53,16 +53,6 @@ public class SmartArtDialog {
         }
     }
 
-    /** The field starts as — and is kept as — an indented list. */
-    private static final String SEED_TEXT =
-            "Alpha\n"
-            + OutlineEditor.INDENT + "Bravo\n"
-            + OutlineEditor.INDENT + OutlineEditor.INDENT + "Charlie\n"
-            + "Delta\n"
-            + OutlineEditor.INDENT + "Echo\n"
-            + OutlineEditor.INDENT + "Foxtrot\n"
-            + OutlineEditor.INDENT + OutlineEditor.INDENT + "Golf\n"
-            + OutlineEditor.INDENT + OutlineEditor.INDENT + "Hotel";
 
     private final XComponentContext context;
 
@@ -302,7 +292,7 @@ public class SmartArtDialog {
         p.setPropertyValue("HelpText",
                 "One item per line. Enter = new item; Ctrl+] / Ctrl+[ or the "
                         + "Indent/Outdent buttons change the level.");
-        p.setPropertyValue("Text", SEED_TEXT);
+        p.setPropertyValue("Text", SmartArtConfig.getSeedText());
     }
 
     private void addListBox(XMultiServiceFactory factory, XNameContainer container,

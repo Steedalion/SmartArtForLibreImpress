@@ -2,7 +2,6 @@ package org.libreimpress.smartart.layout;
 
 import org.libreimpress.smartart.models.DiagramNode;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -62,19 +61,18 @@ public final class HubAndSpokeLayout {
                     ShapeKind.ELLIPSE);
             int hubIndex = out.addShape(hubShape);
 
-            // Collect all descendants (not just immediate children) as spokes.
-            List<DiagramNode> spokes = new ArrayList<>();
-            collectAllDescendants(hubNode, spokes);
+            // Spokes are only the immediate children (level-2).
+            List<DiagramNode> spokes = hubNode.getChildren();
             int n = spokes.size();
             for (int i = 0; i < n; i++) {
                 double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
                 int spokeCX = hubCX + (int) Math.round(SPOKE_RADIUS * Math.cos(angle));
                 int spokeCY = hubCY + (int) Math.round(SPOKE_RADIUS * Math.sin(angle));
                 DiagramNode spokeNode = spokes.get(i);
-                int spokeW = nodeWidth(spokeNode.getLevel());
-                int spokeH = nodeHeight(spokeNode.getLevel());
+                int spokeW = nodeWidth(2);
+                int spokeH = nodeHeight(2);
                 LaidOutShape spokeShape = new LaidOutShape(
-                        spokeNode.getText(), spokeNode.getLevel(),
+                        spokeNode.getText(), 2,
                         spokeCX - spokeW / 2, spokeCY - spokeH / 2, spokeW, spokeH,
                         ShapeKind.ELLIPSE);
                 int spokeIndex = out.addShape(spokeShape);
@@ -83,13 +81,5 @@ public final class HubAndSpokeLayout {
         }
 
         return out;
-    }
-
-    /** Recursively collect all descendants (excluding the node itself). */
-    private static void collectAllDescendants(DiagramNode node, List<DiagramNode> out) {
-        for (DiagramNode child : node.getChildren()) {
-            out.add(child);
-            collectAllDescendants(child, out);
-        }
     }
 }
