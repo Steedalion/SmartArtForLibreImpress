@@ -92,26 +92,21 @@ public class SlideRenderer {
         XShape[] boxes = new XShape[laidOut.size()];
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
-            boolean isPolygon = s.getKind() == ShapeKind.CHEVRON
-                             || s.getKind() == ShapeKind.PENTAGON;
             String service;
             if (s.getKind() == ShapeKind.ELLIPSE) {
                 service = "com.sun.star.drawing.EllipseShape";
-            } else if (isPolygon) {
-                service = "com.sun.star.drawing.PolyPolygonShape";
+            } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
+                service = "com.sun.star.drawing.CustomShape";
             } else {
                 service = "com.sun.star.drawing.RectangleShape";
             }
             Object shape = factory.createInstance(service);
             XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
             shapes.add(xShape);
-            if (isPolygon) {
-                XPropertySet props =
-                        UnoRuntime.queryInterface(XPropertySet.class, shape);
-                props.setPropertyValue("PolyPolygon", buildChevronPolygon(s));
-            } else {
-                xShape.setSize(new Size(s.getWidth(), s.getHeight()));
-                xShape.setPosition(new Point(s.getX(), s.getY()));
+            xShape.setSize(new Size(s.getWidth(), s.getHeight()));
+            xShape.setPosition(new Point(s.getX(), s.getY()));
+            if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
+                applyChevronGeometry(shape, s.getKind());
             }
             XText xText = UnoRuntime.queryInterface(XText.class, shape);
             if (xText != null) {
@@ -139,45 +134,24 @@ public class SlideRenderer {
     }
 
     /**
-     * Builds a {@code PolyPolygon} value (Point[][]) for a pentagon or chevron.
+     * Applies the LibreOffice built-in chevron or pentagon-right preset geometry
+     * to a {@code com.sun.star.drawing.CustomShape}.
      *
-     * <p>Pentagon: flat left side, pointed right — used as the first step.
-     * Chevron: notched left side, pointed right — used for subsequent steps.
-     * Coordinates are absolute slide units (1/100 mm), taken directly from the
-     * {@link LaidOutShape}'s bounding box so no separate setPosition/setSize call
-     * is needed.
+     * <p>Java's statically-typed {@code PropertyValue[]} array is passed to
+     * {@code setPropertyValue} and the UNO bridge annotates the {@code Any} as
+     * {@code sequence<PropertyValue>} — the same annotation that Python's
+     * attribute-assignment path applies, which is what makes the property take
+     * effect in LibreOffice's C++ shape engine.
      */
-    private static Point[][] buildChevronPolygon(LaidOutShape s) {
-        int x = s.getX(), y = s.getY(), w = s.getWidth(), h = s.getHeight();
-        int tip   = w / 4; // width of the right-pointing tip
-        Point[] pts;
-        if (s.getKind() == ShapeKind.PENTAGON) {
-            pts = new Point[]{
-                pt(x,           y),
-                pt(x + w - tip, y),
-                pt(x + w,       y + h / 2),
-                pt(x + w - tip, y + h),
-                pt(x,           y + h),
-            };
-        } else { // CHEVRON
-            int notch = w / 6; // depth of the left-side notch
-            pts = new Point[]{
-                pt(x + notch,   y),
-                pt(x + w - tip, y),
-                pt(x + w,       y + h / 2),
-                pt(x + w - tip, y + h),
-                pt(x + notch,   y + h),
-                pt(x,           y + h / 2),
-            };
-        }
-        return new Point[][]{ pts };
-    }
-
-    private static Point pt(int x, int y) {
-        Point p = new Point();
-        p.X = x;
-        p.Y = y;
-        return p;
+    private static void applyChevronGeometry(Object shape, ShapeKind kind)
+            throws Exception {
+        String typeName = (kind == ShapeKind.PENTAGON) ? "pentagon-right" : "chevron";
+        com.sun.star.beans.PropertyValue typeVal = new com.sun.star.beans.PropertyValue();
+        typeVal.Name  = "Type";
+        typeVal.Value = typeName;
+        XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
+        props.setPropertyValue("CustomShapeGeometry",
+                new com.sun.star.beans.PropertyValue[]{ typeVal });
     }
 
     /** Groups all the diagram's shapes into one editable group on the page. */
