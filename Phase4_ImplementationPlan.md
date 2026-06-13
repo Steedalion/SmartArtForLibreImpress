@@ -56,7 +56,7 @@ on a standard slide. These are placeholders; real layout arrives in 4.3.
 
 ## Testing
 - `mvn clean package` / CI — unchanged unit tests (parser, outline editor) still
-  pass; the registration/dispatch probe (`tools/verify-extension.sh`) still
+  pass; the registration/dispatch probe (`uno-tests/run.sh`) still
   passes, confirming the extension loads after adding the renderer.
 - **Manual (required):** the actual shape creation is UNO runtime work that is
   not headless-testable. Verify in Impress: SmartArt → Create Diagram… → Create →
@@ -100,7 +100,7 @@ diagram types use it for now; type-specific layouts come in 4.4.
 
 ### Testing
 - `HierarchyLayoutTest` (5 cases) covers the positioning math.
-- `tools/verify-extension.sh` still passes (extension loads + dispatches).
+- `uno-tests/run.sh` (registration probe) still passes (extension loads + dispatches).
 - **Manual (required):** the multi-shape draw is UNO runtime work — verify in
   Impress that a 3-level outline renders as a centred tree of labelled boxes
   joined by connectors.

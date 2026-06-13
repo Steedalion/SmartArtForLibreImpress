@@ -50,7 +50,10 @@ jobs:
           sudo apt-get install -y libreoffice libreoffice-java-common default-jre python3-uno xvfb
 
       - name: Verify registration and dispatch (headless UNO)
-        run: xvfb-run -a bash tools/verify-extension.sh target/SmartArt.oxt
+        run: xvfb-run -a bash uno-tests/run.sh --install target/SmartArt.oxt uno-tests/probes/registration_probe.py
+
+      - name: Verify rendering API (headless UNO)
+        run: xvfb-run -a bash uno-tests/run.sh uno-tests/probes/render_probe.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

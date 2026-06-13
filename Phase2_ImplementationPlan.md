@@ -533,7 +533,7 @@ extension, change a token in *all* its locations at once:
    `RegistrationClassName: org.libreimpress.smartart.SmartArtCommand`.
 
 Verifying the contract holds is automated — see `TESTING_STRATEGY.md` and
-`tools/verify-extension.sh` (it asserts the command actually dispatches).
+`uno-tests/run.sh` with `registration_probe.py` (it asserts the command actually dispatches).
 
 ---
 

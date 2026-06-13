@@ -285,7 +285,7 @@ actually work is described in `TESTING_STRATEGY.md`.
 
 Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
 
-✅ Plugin loads / installs without errors (verified by `tools/verify-extension.sh`)  
+✅ Plugin loads / installs without errors (verified by `uno-tests/run.sh`)  
 ✅ Dialog accepts text input with indentation  
 ✅ Minimum 3 levels supported (enforced by the parser)  
 ✅ User-friendly error messages  

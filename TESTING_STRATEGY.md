@@ -8,7 +8,7 @@ on each push; layers 1–3 also run locally.
 |-------|----------------|--------------------|-------|
 | 1. Java unit tests | Pure-Java logic (the parser) is correct | No | `mvn package` |
 | 2. OXT structure validation | The `.oxt` contains the right files in the right places | No | CI shell step |
-| 3. Runtime registration & dispatch | LibreOffice loads the component and the menu command actually dispatches | Yes (headless) | `tools/verify-extension.sh` |
+| 3. Runtime checks (registration/dispatch + drawing API) | LibreOffice loads the component, the command dispatches, and the drawing API behaves as assumed | Yes (headless) | `uno-tests/run.sh` |
 | Manual | The dialog *looks* right on screen | Yes (GUI) | human |
 
 The key change from earlier phases: **layer 3 is now automated.** A headless
@@ -53,39 +53,46 @@ actually works — that is layer 3.
 
 ---
 
-## Layer 3 — Runtime registration & dispatch (headless LibreOffice)
+## Layer 3 — Runtime checks against a headless LibreOffice
 
-**Scripts:** `tools/verify-extension.sh` (orchestrator) + `tools/probe_extension.py`
-(UNO probe).
+**Scripts:** `uno-tests/run.sh` (orchestrator) + the probes in `uno-tests/probes/`.
+See [`uno-tests/README.md`](uno-tests/README.md). `run.sh` starts a throwaway,
+headless LibreOffice (profile under `target/`, never `/tmp`), optionally installs
+the `.oxt`, runs the given probe over a UNO socket, and tears everything down.
 
-`verify-extension.sh` installs the `.oxt` into a throwaway user profile, starts a
-headless listening LibreOffice, runs the probe, and tears everything down. The
-probe asserts:
+There are two probes:
 
+**`registration_probe.py`** (installs the `.oxt`) asserts:
 1. the SmartArt menu item is present in LibreOffice's **merged** Addons config; and
 2. `frame.queryDispatch("org.libreimpress.smartart:CreateDiagram", …)` returns a
    real dispatch in an Impress frame.
 
 Check 2 is the decisive one: LibreOffice **silently hides** an addon menu item
 whose command cannot be dispatched, so a null dispatch means an empty submenu.
-This layer catches the registration/dispatch regressions that layers 1–2 miss —
-e.g. the component jar packaged at the OXT root instead of `uno/smartart.jar`,
-which leaves the config perfect but the dispatch null (see
-`Phase2_ImplementationPlan.md` §15).
+This catches the registration/dispatch regressions that layers 1–2 miss — e.g.
+the component jar packaged at the OXT root instead of `uno/smartart.jar`, which
+leaves the config perfect but the dispatch null (see `Phase2_ImplementationPlan.md`
+§15).
+
+**`render_probe.py`** (no extension needed) exercises the drawing API the renderer
+relies on against a fresh Impress doc — create `RectangleShape`s, glue
+`ConnectorShape`s, group via the global `ShapeCollection` — guarding against a
+LibreOffice version where any of those behaves differently (each was a real
+surprise during development). It is an API-contract smoke test; it does not invoke
+the Java renderer (that needs the modal dialog, which can't run headless).
 
 ```bash
 # requires libreoffice (unopkg, soffice) + python3-uno on PATH
 mvn clean package
-xvfb-run -a bash tools/verify-extension.sh target/SmartArt.oxt
-#   PASS: config has menu 'org.libreimpress.smartart' with submenu items ['m1'] …
-#   PASS: queryDispatch('org.libreimpress.smartart:CreateDiagram') -> …SmartArtCommand
-#   VERIFY PASS
+uno-tests/run.sh --install target/SmartArt.oxt uno-tests/probes/registration_probe.py
+uno-tests/run.sh uno-tests/probes/render_probe.py
+#   … PASS lines …
+#   UNO TEST PASS: <probe>
 ```
 
-The script exits non-zero if registration or dispatch fails, so it gates CI.
-It was validated both ways: it passes on a correct build and **fails** on a
-deliberately broken one (jar moved to the OXT root → `queryDispatch` returns
-`None`).
+Each run exits non-zero on failure, so they gate CI. The registration probe was
+validated both ways: it passes on a correct build and **fails** on a deliberately
+broken one (jar moved to the OXT root → `queryDispatch` returns `None`).
 
 ---
 
@@ -115,6 +122,6 @@ unopkg add --suppress-license target/SmartArt.oxt  # close all LibreOffice windo
 
 1. `mvn clean package` — layer 1 + build the `.oxt`.
 2. Validate OXT structure — layer 2.
-3. Install LibreOffice + `python3-uno`, then `xvfb-run … tools/verify-extension.sh`
-   — layer 3.
+3. Install LibreOffice + `python3-uno`, then run both `uno-tests/` probes under
+   `xvfb-run` — layer 3.
 4. Upload the `.oxt` artifact.

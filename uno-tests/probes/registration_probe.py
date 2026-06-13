@@ -1,47 +1,29 @@
 #!/usr/bin/env python3
-"""Runtime verification probe for the LibreImpress SmartArt extension.
+"""Registration & dispatch probe for the SmartArt extension.
 
-Connects to a headless LibreOffice instance (started by verify-extension.sh) and
-asserts two things that structural/packaging checks cannot catch:
+Run via uno-tests/run.sh with the extension installed:
+    uno-tests/run.sh --install target/SmartArt.oxt uno-tests/probes/registration_probe.py
 
+Asserts two things that packaging/structural checks cannot:
   1. The SmartArt menu item is present in LibreOffice's *merged* Addons config.
-  2. The command URL actually resolves to a dispatch in an Impress frame.
+  2. The command URL resolves to a dispatch in an Impress frame.
 
-Check (2) is the decisive one: LibreOffice silently hides an addon menu item
-whose command cannot be dispatched, so a null dispatch == an empty submenu. This
-is exactly the failure mode caused by the component jar being in the wrong place
-(uri is resolved relative to the descriptor) — see impressSmartArt.md §5.5.
+Check (2) is decisive: LibreOffice hides an addon menu item whose command cannot
+be dispatched, so a null dispatch == an empty submenu (e.g. the component jar in
+the wrong place). See Phase2_ImplementationPlan.md §15.
 
-Usage: probe_extension.py <port>
-Exit code 0 = all checks pass, 1 = a check failed, 2 = could not connect.
+Exit 0 = pass, 1 = a check failed, 2 = could not connect.
 """
 
 import sys
-import time
 import uno
 from com.sun.star.beans import PropertyValue
 
-# --- values from the registration contract (impressSmartArt.md §5.5.2) ---
+from _connect import connect
+
 MENU_NODE = "org.libreimpress.smartart"
 COMMAND_URL = "org.libreimpress.smartart:CreateDiagram"
 MENU_PATH = "/org.openoffice.Office.Addons/AddonUI/OfficeMenuBar"
-
-
-def connect(port, tries=60):
-    local = uno.getComponentContext()
-    resolver = local.ServiceManager.createInstanceWithContext(
-        "com.sun.star.bridge.UnoUrlResolver", local)
-    last = None
-    for _ in range(tries):
-        try:
-            return resolver.resolve(
-                "uno:socket,host=localhost,port=%d;urp;StarOffice.ComponentContext"
-                % port)
-        except Exception as e:  # noqa: BLE001
-            last = e
-            time.sleep(0.5)
-    print("PROBE: could not connect to port %d: %s" % (port, last))
-    sys.exit(2)
 
 
 def check_config(ctx):
@@ -92,15 +74,15 @@ def check_dispatch(ctx):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: probe_extension.py <port>")
+        print("usage: registration_probe.py <port>")
         sys.exit(2)
     ctx = connect(int(sys.argv[1]))
     ok_config = check_config(ctx)
     ok_dispatch = check_dispatch(ctx)
     if ok_config and ok_dispatch:
-        print("PROBE: all checks passed")
+        print("REGISTRATION PROBE: all checks passed")
         sys.exit(0)
-    print("PROBE: one or more checks failed")
+    print("REGISTRATION PROBE: one or more checks failed")
     sys.exit(1)
 
 

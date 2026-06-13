@@ -125,7 +125,7 @@ itself needs a manual GUI check.
 - `mvn clean package` compiles the new code and runs `HierarchyParserTest` and
   `OutlineEditorTest`.
 - Install check (unchanged contract, but confirm the jar still loads): run
-  `tools/verify-extension.sh` (see `TESTING_STRATEGY.md`).
+  `uno-tests/run.sh` (see `TESTING_STRATEGY.md`).
 - Manual: SmartArt → Create Diagram… → type a 3-level outline → Create →
   message box shows the parsed tree; try bad input → see the matching error.
 

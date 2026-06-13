@@ -37,3 +37,7 @@ out/
 # Testing
 .coverage
 .pytest_cache/
+
+# Python
+__pycache__/
+*.pyc

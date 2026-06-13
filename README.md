@@ -96,9 +96,12 @@ LibreImpress-SmartArt/
 │       ├── parsers/HierarchyParserTest.java # parser unit tests (run in mvn package)
 │       ├── editing/OutlineEditorTest.java   # outline-editing unit tests
 │       └── layout/HierarchyLayoutTest.java  # tree-layout unit tests
-├── tools/
-│   ├── verify-extension.sh                 # install + headless UNO dispatch test
-│   └── probe_extension.py                  # UNO probe (config merge + queryDispatch)
+├── uno-tests/                              # live headless-LibreOffice tests (layer 3)
+│   ├── run.sh                              # launch throwaway LibreOffice, run a probe, tear down
+│   └── probes/
+│       ├── _connect.py                     # shared UNO connection helper
+│       ├── registration_probe.py           # menu in merged config + command dispatches
+│       └── render_probe.py                 # rectangle/connector/group API the renderer uses
 └── target/
     ├── smartart.jar
     └── SmartArt.oxt
