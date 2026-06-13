@@ -45,14 +45,16 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 4.2 | Multi-level Hierarchy: a box per node as a top-down tree + connectors | ✅ Done |
 | 4.3 | Group the diagram's shapes into one editable group object | ✅ Done |
 | 4.4 | Diagram-type shapes/layouts (Hub & Spoke, Process Flow, Sequential Chevron) | ✅ Done |
-| later | Colour palette & styling | ⏳ Planned |
+| 5 | Default colour palette applied to shapes based on kind and level | ✅ Done |
+| later | User-provided colour palette via dialog | ⏳ Planned |
 
 **What works today:** clicking **SmartArt → Create Diagram…** opens a
 programmatic dialog (diagram-type dropdown + multiline text); on **Create** the
 indented text is parsed into a validated hierarchy and the chosen diagram type is
 rendered as grouped, editable shapes on the current slide. All four diagram types
-are implemented — Hierarchy, Hub & Spoke, Process Flow, and Sequential Chevron.
-The colour-palette input described in §3.2 / §5.1 is deferred to a later phase.
+are implemented — Hierarchy, Hub & Spoke, Process Flow, and Sequential Chevron —
+with a built-in default colour palette (blue/green by level). The user-provided
+colour-palette input described in §3.2 / §5.1 is deferred to a later phase.
 Sections 2–8 below describe the target product.
 
 ### 1.3 How these documents are written (and the one-shot goal)
@@ -294,7 +296,7 @@ Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
 ✅ Hierarchy is visually reflected in output (Phase 4.2)  
 ✅ Output is grouped and editable (Phase 4.3)  
 ✅ All diagram types generate correctly — Hierarchy, Hub & Spoke, Process Flow, Sequential Chevron (Phase 4.4)  
-⏳ Color palette (when provided) is applied — later phase  
-⏳ Default styling applied when palette missing — later phase
+✅ Default styling applied when palette missing — built-in palette applied (Phase 5)  
+⏳ Color palette (when provided) is applied — later phase
 
 

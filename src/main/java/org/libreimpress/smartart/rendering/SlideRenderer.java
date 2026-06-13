@@ -90,6 +90,7 @@ public class SlideRenderer {
 
         List<LaidOutShape> laidOut = layout.getShapes();
         XShape[] boxes = new XShape[laidOut.size()];
+        int chevronSeq = 0; // sequence counter for chevron colour cycling
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
             String service;
@@ -107,6 +108,12 @@ public class SlideRenderer {
             xShape.setPosition(new Point(s.getX(), s.getY()));
             if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
                 applyChevronGeometry(shape, s.getKind());
+                applyStyle(shape, DefaultPalette.chevronFill(chevronSeq++),
+                        DefaultPalette.TEXT_WHITE);
+            } else {
+                applyStyle(shape,
+                        DefaultPalette.fill(s.getKind(), s.getLevel()),
+                        DefaultPalette.TEXT_WHITE);
             }
             XText xText = UnoRuntime.queryInterface(XText.class, shape);
             if (xText != null) {
@@ -138,6 +145,18 @@ public class SlideRenderer {
         }
 
         groupShapes(page, created);
+    }
+
+    /** Applies solid fill colour and white text to a shape. */
+    private static void applyStyle(Object shape, int fillColor, int textColor)
+            throws Exception {
+        XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
+        props.setPropertyValue("FillStyle",
+                com.sun.star.drawing.FillStyle.SOLID);
+        props.setPropertyValue("FillColor", Integer.valueOf(fillColor));
+        props.setPropertyValue("CharColor", Integer.valueOf(textColor));
+        props.setPropertyValue("LineStyle",
+                com.sun.star.drawing.LineStyle.NONE);
     }
 
     /**

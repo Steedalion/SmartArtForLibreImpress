@@ -13,6 +13,8 @@ text input.
   into a validated hierarchy and the parsed tree (or a clear error) is shown.
 - ✅ **Phase 4 — Shape rendering:** the parsed tree is drawn as grouped,
   editable shapes on the slide. All four diagram types are fully rendered.
+- ✅ **Phase 5 — Default colour palette:** shapes are automatically styled
+  with a built-in blue/green palette based on shape kind and hierarchy level.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
@@ -154,6 +156,7 @@ only surfacing during a manual install.
 | [`Phase2_ImplementationPlan.md`](Phase2_ImplementationPlan.md) | Phase 2 — menu integration |
 | [`Phase3_ImplementationPlan.md`](Phase3_ImplementationPlan.md) | Phase 3 — dialog & text parsing |
 | [`Phase4_ImplementationPlan.md`](Phase4_ImplementationPlan.md) | Phase 4 — shape rendering |
+| [`Phase5_ImplementationPlan.md`](Phase5_ImplementationPlan.md) | Phase 5 — default colour palette |
 | [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
 | [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 
