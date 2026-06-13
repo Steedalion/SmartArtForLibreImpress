@@ -169,21 +169,40 @@ def export_png(doc, path):
 # ---------------------------------------------------------------------------
 
 def draw_sequential_chevron(doc, page):
-    """3 steps: pentagon → chevron → chevron, with sub-boxes below first two."""
+    """3 steps: pentagon → chevron → chevron; sub-boxes horizontally below first two;
+    first sub-item of Alpha (Bravo) has a level-3 child (Hotel)."""
     W, H = 4500, 1600; GAP = 800; MARGIN = 1200
     sub_w, sub_h = W - 400, 900
+    SUB_GAP = 400           # horizontal gap between sub-items
+    CHEVRON_TO_SUB = 700    # vertical gap from chevron to sub-items
+    CHILD_V_GAP = 500       # vertical gap from sub-item to its level-3 children
+    child_w, child_h = sub_w - 400, 700
 
     steps = [
-        (MARGIN,               1000, "Alpha", "pentagon-right", ["Bravo", "Charlie"], BLUE),
-        (MARGIN + W + GAP,     1000, "Delta", "chevron",        ["Echo", "Foxtrot"],  BLUE2),
-        (MARGIN + 2*(W + GAP), 1000, "Golf",  "chevron",        [],                   BLUE3),
+        (MARGIN,               1000, "Alpha", "pentagon-right",
+         [("Bravo", ["Hotel"]), ("Charlie", [])], BLUE),
+        (MARGIN + W + GAP,     1000, "Delta", "chevron",
+         [("Echo", []), ("Foxtrot", [])],          BLUE2),
+        (MARGIN + 2*(W + GAP), 1000, "Golf",  "chevron",
+         [],                                        BLUE3),
     ]
     for x, y, label, kind, subs, color in steps:
         add_chevron_shape(doc, page, x, y, W, H, kind, label, color)
-        sy = y + H + 700
-        for sl in subs:
-            add_rect(doc, page, x + 200, sy, sub_w, sub_h, sl, GREEN)
-            sy += sub_h + 300
+        if not subs:
+            continue
+        cx = x + W // 2
+        total_sub_w = len(subs) * sub_w + (len(subs) - 1) * SUB_GAP
+        sub_start_x = cx - total_sub_w // 2
+        sub_y = y + H + CHEVRON_TO_SUB
+        for j, (sub_label, grandchildren) in enumerate(subs):
+            sx = sub_start_x + j * (sub_w + SUB_GAP)
+            add_rect(doc, page, sx, sub_y, sub_w, sub_h, sub_label, GREEN)
+            sub_cx = sx + sub_w // 2
+            gy = sub_y + sub_h + CHILD_V_GAP
+            for gc_label in grandchildren:
+                add_rect(doc, page, sub_cx - child_w // 2, gy, child_w, child_h,
+                         gc_label, BLUE2)
+                gy += child_h + CHILD_V_GAP
 
 
 def draw_hub_and_spoke(doc, page):

@@ -1,6 +1,7 @@
 package org.libreimpress.smartart.layout;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 import org.libreimpress.smartart.models.DiagramNode;
@@ -74,6 +75,43 @@ public class SequentialChevronLayoutTest {
         DiagramLayout layout = SequentialChevronLayout.layout(root);
         // The subitem (second shape) should be a rectangle (default)
         assertEquals(ShapeKind.RECTANGLE, layout.getShapes().get(1).getKind());
+    }
+
+    @Test
+    public void level3ChildrenPlacedBelowSubitem() {
+        DiagramNode root    = new DiagramNode("", 0);
+        DiagramNode chevron = new DiagramNode("Step", 1);
+        DiagramNode sub     = new DiagramNode("Sub", 2);
+        DiagramNode child   = new DiagramNode("Child", 3);
+        sub.addChild(child);
+        chevron.addChild(sub);
+        root.addChild(chevron);
+
+        DiagramLayout layout = SequentialChevronLayout.layout(root);
+        assertEquals(3, layout.getShapes().size()); // chevron + sub + child
+        assertEquals(2, layout.getEdges().size());  // chevron→sub + sub→child
+
+        LaidOutShape subShape   = layout.getShapes().get(1);
+        LaidOutShape childShape = layout.getShapes().get(2);
+        assertTrue("level-3 child should be below level-2 sub-item",
+                childShape.getY() > subShape.getY() + subShape.getHeight());
+        assertEquals("child should be centred on sub-item X",
+                subShape.centerX(), childShape.centerX());
+    }
+
+    @Test
+    public void level3EdgeUsesBottomToTopGlue() {
+        DiagramNode root    = new DiagramNode("", 0);
+        DiagramNode chevron = new DiagramNode("Step", 1);
+        DiagramNode sub     = new DiagramNode("Sub", 2);
+        sub.addChild(new DiagramNode("Child", 3));
+        chevron.addChild(sub);
+        root.addChild(chevron);
+
+        DiagramLayout layout = SequentialChevronLayout.layout(root);
+        Edge childEdge = layout.getEdges().get(1); // second edge = sub→child
+        assertEquals("start glue should be bottom (2)", 2, childEdge.getStartGlue());
+        assertEquals("end glue should be top (0)", 0, childEdge.getEndGlue());
     }
 
     @Test

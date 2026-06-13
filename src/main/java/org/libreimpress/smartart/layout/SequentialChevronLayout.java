@@ -22,6 +22,7 @@ public final class SequentialChevronLayout {
     static final int SLIDE_H = 19050; // standard Impress slide: 190.5 mm
     static final int MARGIN_X = 1000;
     static final int MARGIN_Y = 1000;
+    static final int CHILD_V_GAP = 500; // vertical gap between a sub-item and its children
 
     private SequentialChevronLayout() {
     }
@@ -91,10 +92,41 @@ public final class SequentialChevronLayout {
                             subitemX, subitemY, w2, h2);
                     int subitemIndex = out.addShape(subitemShape);
                     out.addEdge(chevronIndex, subitemIndex);
+                    // Recursively place level-3+ children below this sub-item.
+                    placeSubtree(out, subitem.getChildren(),
+                            subitemX + w2 / 2, subitemY + h2, subitemIndex, 3);
                 }
             }
         }
 
         return out;
+    }
+
+    /**
+     * Recursively places {@code children} stacked vertically below a parent
+     * sub-item, centred on the parent's X, connecting parent → child.
+     *
+     * @param parentCX       centre X of the parent shape
+     * @param parentBottomY  Y of the parent's bottom edge
+     * @param parentIndex    shape index of the parent in {@code out}
+     * @param level          level of these children (3, 4, …)
+     */
+    private static void placeSubtree(DiagramLayout out, List<DiagramNode> children,
+                                     int parentCX, int parentBottomY,
+                                     int parentIndex, int level) {
+        if (children.isEmpty()) {
+            return;
+        }
+        int w = nodeWidth(level);
+        int h = nodeHeight(level);
+        int childY = parentBottomY + CHILD_V_GAP;
+        for (DiagramNode child : children) {
+            int childX = parentCX - w / 2;
+            LaidOutShape childShape = new LaidOutShape(child.getText(), level, childX, childY, w, h);
+            int childIndex = out.addShape(childShape);
+            out.addEdge(parentIndex, childIndex, 2, 0); // bottom of parent → top of child
+            placeSubtree(out, child.getChildren(), parentCX, childY + h, childIndex, level + 1);
+            childY += h + CHILD_V_GAP;
+        }
     }
 }
