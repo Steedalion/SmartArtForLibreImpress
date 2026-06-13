@@ -20,9 +20,8 @@ In Phase 2, we add:
 > the Java class — a single off-by-one character (famously
 > `…/2010/component` instead of `…/2010/uno-components`) fails silently or with
 > an opaque `InvalidRegistryException`. Before changing any name here, consult
-> the **name-matching contract** and **exact-match rules** in the master spec
-> ([`impressSmartArt.md`](impressSmartArt.md) §5.5.2–§5.5.3); they are the
-> authoritative, repeatable checklist.
+> the **registration naming contract** and **exact-match rules** in §15 below;
+> they are the authoritative, repeatable checklist.
 
 ---
 
@@ -454,10 +453,89 @@ Phase 3 will:
 - Parse hierarchical text
 - Prepare for diagram generation
 
-See `Phase3_ImplementationPlan.md` (to be created)
+See `Phase3_ImplementationPlan.md`.
 
 ---
 
-**Status:** Ready for implementation  
-**Estimated Time:** 1-2 hours  
-**Next Phase:** Phase 3 - Dialog and Text Parsing
+## 15. Registration naming contract & exact-match rules
+
+This is the authoritative checklist for making the menu install *and* dispatch.
+It was the hardest part of Phase 2: the same identifier strings must be repeated
+**verbatim** across several files, and a single differing character fails
+silently or with an opaque error.
+
+### 15.1 Files inside the `.oxt`
+| File | Purpose |
+|------|---------|
+| `META-INF/manifest.xml` | Package manifest: registers every `.xcu` and the component descriptor |
+| `description.xml` | Extension metadata (identifier, version, display name) |
+| `Addons.xcu` | Adds the menu entry to the LibreOffice UI |
+| `ProtocolHandler.xcu` | Binds the command-URL protocol to the Java handler |
+| `uno/SmartArtImpl.xml` | UNO component descriptor (which class implements which service) |
+| `uno/smartart.jar` | Compiled Java code (must sit beside the descriptor — see rule 2) |
+
+### 15.2 Name-matching contract
+Each token must be **identical** in every listed location; to repurpose this
+extension, change a token in *all* its locations at once:
+
+| Token | Value (this project) | Must be identical in |
+|-------|----------------------|----------------------|
+| Component namespace | `http://openoffice.org/2010/uno-components` | `uno/SmartArtImpl.xml` root `xmlns` |
+| Implementation name | `org.libreimpress.smartart.SmartArtCommand` | `SmartArtImpl.xml` `<implementation name>` · `ProtocolHandler.xcu` `HandlerSet` child `oor:name` · JAR `MANIFEST.MF` `RegistrationClassName` · the Java class (FQN + `IMPLEMENTATION_NAME`) |
+| Service name | `com.sun.star.frame.ProtocolHandler` | `SmartArtImpl.xml` `<service name>` · Java `SERVICE_NAME` / `getSupportedServiceNames()` |
+| Command protocol prefix | `org.libreimpress.smartart` | `ProtocolHandler.xcu` `Protocols` (as `…:*`) · the part of the `Addons.xcu` menu `URL` before the `:` · the Java `dispatch`/`queryDispatch` `startsWith(...)` guard |
+| Full command URL | `org.libreimpress.smartart:CreateDiagram` | `Addons.xcu` menu item `URL` value |
+| Extension identifier | `org.libreimpress.smartart` | `description.xml` `<identifier value>` · the argument to `unopkg remove` |
+| Component jar name | `smartart.jar` | `SmartArtImpl.xml` `uri` · assembly `oxt.xml` include · pom jar `finalName` (packaged as `uno/smartart.jar`, beside the descriptor — see rule 2) |
+
+> The command **protocol prefix** and the **extension identifier** happen to be
+> the same text (`org.libreimpress.smartart`) but are independent roles: the
+> first routes menu clicks to the handler, the second names the installed
+> package. They need not be equal.
+
+### 15.3 Exact-match rules (each one is a silent-failure trap)
+1. **Component descriptor namespace** — `uno/SmartArtImpl.xml` must use
+   `xmlns="http://openoffice.org/2010/uno-components"`. A wrong namespace makes
+   `unopkg`/LibreOffice throw `InvalidRegistryException: unexpected item in outer
+   level` (the C++ parser rejects the root element before reading attributes).
+   This is the same namespace LibreOffice's own `program/services.rdb` uses.
+2. **Component `uri`** — must be the bare jar name, `uri="smartart.jar"` (not a
+   `jar:*…!/…Class` URL). **The `uri` is resolved relative to the descriptor's
+   own location**, so the jar must sit in the *same directory* as
+   `SmartArtImpl.xml`. Because the descriptor lives in `uno/`, the jar is
+   packaged as `uno/smartart.jar`. Get this wrong and the component fails to load
+   with `java.io.FileNotFoundException: …/uno/smartart.jar`; the dispatch then
+   returns null and LibreOffice **silently hides the menu item**.
+3. **`description.xml` identifier/version use `value` attributes** —
+   `<identifier value="org.libreimpress.smartart"/>` and
+   `<version value="0.1.0"/>`. Using element *text*
+   (`<identifier>…</identifier>`) is ignored; LibreOffice then falls back to a
+   `org.openoffice.legacy.<filename>` identifier, which also breaks
+   `unopkg remove org.libreimpress.smartart`.
+4. **`display-name`/`publisher`** use child `<name lang="en">…</name>` elements,
+   not direct text.
+5. **`Addons.xcu`** must be `oor:component-data` merging into
+   `org.openoffice.Office.Addons / AddonUI` (under `OfficeMenuBar` for a
+   top-level menu, or `AddonMenu` for Tools → Add-Ons). Every `prop` declares
+   `oor:type` and uses `oor:op="replace"`.
+6. **Localized `Title` needs an empty default** — each `Title` prop must list a
+   bare `<value/>` *before* the `<value xml:lang="en-US">…</value>`. Without the
+   default, LibreOffice cannot resolve a title for the running locale and
+   **silently drops the menu item** (the menu container still shows because it
+   falls back to the node name; leaf items do not).
+7. **`ProtocolHandler.xcu`** `HandlerSet` node name must equal the
+   `implementation name` in `uno/SmartArtImpl.xml`, and its `Protocols` value
+   (`org.libreimpress.smartart:*`) must match the prefix of the menu command URL.
+8. **Java side** — the implementation class must expose static
+   `__getComponentFactory(String)` and `__writeRegistryServiceInfo(XRegistryKey)`
+   (built via `com.sun.star.lib.uno.helper.Factory`), and the JAR's
+   `META-INF/MANIFEST.MF` must declare
+   `RegistrationClassName: org.libreimpress.smartart.SmartArtCommand`.
+
+Verifying the contract holds is automated — see `TESTING_STRATEGY.md` and
+`tools/verify-extension.sh` (it asserts the command actually dispatches).
+
+---
+
+**Status:** Implemented and verified.  
+**Next Phase:** Phase 3 — Dialog and Text Parsing (`Phase3_ImplementationPlan.md`).

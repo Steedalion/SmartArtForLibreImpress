@@ -50,6 +50,25 @@ error — is shown. **Shapes are not drawn yet** (Phase 4), and the colour-palet
 input described in §3.2 / §5.1 is deferred to a later phase. Sections 2–8 below
 describe the *target* product; see this table for what is implemented now.
 
+### 1.3 How these documents are written (and the one-shot goal)
+
+**Goal:** these documents should be complete and precise enough to **develop the
+plugin in one shot** — a developer (or an AI agent) should be able to build any
+phase straight from the plans, with no further clarification needed. To keep that
+workable, each document has a fixed role and a rule about code:
+
+- **This master specification is *functional* and contains *no code*.** It states
+  *what* the plugin does and the externally-observable rules it must satisfy
+  (behaviour, inputs, validation, packaging outcomes) — never *how* it is coded.
+- **`Architecture_VDiagram.md` holds the *diagrams* (Mermaid) and *no code*** —
+  the class/component structure, the runtime dispatch flow, and the V-model.
+- **The phase plans (`PhaseN_ImplementationPlan.md`) are the only documents that
+  may contain *code*** — concrete snippets, XML fragments, file layouts, and the
+  exact UNO registration details needed to build each increment.
+
+So when a build detail (a code/XML snippet, an exact UNO name, a file path) is
+needed, it belongs in a phase plan — not here, and not in the architecture doc.
+
 ---
 
 ## 2. Core Functionality
@@ -140,29 +159,18 @@ describe the *target* product; see this table for what is implemented now.
 
 ### 5.1 Input Format
 
-**Input Dialog:**
-```
-Diagram Type: [Dropdown: Hierarchy / Hub & Spoke / Process Flow]
+The dialog collects, with **Create** and **Cancel** actions:
 
-Text Points:
-[Multiline text area with indentation support]
-Level 1 Item
-  Level 2 Item
-    Level 3 Item
-  Level 2 Item B
-    Level 3 Item B1
-    Level 3 Item B2
-
-Color Palette (Optional):
-[Text field or JSON input]
-{
-  "level1": {"fill": "#FF0000", "font": "Arial", "fontSize": 14},
-  "level2": {"fill": "#00FF00", "font": "Arial", "fontSize": 12},
-  "level3": {"fill": "#0000FF", "font": "Arial", "fontSize": 10}
-}
-
-[Create Button] [Cancel Button]
-```
+- **Diagram type** — one of Hierarchy, Hub & Spoke, or Process Flow (a dropdown).
+- **Text points** — a multi-line field in which each line is one node and leading
+  indentation expresses nesting (per the rules in §5.2), e.g.:
+  - Level 1 Item
+    - Level 2 Item
+      - Level 3 Item
+    - Level 2 Item B
+- **Colour palette (optional)** — a palette assigning a fill colour, and
+  optionally font and shape styling, per level (see §3.2). *(Planned; not in the
+  current dialog.)*
 
 ### 5.2 Parsing
 - Parse text input to identify hierarchy levels based on indentation
@@ -199,112 +207,28 @@ Color Palette (Optional):
 
 ---
 
-## 5.5 Packaging & UNO Registration (Extension Infrastructure)
+## 5.5 Packaging & Distribution
 
-The plugin ships as a `.oxt` (a ZIP). Getting it to install and expose a menu
-requires several files to agree exactly. These requirements were verified by
-installing the built `.oxt` with `unopkg` (see §5.5.4); each was a real
-failure mode encountered during development.
+The plugin is delivered as a single installable LibreOffice extension (`.oxt`).
+The functional requirements for delivery are:
 
-### 5.5.1 Required files inside the `.oxt`
-| File | Purpose |
-|------|---------|
-| `META-INF/manifest.xml` | Package manifest: registers every `.xcu` and the component descriptor |
-| `description.xml` | Extension metadata (identifier, version, display name) |
-| `Addons.xcu` | Adds the menu entry to the LibreOffice UI |
-| `ProtocolHandler.xcu` | Binds the command-URL protocol to the Java handler |
-| `uno/SmartArtImpl.xml` | UNO component descriptor (which class implements which service) |
-| `uno/smartart.jar` | Compiled Java code (must sit beside the descriptor — see §5.5.3 rule 2) |
+- Installing the extension adds the **SmartArt** menu and its **Create Diagram…**
+  command to Impress with no further setup; uninstalling removes them cleanly.
+- It installs, registers, and uninstalls without errors through the Extension
+  Manager (and `unopkg`), under one stable extension identifier
+  (`org.libreimpress.smartart`).
+- The menu command must actually reach the plugin's handler when clicked. An
+  extension that installs but whose command does not dispatch is a **failure**
+  (it shows up as an empty menu), so "the command dispatches" is part of *done*.
 
-### 5.5.2 Name-matching contract (the part that made the menu hard)
-
-The menu only works when the same identifier strings are repeated **verbatim**
-across several files. A single differing character (e.g. `…/2010/component` vs
-`…/2010/uno-components`) fails silently or with an opaque error. Each token below
-must be **identical** in every listed location; to repurpose this extension,
-change a token in *all* its locations at once:
-
-| Token | Value (this project) | Must be identical in |
-|-------|----------------------|----------------------|
-| Component namespace | `http://openoffice.org/2010/uno-components` | `uno/SmartArtImpl.xml` root `xmlns` |
-| Implementation name | `org.libreimpress.smartart.SmartArtCommand` | `SmartArtImpl.xml` `<implementation name>` · `ProtocolHandler.xcu` `HandlerSet` child `oor:name` · JAR `MANIFEST.MF` `RegistrationClassName` · the Java class (FQN + `IMPLEMENTATION_NAME`) |
-| Service name | `com.sun.star.frame.ProtocolHandler` | `SmartArtImpl.xml` `<service name>` · Java `SERVICE_NAME` / `getSupportedServiceNames()` |
-| Command protocol prefix | `org.libreimpress.smartart` | `ProtocolHandler.xcu` `Protocols` (as `…:*`) · the part of the `Addons.xcu` menu `URL` before the `:` · the Java `dispatch`/`queryDispatch` `startsWith(...)` guard |
-| Full command URL | `org.libreimpress.smartart:CreateDiagram` | `Addons.xcu` menu item `URL` value |
-| Extension identifier | `org.libreimpress.smartart` | `description.xml` `<identifier value>` · the argument to `unopkg remove` |
-| Component jar name | `smartart.jar` | `SmartArtImpl.xml` `uri` · assembly `oxt.xml` include · pom jar `finalName` (packaged as `uno/smartart.jar`, beside the descriptor — see §5.5.3 rule 2) |
-
-> The command **protocol prefix** and the **extension identifier** happen to be
-> the same text (`org.libreimpress.smartart`) but are independent roles: the
-> first routes menu clicks to the handler, the second names the installed
-> package. They need not be equal, and changing one does not change the other.
-
-### 5.5.3 Exact-match rules (each one is a silent-failure trap)
-1. **Component descriptor namespace** — `uno/SmartArtImpl.xml` must use
-   `xmlns="http://openoffice.org/2010/uno-components"`. A wrong namespace makes
-   `unopkg`/LibreOffice throw `InvalidRegistryException: unexpected item in outer
-   level` (the C++ parser rejects the root element before reading attributes).
-   This is the same namespace LibreOffice's own `program/services.rdb` uses.
-2. **Component `uri`** — must be the bare jar name, `uri="smartart.jar"` (not a
-   `jar:*…!/…Class` URL). **The `uri` is resolved relative to the descriptor's
-   own location**, so the jar must sit in the *same directory* as
-   `SmartArtImpl.xml`. Because the descriptor lives in `uno/`, the jar is
-   packaged as `uno/smartart.jar`. Get this wrong and the component fails to load
-   with `java.io.FileNotFoundException: …/uno/smartart.jar`; the dispatch then
-   returns null and LibreOffice **silently hides the menu item** (the top-level
-   menu shows but its submenu is empty — identical symptom to rule 6).
-3. **`description.xml` identifier/version use `value` attributes** —
-   `<identifier value="org.libreimpress.smartart"/>` and
-   `<version value="0.1.0"/>`. Using element *text*
-   (`<identifier>…</identifier>`) is ignored; LibreOffice then falls back to a
-   `org.openoffice.legacy.<filename>` identifier, which also breaks
-   `unopkg remove org.libreimpress.smartart`.
-4. **`display-name`/`publisher`** use child `<name lang="en">…</name>` elements,
-   not direct text.
-5. **`Addons.xcu`** must be `oor:component-data` merging into
-   `org.openoffice.Office.Addons / AddonUI` (under `OfficeMenuBar` for a
-   top-level menu, or `AddonMenu` for Tools → Add-Ons). Every `prop` declares
-   `oor:type` and uses `oor:op="replace"`.
-6. **Localized `Title` needs an empty default** — each `Title` prop must list a
-   bare `<value/>` *before* the `<value xml:lang="en-US">…</value>`. Without the
-   default, LibreOffice cannot resolve a title for the running locale and
-   **silently drops the menu item** — the top-level menu appears but its submenu
-   is empty. (The top-level menu still shows because containers fall back to the
-   node name; leaf items do not.)
-7. **`ProtocolHandler.xcu`** `HandlerSet` node name must equal the
-   `implementation name` in `uno/SmartArtImpl.xml`, and its `Protocols` value
-   (`org.libreimpress.smartart:*`) must match the prefix of the menu command URL.
-8. **Java side** — the implementation class must expose static
-   `__getComponentFactory(String)` and `__writeRegistryServiceInfo(XRegistryKey)`
-   (built via `com.sun.star.lib.uno.helper.Factory`), and the JAR's
-   `META-INF/MANIFEST.MF` must declare
-   `RegistrationClassName: org.libreimpress.smartart.SmartArtCommand`.
-
-### 5.5.4 Install verification (local and CI)
-Structural checks alone do not catch a bad namespace, identifier, or a
-mis-placed jar — those only fail at *runtime*, when LibreOffice tries to load the
-component and dispatch the command. The authoritative test therefore installs the
-`.oxt` into a throwaway profile, starts a **headless** LibreOffice, and asserts
-via UNO that the menu item is registered **and** that the command actually
-dispatches (a null dispatch is why a broken extension shows an empty submenu).
-
-This is automated as a committed test, `tools/verify-extension.sh` (orchestrator)
-+ `tools/probe_extension.py` (the UNO probe):
-
-```bash
-mvn clean package
-xvfb-run -a bash tools/verify-extension.sh target/SmartArt.oxt
-#   PASS: config has menu 'org.libreimpress.smartart' with submenu items ['m1'] …
-#   PASS: queryDispatch('org.libreimpress.smartart:CreateDiagram') -> …SmartArtCommand
-#   VERIFY PASS
-```
-
-The GitHub Actions workflow (`.github/workflows/build-and-validate.yml`) runs
-this on every push: build → validate OXT structure → install LibreOffice +
-`python3-uno` → `xvfb-run … tools/verify-extension.sh`. A registration **or
-dispatch** regression (wrong namespace, bad identifier, jar in the wrong
-directory, missing file) fails CI instead of only surfacing during a manual
-install. See `TESTING_STRATEGY.md` for the full three-layer test plan.
+*How* this is achieved — the package layout, the UNO component / menu / protocol
+registration, and the exact cross-file naming that makes dispatch work (the
+"registration naming contract") — is build detail and lives in the phase plans:
+**Phase 1** packages the installable `.oxt`, and **Phase 2** adds the menu and
+component registration (and documents the naming contract and its silent-failure
+traps). The runtime structure — how a click reaches the handler — is shown in
+`Architecture_VDiagram.md`; automated verification that registration and dispatch
+actually work is described in `TESTING_STRATEGY.md`.
 
 ---
 

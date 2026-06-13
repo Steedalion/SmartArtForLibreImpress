@@ -47,8 +47,9 @@ the fragile strings are correct, without launching LibreOffice:
   namespace;
 - `description.xml` declares `<identifier value="org.libreimpress.smartart"/>`.
 
-These are cheap regression guards for the §5.5 registration contract, but they
-**cannot** prove the extension actually works — that is layer 3.
+These are cheap regression guards for the registration contract
+(`Phase2_ImplementationPlan.md` §15), but they **cannot** prove the extension
+actually works — that is layer 3.
 
 ---
 
@@ -69,8 +70,8 @@ Check 2 is the decisive one: LibreOffice **silently hides** an addon menu item
 whose command cannot be dispatched, so a null dispatch means an empty submenu.
 This layer catches the registration/dispatch regressions that layers 1–2 miss —
 e.g. the component jar packaged at the OXT root instead of `uno/smartart.jar`,
-which leaves the config perfect but the dispatch null (see `impressSmartArt.md`
-§5.5).
+which leaves the config perfect but the dispatch null (see
+`Phase2_ImplementationPlan.md` §15).
 
 ```bash
 # requires libreoffice (unopkg, soffice) + python3-uno on PATH

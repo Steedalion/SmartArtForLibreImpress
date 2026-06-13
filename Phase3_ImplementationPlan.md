@@ -8,8 +8,9 @@ result (the parsed tree, or a clear error) is shown to the user. **No shapes are
 drawn yet** — that is Phase 4.
 
 This phase adds only Java code to `smartart.jar`. It introduces **no new files
-in the `.oxt`** and changes **none** of the names in the §5.5 registration
-contract (the dialog is built programmatically, not from an `.xdl`).
+in the `.oxt`** and changes **none** of the names in the registration contract
+(`Phase2_ImplementationPlan.md` §15) — the dialog is built programmatically, not
+from an `.xdl`.
 
 ---
 
@@ -88,8 +89,8 @@ Show dialog → if cancelled, return → parse → show outline (info) or error.
 
 ## 4. Build & verify
 - `mvn clean package` compiles the new code and runs `HierarchyParserTest`.
-- Install check (unchanged contract, but confirm the jar still loads):
-  `unopkg add … && unopkg list && unopkg remove …` (see master spec §5.5.4).
+- Install check (unchanged contract, but confirm the jar still loads): run
+  `tools/verify-extension.sh` (see `TESTING_STRATEGY.md`).
 - Manual: SmartArt → Create Diagram… → type a 3-level outline → Create →
   message box shows the parsed tree; try bad input → see the matching error.
 
