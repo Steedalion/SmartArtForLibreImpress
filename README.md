@@ -15,6 +15,12 @@ text input.
   editable shapes on the slide. All four diagram types are fully rendered.
 - ✅ **Phase 5 — Default colour palette:** shapes are automatically styled
   with a built-in blue/green palette based on shape kind and hierarchy level.
+- ✅ **Phase 6 — Arrow heads & font scaling:** Process Flow step connectors
+  carry directional arrowheads; text size scales with hierarchy level (14/11/9 pt).
+- ✅ **Phase 7 — Process Flow sub-items:** level-2+ children of each step are
+  stacked vertically below it, connected top-to-bottom.
+- ✅ **Phase 8 — Hub & Spoke children:** level-3+ descendants of each spoke are
+  placed radially outward along the same angle, connected with straight lines.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
@@ -157,6 +163,9 @@ only surfacing during a manual install.
 | [`Phase3_ImplementationPlan.md`](Phase3_ImplementationPlan.md) | Phase 3 — dialog & text parsing |
 | [`Phase4_ImplementationPlan.md`](Phase4_ImplementationPlan.md) | Phase 4 — shape rendering |
 | [`Phase5_ImplementationPlan.md`](Phase5_ImplementationPlan.md) | Phase 5 — default colour palette |
+| [`Phase6_ImplementationPlan.md`](Phase6_ImplementationPlan.md) | Phase 6 — arrow heads & font size scaling |
+| [`Phase7_ImplementationPlan.md`](Phase7_ImplementationPlan.md) | Phase 7 — Process Flow sub-items |
+| [`Phase8_ImplementationPlan.md`](Phase8_ImplementationPlan.md) | Phase 8 — Hub & Spoke children |
 | [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
 | [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 

@@ -20,7 +20,11 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 │   ├── Phase1_ImplementationPlan.md   — Phase 1: Empty OXT extension (installable skeleton)
 │   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (top-level menu entry → dispatch)
 │   ├── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing
-│   └── Phase4_ImplementationPlan.md   — Phase 4: Shape rendering (4.1 single shape → layout → grouping)
+│   ├── Phase4_ImplementationPlan.md   — Phase 4: Shape rendering (4.1 single shape → layout → grouping)
+│   ├── Phase5_ImplementationPlan.md   — Phase 5: Default colour palette
+│   ├── Phase6_ImplementationPlan.md   — Phase 6: Arrow heads & font size scaling
+│   ├── Phase7_ImplementationPlan.md   — Phase 7: Process Flow sub-items
+│   └── Phase8_ImplementationPlan.md   — Phase 8: Hub & Spoke children
 │
 ├── Architecture_VDiagram.md       — architecture overview & V-model development process
 ├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)
@@ -45,16 +49,20 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 4.2 | Multi-level Hierarchy: a box per node as a top-down tree + connectors | ✅ Done |
 | 4.3 | Group the diagram's shapes into one editable group object | ✅ Done |
 | 4.4 | Diagram-type shapes/layouts (Hub & Spoke, Process Flow, Sequential Chevron) | ✅ Done |
-| 5 | Default colour palette applied to shapes based on kind and level | ✅ Done |
+| 5 | Default colour palette: blue/green by level, white text, no border | ✅ Done |
+| 6 | Arrow heads on Process Flow step connectors; font size scaling by level | ✅ Done |
+| 7 | Process Flow sub-items stacked vertically below each step | ✅ Done |
+| 8 | Hub & Spoke level-3+ children stacked radially outward from their spoke | ✅ Done |
+| later | Sequential Chevron level-3+ children (currently dropped) | ⏳ Planned |
 | later | User-provided colour palette via dialog | ⏳ Planned |
 
 **What works today:** clicking **SmartArt → Create Diagram…** opens a
 programmatic dialog (diagram-type dropdown + multiline text); on **Create** the
 indented text is parsed into a validated hierarchy and the chosen diagram type is
 rendered as grouped, editable shapes on the current slide. All four diagram types
-are implemented — Hierarchy, Hub & Spoke, Process Flow, and Sequential Chevron —
-with a built-in default colour palette (blue/green by level). The user-provided
-colour-palette input described in §3.2 / §5.1 is deferred to a later phase.
+are fully implemented with sub-item support, a built-in colour palette, font
+sizing by level, and directional arrow connectors on Process Flow. The
+user-provided colour-palette input described in §3.2 / §5.1 is deferred.
 Sections 2–8 below describe the target product.
 
 ### 1.3 How these documents are written (and the one-shot goal)
@@ -296,7 +304,9 @@ Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
 ✅ Hierarchy is visually reflected in output (Phase 4.2)  
 ✅ Output is grouped and editable (Phase 4.3)  
 ✅ All diagram types generate correctly — Hierarchy, Hub & Spoke, Process Flow, Sequential Chevron (Phase 4.4)  
-✅ Default styling applied when palette missing — built-in palette applied (Phase 5)  
-⏳ Color palette (when provided) is applied — later phase
+✅ Sub-items rendered in all diagram types — Process Flow (Phase 7), Hub & Spoke (Phase 8)  
+✅ Default styling applied when palette missing — built-in palette, font sizing, arrow heads (Phases 5–6)  
+⏳ Sequential Chevron level-3+ children — planned  
+⏳ Color palette (when provided) is applied — planned
 
 
