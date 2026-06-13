@@ -92,9 +92,14 @@ public class SlideRenderer {
         XShape[] boxes = new XShape[laidOut.size()];
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
-            String service = s.getKind() == ShapeKind.ELLIPSE
-                    ? "com.sun.star.drawing.EllipseShape"
-                    : "com.sun.star.drawing.RectangleShape";
+            String service;
+            if (s.getKind() == ShapeKind.ELLIPSE) {
+                service = "com.sun.star.drawing.EllipseShape";
+            } else if (s.getKind() == ShapeKind.CHEVRON) {
+                service = "com.sun.star.drawing.PolyPolygonShape";
+            } else {
+                service = "com.sun.star.drawing.RectangleShape";
+            }
             Object shape = factory.createInstance(service);
             XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
             shapes.add(xShape);

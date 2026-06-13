@@ -17,6 +17,7 @@ import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.HierarchyLayout;
 import org.libreimpress.smartart.layout.HubAndSpokeLayout;
 import org.libreimpress.smartart.layout.ProcessFlowLayout;
+import org.libreimpress.smartart.layout.SequentialChevronLayout;
 import org.libreimpress.smartart.models.DiagramNode;
 import org.libreimpress.smartart.models.DiagramType;
 import org.libreimpress.smartart.parsers.HierarchyParser;
@@ -104,9 +105,10 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
     private static DiagramLayout buildLayout(DiagramType type, DiagramNode root) {
         switch (type) {
-            case HUB_AND_SPOKE:  return HubAndSpokeLayout.layout(root);
-            case PROCESS_FLOW:   return ProcessFlowLayout.layout(root);
-            default:             return HierarchyLayout.layout(root);
+            case HUB_AND_SPOKE:        return HubAndSpokeLayout.layout(root);
+            case PROCESS_FLOW:         return ProcessFlowLayout.layout(root);
+            case SEQUENTIAL_CHEVRON:   return SequentialChevronLayout.layout(root);
+            default:                   return HierarchyLayout.layout(root);
         }
     }
 
