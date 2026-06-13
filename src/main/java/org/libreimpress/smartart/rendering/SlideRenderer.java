@@ -96,7 +96,9 @@ public class SlideRenderer {
             if (s.getKind() == ShapeKind.ELLIPSE) {
                 service = "com.sun.star.drawing.EllipseShape";
             } else if (s.getKind() == ShapeKind.CHEVRON) {
-                service = "com.sun.star.drawing.BlockArrowShape";
+                // TODO: Use correct chevron/arrow shape from LibreOffice.
+                // For now, render as rectangle to ensure diagram displays.
+                service = "com.sun.star.drawing.RectangleShape";
             } else {
                 service = "com.sun.star.drawing.RectangleShape";
             }
