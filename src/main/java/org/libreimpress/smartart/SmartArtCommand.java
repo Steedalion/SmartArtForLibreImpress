@@ -13,6 +13,8 @@ import com.sun.star.frame.DispatchDescriptor;
 import com.sun.star.beans.PropertyValue;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
+import org.libreimpress.smartart.layout.DiagramLayout;
+import org.libreimpress.smartart.layout.HierarchyLayout;
 import org.libreimpress.smartart.models.DiagramNode;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
@@ -107,11 +109,12 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
             ParseResult parsed = new HierarchyParser().parse(result.getText());
             if (parsed.isValid()) {
-                // Phase 4.1: draw a single rectangle from the first top-level node.
+                // Phase 4.2: lay out the hierarchy and draw boxes + connectors.
+                // (Only the Hierarchy layout exists yet; other types use it too
+                // for now — type-specific layouts arrive in 4.5.)
                 DiagramNode root = parsed.getRoot();
-                String label = root.getChildren().isEmpty()
-                        ? "SmartArt" : root.getChildren().get(0).getText();
-                new SlideRenderer(xComponentContext).drawRectangle(label);
+                DiagramLayout layout = HierarchyLayout.layout(root);
+                new SlideRenderer(xComponentContext).drawHierarchy(layout);
             } else {
                 LibreOfficeHelper.showMessage(xComponentContext,
                         "SmartArt – Invalid input", parsed.getErrorMessage(), true);

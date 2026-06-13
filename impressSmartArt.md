@@ -42,7 +42,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 3 | Input dialog + hierarchy parser (validate, preview the parsed tree) | ✅ Done |
 | 4 | Render the parsed tree as grouped, editable shapes on the slide | ⏳ In progress |
 | 4.1 | Draw a single rectangle on the current slide (prove the drawing pipeline) | ✅ Done |
-| later | Layout, connectors, grouping (4.2–4.4); colour palette & styling; Hub & Spoke / Process Flow | ⏳ Planned |
+| 4.2 | Multi-level Hierarchy: a box per node as a top-down tree + connectors | ✅ Done |
+| later | Grouping (4.3); Hub & Spoke / Process Flow layouts (4.4); colour palette & styling | ⏳ Planned |
 
 **What works today:** clicking **SmartArt → Create Diagram…** opens a
 programmatic dialog (diagram-type dropdown + multiline text); on **Create** the

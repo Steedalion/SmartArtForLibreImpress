@@ -11,9 +11,10 @@ A LibreOffice Impress UNO extension that generates structured diagrams
   dialog (text + diagram-type dropdown); on Create the indented text is parsed
   into a validated hierarchy and the parsed tree (or a clear error) is shown.
 - 🚧 **Phase 4 — Shape rendering:** draw the parsed tree as grouped, editable
-  shapes on the slide. **4.1 done** — Create now adds a single rectangle to the
-  current slide (labelled with the first node); layout, connectors and grouping
-  are next (4.2–4.4).
+  shapes on the slide. **4.1–4.2 done** — Create now renders a multi-level
+  **Hierarchy**: a labelled box per node laid out as a top-down tree with
+  parent→child connectors. Grouping (4.3) and the other diagram types (4.4) are
+  next.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
@@ -77,7 +78,8 @@ LibreImpress-SmartArt/
 │   │   │   ├── models/                     # DiagramNode, DiagramType
 │   │   │   ├── parsers/                     # HierarchyParser, ParseResult (pure Java)
 │   │   │   ├── editing/                     # OutlineEditor — indent/outdent/newline transforms (pure Java)
-│   │   │   ├── rendering/                    # SlideRenderer — draws shapes on the current slide
+│   │   │   ├── layout/                       # HierarchyLayout — top-down tree positions (pure Java)
+│   │   │   ├── rendering/                    # SlideRenderer — draws boxes + connectors on the slide
 │   │   │   └── helpers/                     # LibreOfficeHelper (message boxes)
 │   │   ├── assembly/
 │   │   │   └── oxt.xml                      # assembles the .oxt
@@ -92,7 +94,8 @@ LibreImpress-SmartArt/
 │   │           └── SmartArtImpl.xml         # UNO component descriptor
 │   └── test/java/org/libreimpress/smartart/
 │       ├── parsers/HierarchyParserTest.java # parser unit tests (run in mvn package)
-│       └── editing/OutlineEditorTest.java   # outline-editing unit tests
+│       ├── editing/OutlineEditorTest.java   # outline-editing unit tests
+│       └── layout/HierarchyLayoutTest.java  # tree-layout unit tests
 ├── tools/
 │   ├── verify-extension.sh                 # install + headless UNO dispatch test
 │   └── probe_extension.py                  # UNO probe (config merge + queryDispatch)

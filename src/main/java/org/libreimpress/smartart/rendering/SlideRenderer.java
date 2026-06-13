@@ -2,6 +2,7 @@ package org.libreimpress.smartart.rendering;
 
 import com.sun.star.awt.Point;
 import com.sun.star.awt.Size;
+import com.sun.star.beans.XPropertySet;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawView;
 import com.sun.star.drawing.XShape;
@@ -15,6 +16,12 @@ import com.sun.star.lang.XMultiServiceFactory;
 import com.sun.star.text.XText;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
+
+import java.util.List;
+
+import org.libreimpress.smartart.layout.DiagramLayout;
+import org.libreimpress.smartart.layout.Edge;
+import org.libreimpress.smartart.layout.LaidOutShape;
 
 /**
  * Draws shapes on the current Impress slide. Phase 4.1 only adds a single
@@ -60,6 +67,49 @@ public class SlideRenderer {
             xText.setString(text);
         }
         return xShape;
+    }
+
+    /**
+     * Draws a laid-out hierarchy: one rectangle per node and a connector glued
+     * between each parent and child. The connectors auto-route between the
+     * boxes (glue indices left at -1).
+     */
+    public void drawHierarchy(DiagramLayout layout) throws Exception {
+        XComponent document = currentComponent();
+        XDrawPage page = currentPage(document);
+        if (page == null) {
+            throw new Exception("No active slide — open a slide in Impress first.");
+        }
+        XMultiServiceFactory factory =
+                UnoRuntime.queryInterface(XMultiServiceFactory.class, document);
+        XShapes shapes = UnoRuntime.queryInterface(XShapes.class, page);
+
+        List<LaidOutShape> laidOut = layout.getShapes();
+        XShape[] created = new XShape[laidOut.size()];
+        for (int i = 0; i < laidOut.size(); i++) {
+            LaidOutShape s = laidOut.get(i);
+            Object shape = factory.createInstance("com.sun.star.drawing.RectangleShape");
+            XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
+            shapes.add(xShape);
+            xShape.setSize(new Size(s.getWidth(), s.getHeight()));
+            xShape.setPosition(new Point(s.getX(), s.getY()));
+            XText xText = UnoRuntime.queryInterface(XText.class, shape);
+            if (xText != null) {
+                xText.setString(s.getText());
+            }
+            created[i] = xShape;
+        }
+
+        for (Edge edge : layout.getEdges()) {
+            Object connector = factory.createInstance("com.sun.star.drawing.ConnectorShape");
+            XShape xConnector = UnoRuntime.queryInterface(XShape.class, connector);
+            shapes.add(xConnector);
+            XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, connector);
+            props.setPropertyValue("StartShape", created[edge.getParent()]);
+            props.setPropertyValue("EndShape", created[edge.getChild()]);
+            props.setPropertyValue("StartGluePointIndex", Integer.valueOf(-1));
+            props.setPropertyValue("EndGluePointIndex", Integer.valueOf(-1));
+        }
     }
 
     private XComponent currentComponent() throws Exception {
