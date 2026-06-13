@@ -155,6 +155,9 @@ public class SlideRenderer {
             if (edge.isStraight()) {
                 props.setPropertyValue("EdgeKind",
                         com.sun.star.drawing.ConnectorType.LINE);
+            } else if (edge.isCurved()) {
+                props.setPropertyValue("EdgeKind",
+                        com.sun.star.drawing.ConnectorType.CURVE);
             }
             if (edge.hasArrowEnd()) {
                 props.setPropertyValue("LineEndName", "Arrow");

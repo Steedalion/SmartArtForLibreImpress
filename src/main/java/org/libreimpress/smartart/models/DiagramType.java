@@ -11,7 +11,8 @@ public enum DiagramType {
     HUB_AND_SPOKE("Hub & Spoke"),
     PROCESS_FLOW("Process Flow"),
     SEQUENTIAL_CHEVRON("Sequential Chevron"),
-    CYCLE("Cycle");
+    CYCLE("Cycle"),
+    CYCLE_ARROW("Cycle (Arrows)");
 
     private final String label;
 

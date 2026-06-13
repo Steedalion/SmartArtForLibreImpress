@@ -20,6 +20,7 @@ import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
+import org.libreimpress.smartart.layout.CycleArrowLayout;
 import org.libreimpress.smartart.layout.CycleLayout;
 import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.HierarchyLayout;
@@ -96,6 +97,10 @@ final class DemoRunner {
             DiagramType.CYCLE, "Cycle",
             "Plan\nDo\nCheck\nAct"
         },
+        {
+            DiagramType.CYCLE_ARROW, "Cycle (Arrows)",
+            "Plan\nDo\nCheck\nAct"
+        },
     };
 
     private final XComponentContext context;
@@ -159,6 +164,7 @@ final class DemoRunner {
             case PROCESS_FLOW:       return ProcessFlowLayout.layout(root);
             case SEQUENTIAL_CHEVRON: return SequentialChevronLayout.layout(root);
             case CYCLE:              return CycleLayout.layout(root);
+            case CYCLE_ARROW:        return CycleArrowLayout.layout(root);
             default:                 return HierarchyLayout.layout(root);
         }
     }
