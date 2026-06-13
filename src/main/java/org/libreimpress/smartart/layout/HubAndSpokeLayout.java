@@ -13,12 +13,23 @@ import java.util.List;
  */
 public final class HubAndSpokeLayout {
 
-    static final int NODE_W = 4000;
-    static final int NODE_H = 1500;
+    static final int BASE_NODE_W = 4000;
+    static final int BASE_NODE_H = 1500;
+    static final int SIZE_DECREMENT = 30; // reduce size by 30 per level depth
     static final int SPOKE_RADIUS = 3500; // hub-centre to spoke-centre distance
     static final int HUB_SPACING = 16000; // space from one hub centre to the next
 
     private HubAndSpokeLayout() {
+    }
+
+    /** Calculate node width based on level (reduces 30/level from base). */
+    private static int nodeWidth(int level) {
+        return Math.max(1500, BASE_NODE_W - (level - 1) * SIZE_DECREMENT);
+    }
+
+    /** Calculate node height based on level (reduces 30/level from base). */
+    private static int nodeHeight(int level) {
+        return Math.max(600, BASE_NODE_H - (level - 1) * SIZE_DECREMENT);
     }
 
     /**
@@ -43,22 +54,28 @@ public final class HubAndSpokeLayout {
             int hubCX = startX + h * HUB_SPACING;
             int hubCY = centerY;
 
+            int hubW = nodeWidth(1);
+            int hubH = nodeHeight(1);
             LaidOutShape hubShape = new LaidOutShape(
                     hubNode.getText(), 1,
-                    hubCX - NODE_W / 2, hubCY - NODE_H / 2, NODE_W, NODE_H,
+                    hubCX - hubW / 2, hubCY - hubH / 2, hubW, hubH,
                     ShapeKind.ELLIPSE);
             int hubIndex = out.addShape(hubShape);
 
-            List<DiagramNode> spokes = hubNode.getChildren();
+            // Collect all descendants (not just immediate children) as spokes.
+            List<DiagramNode> spokes = new ArrayList<>();
+            collectAllDescendants(hubNode, spokes);
             int n = spokes.size();
             for (int i = 0; i < n; i++) {
                 double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
                 int spokeCX = hubCX + (int) Math.round(SPOKE_RADIUS * Math.cos(angle));
                 int spokeCY = hubCY + (int) Math.round(SPOKE_RADIUS * Math.sin(angle));
                 DiagramNode spokeNode = spokes.get(i);
+                int spokeW = nodeWidth(spokeNode.getLevel());
+                int spokeH = nodeHeight(spokeNode.getLevel());
                 LaidOutShape spokeShape = new LaidOutShape(
                         spokeNode.getText(), spokeNode.getLevel(),
-                        spokeCX - NODE_W / 2, spokeCY - NODE_H / 2, NODE_W, NODE_H,
+                        spokeCX - spokeW / 2, spokeCY - spokeH / 2, spokeW, spokeH,
                         ShapeKind.ELLIPSE);
                 int spokeIndex = out.addShape(spokeShape);
                 out.addEdge(hubIndex, spokeIndex);
@@ -66,5 +83,13 @@ public final class HubAndSpokeLayout {
         }
 
         return out;
+    }
+
+    /** Recursively collect all descendants (excluding the node itself). */
+    private static void collectAllDescendants(DiagramNode node, List<DiagramNode> out) {
+        for (DiagramNode child : node.getChildren()) {
+            out.add(child);
+            collectAllDescendants(child, out);
+        }
     }
 }

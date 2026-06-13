@@ -12,14 +12,25 @@ import java.util.List;
  */
 public final class ProcessFlowLayout {
 
-    static final int NODE_W = 4000;
-    static final int NODE_H = 1500;
+    static final int BASE_NODE_W = 4000;
+    static final int BASE_NODE_H = 1500;
+    static final int SIZE_DECREMENT = 30; // reduce size by 30 per level depth
     static final int H_GAP = 1500;  // space between consecutive boxes
     static final int SLIDE_W = 25400; // standard Impress slide: 254 mm
     static final int SLIDE_H = 19050; // standard Impress slide: 190.5 mm
     static final int MARGIN_X = 1000;
 
     private ProcessFlowLayout() {
+    }
+
+    /** Calculate node width based on level (reduces 30/level from base). */
+    private static int nodeWidth(int level) {
+        return Math.max(1500, BASE_NODE_W - (level - 1) * SIZE_DECREMENT);
+    }
+
+    /** Calculate node height based on level (reduces 30/level from base). */
+    private static int nodeHeight(int level) {
+        return Math.max(600, BASE_NODE_H - (level - 1) * SIZE_DECREMENT);
     }
 
     /**
@@ -38,15 +49,17 @@ public final class ProcessFlowLayout {
             return out;
         }
 
-        int totalWidth = n * NODE_W + (n - 1) * H_GAP;
+        int w1 = nodeWidth(1);
+        int h1 = nodeHeight(1);
+        int totalWidth = n * w1 + (n - 1) * H_GAP;
         int startX = Math.max(MARGIN_X, (SLIDE_W - totalWidth) / 2);
-        int topY = (SLIDE_H - NODE_H) / 2;
+        int topY = (SLIDE_H - h1) / 2;
 
         int[] topIndices = new int[n];
         for (int i = 0; i < n; i++) {
-            int x = startX + i * (NODE_W + H_GAP);
+            int x = startX + i * (w1 + H_GAP);
             topIndices[i] = out.addShape(
-                    new LaidOutShape(steps.get(i).getText(), 1, x, topY, NODE_W, NODE_H));
+                    new LaidOutShape(steps.get(i).getText(), 1, x, topY, w1, h1));
         }
 
         // Connect the top-level steps horizontally.
@@ -57,8 +70,8 @@ public final class ProcessFlowLayout {
         // Add children of each step, placed vertically below.
         for (int i = 0; i < n; i++) {
             DiagramNode step = steps.get(i);
-            int stepX = startX + i * (NODE_W + H_GAP);
-            placeChildren(step, stepX, topY + NODE_H + H_GAP, topIndices[i], out);
+            int stepX = startX + i * (w1 + H_GAP);
+            placeChildren(step, stepX, topY + h1 + H_GAP, topIndices[i], out);
         }
 
         return out;
@@ -72,19 +85,22 @@ public final class ProcessFlowLayout {
             return;
         }
         // Place children directly below the parent, slightly indented.
+        int childLevel = parent.getLevel() + 1;
+        int childW = nodeWidth(childLevel);
+        int childH = nodeHeight(childLevel);
         int childX = parentX;
         int[] childIndices = new int[children.size()];
         for (int i = 0; i < children.size(); i++) {
             childIndices[i] = out.addShape(
-                    new LaidOutShape(children.get(i).getText(), children.get(i).getLevel(),
-                            childX, y, NODE_W, NODE_H));
+                    new LaidOutShape(children.get(i).getText(), childLevel,
+                            childX, y, childW, childH));
             out.addEdge(parentIndex, childIndices[i]);
-            childX += NODE_W + H_GAP;
+            childX += childW + H_GAP;
         }
         // Recursively place grandchildren below.
         for (int i = 0; i < children.size(); i++) {
-            placeChildren(children.get(i), parentX + i * (NODE_W + H_GAP),
-                    y + NODE_H + H_GAP, childIndices[i], out);
+            placeChildren(children.get(i), parentX + i * (childW + H_GAP),
+                    y + childH + H_GAP, childIndices[i], out);
         }
     }
 }

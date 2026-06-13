@@ -57,7 +57,7 @@ public class ProcessFlowLayoutTest {
         int x1 = layout.getShapes().get(1).getX();
         int x2 = layout.getShapes().get(2).getX();
         assertEquals(x1 - x0, x2 - x1);
-        assertEquals(ProcessFlowLayout.NODE_W + ProcessFlowLayout.H_GAP, x1 - x0);
+        assertEquals(ProcessFlowLayout.BASE_NODE_W + ProcessFlowLayout.H_GAP, x1 - x0);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class ProcessFlowLayoutTest {
     @Test
     public void stepsAreCentredVertically() {
         DiagramLayout layout = ProcessFlowLayout.layout(root("A", "B"));
-        int expectedY = (ProcessFlowLayout.SLIDE_H - ProcessFlowLayout.NODE_H) / 2;
+        int expectedY = (ProcessFlowLayout.SLIDE_H - ProcessFlowLayout.BASE_NODE_H) / 2;
         for (LaidOutShape s : layout.getShapes()) {
             assertEquals(expectedY, s.getY());
         }
