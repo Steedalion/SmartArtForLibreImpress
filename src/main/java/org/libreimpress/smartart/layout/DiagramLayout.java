@@ -23,6 +23,10 @@ public final class DiagramLayout {
         edges.add(new Edge(parentIndex, childIndex));
     }
 
+    public void addEdge(int parentIndex, int childIndex, int startGlue, int endGlue) {
+        edges.add(new Edge(parentIndex, childIndex, startGlue, endGlue));
+    }
+
     public List<LaidOutShape> getShapes() {
         return Collections.unmodifiableList(shapes);
     }

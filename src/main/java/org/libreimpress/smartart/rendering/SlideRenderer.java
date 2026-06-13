@@ -24,6 +24,7 @@ import java.util.List;
 import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.Edge;
 import org.libreimpress.smartart.layout.LaidOutShape;
+import org.libreimpress.smartart.layout.ShapeKind;
 
 /**
  * Draws shapes on the current Impress slide. Phase 4.1 only adds a single
@@ -91,7 +92,10 @@ public class SlideRenderer {
         XShape[] boxes = new XShape[laidOut.size()];
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
-            Object shape = factory.createInstance("com.sun.star.drawing.RectangleShape");
+            String service = s.getKind() == ShapeKind.ELLIPSE
+                    ? "com.sun.star.drawing.EllipseShape"
+                    : "com.sun.star.drawing.RectangleShape";
+            Object shape = factory.createInstance(service);
             XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
             shapes.add(xShape);
             xShape.setSize(new Size(s.getWidth(), s.getHeight()));
@@ -111,8 +115,10 @@ public class SlideRenderer {
             XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, connector);
             props.setPropertyValue("StartShape", boxes[edge.getParent()]);
             props.setPropertyValue("EndShape", boxes[edge.getChild()]);
-            props.setPropertyValue("StartGluePointIndex", Integer.valueOf(-1));
-            props.setPropertyValue("EndGluePointIndex", Integer.valueOf(-1));
+            props.setPropertyValue("StartGluePointIndex",
+                    Integer.valueOf(edge.getStartGlue()));
+            props.setPropertyValue("EndGluePointIndex",
+                    Integer.valueOf(edge.getEndGlue()));
             created.add(xConnector);
         }
 

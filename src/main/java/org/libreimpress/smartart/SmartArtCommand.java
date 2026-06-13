@@ -15,7 +15,10 @@ import com.sun.star.beans.PropertyValue;
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
 import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.HierarchyLayout;
+import org.libreimpress.smartart.layout.HubAndSpokeLayout;
+import org.libreimpress.smartart.layout.ProcessFlowLayout;
 import org.libreimpress.smartart.models.DiagramNode;
+import org.libreimpress.smartart.models.DiagramType;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
 import org.libreimpress.smartart.rendering.SlideRenderer;
@@ -99,6 +102,14 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
         return new String[]{SERVICE_NAME};
     }
 
+    private static DiagramLayout buildLayout(DiagramType type, DiagramNode root) {
+        switch (type) {
+            case HUB_AND_SPOKE:  return HubAndSpokeLayout.layout(root);
+            case PROCESS_FLOW:   return ProcessFlowLayout.layout(root);
+            default:             return HierarchyLayout.layout(root);
+        }
+    }
+
     private void execute() {
         try {
             SmartArtDialog dialog = new SmartArtDialog(xComponentContext);
@@ -109,11 +120,8 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
             ParseResult parsed = new HierarchyParser().parse(result.getText());
             if (parsed.isValid()) {
-                // Phase 4.2: lay out the hierarchy and draw boxes + connectors.
-                // (Only the Hierarchy layout exists yet; other types use it too
-                // for now — type-specific layouts arrive in 4.5.)
                 DiagramNode root = parsed.getRoot();
-                DiagramLayout layout = HierarchyLayout.layout(root);
+                DiagramLayout layout = buildLayout(result.getType(), root);
                 new SlideRenderer(xComponentContext).drawHierarchy(layout);
             } else {
                 LibreOfficeHelper.showMessage(xComponentContext,

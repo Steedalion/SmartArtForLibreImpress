@@ -12,14 +12,21 @@ public final class LaidOutShape {
     private final int y;
     private final int width;
     private final int height;
+    private final ShapeKind kind;
 
     public LaidOutShape(String text, int level, int x, int y, int width, int height) {
+        this(text, level, x, y, width, height, ShapeKind.RECTANGLE);
+    }
+
+    public LaidOutShape(String text, int level, int x, int y, int width, int height,
+            ShapeKind kind) {
         this.text = text;
         this.level = level;
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        this.kind = kind;
     }
 
     public String getText() {
@@ -52,5 +59,9 @@ public final class LaidOutShape {
 
     public int centerY() {
         return y + height / 2;
+    }
+
+    public ShapeKind getKind() {
+        return kind;
     }
 }

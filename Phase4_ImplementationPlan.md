@@ -11,7 +11,7 @@ its own.
 | 4.1 | Draw a **single** rectangle on the current slide (prove the UNO drawing pipeline) | ✅ done |
 | 4.2 | Multi-level **Hierarchy**: a box per node laid out as a top-down tree + parent→child connectors | ✅ done |
 | 4.3 | Group all shapes into one editable group object | ✅ done |
-| 4.4 | Diagram-type shapes/layouts (Hub & Spoke circle+spokes, Process Flow sequence) | planned |
+| 4.4 | Diagram-type shapes/layouts (Hub & Spoke circle+spokes, Process Flow sequence) | ✅ done |
 | later | Per-level colour palette & styling | planned |
 
 ---
@@ -132,3 +132,53 @@ Validated headlessly first: grouping 5 shapes collapsed the page's top level fro
 
 ### Not in 4.3
 - ❌ Hub & Spoke / Process Flow (4.4); ❌ colour/styling.
+
+---
+
+## 4.4 — Diagram-type shapes/layouts
+
+### Goal
+Route the rendered output to a layout algorithm that matches the chosen diagram
+type, so Hub & Spoke and Process Flow produce meaningfully different pictures
+rather than always falling back to the hierarchy tree.
+
+### Hub & Spoke (`HubAndSpokeLayout`)
+The first level-1 node becomes the **hub**, placed at the slide centre
+(12700, 9525 in 1/100 mm — the centre of a standard 254 × 190.5 mm slide).
+Its level-2 children, plus any extra level-1 siblings, become the **spokes**,
+arranged evenly on a circle of radius 5500 around the hub. The first spoke
+starts directly above the hub (angle −π/2) and the rest continue clockwise.
+An edge runs from the hub to each spoke.
+
+- Constants: `NODE_W = 4000`, `NODE_H = 1500`, `SPOKE_RADIUS = 5500`.
+- Covered by `HubAndSpokeLayoutTest` (8 cases: empty, hub-only, 4 spokes,
+  hub position, single-spoke direction, cardinal positions, extra level-1
+  siblings, equidistance).
+
+### Process Flow (`ProcessFlowLayout`)
+The level-1 nodes become the **flow steps**, arranged left-to-right in a single
+horizontal row centred on the slide. The sequence is centred horizontally:
+`startX = max(MARGIN_X, (SLIDE_W − totalWidth) / 2)` where
+`totalWidth = n × NODE_W + (n−1) × H_GAP`. All boxes share the same Y:
+`(SLIDE_H − NODE_H) / 2`. An edge runs from each step to the next.
+
+- Constants: `NODE_W = 4000`, `NODE_H = 1500`, `H_GAP = 1500`,
+  `SLIDE_W = 25400`, `SLIDE_H = 19050`, `MARGIN_X = 1000`.
+- Covered by `ProcessFlowLayoutTest` (8 cases: empty, single step, three steps,
+  shared Y, even spacing, horizontal centring of one step and of the sequence,
+  vertical centring).
+
+### Wiring (`SmartArtCommand`)
+`execute()` calls `buildLayout(type, root)` which dispatches to the three
+layout classes via a `switch` on `DiagramType`. The renderer path is unchanged.
+
+### Testing
+- All 41 unit tests pass (`mvn test`).
+- **Manual (required):** verify in Impress that selecting Hub & Spoke renders a
+  central box with spokes radiating outward, and Process Flow renders a
+  left-to-right sequence of boxes with connecting arrows — both grouped as one
+  editable object.
+
+### Not in 4.4
+- ❌ Per-level colour palette & styling; ❌ wrapping for >4 process-flow steps;
+  ❌ level-3+ sub-spokes in Hub & Spoke.
