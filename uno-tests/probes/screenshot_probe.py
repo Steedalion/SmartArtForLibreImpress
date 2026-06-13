@@ -132,7 +132,7 @@ def add_chevron_shape(doc, page, x, y, w, h, kind, label, color=BLUE):
     return s
 
 
-def add_connector(doc, page, start_shape, end_shape):
+def add_connector(doc, page, start_shape, end_shape, straight=False):
     c = doc.createInstance("com.sun.star.drawing.ConnectorShape")
     page.add(c)
     c.setPropertyValue("StartShape", start_shape)
@@ -140,6 +140,9 @@ def add_connector(doc, page, start_shape, end_shape):
     c.setPropertyValue("StartGluePointIndex", -1)
     c.setPropertyValue("EndGluePointIndex", -1)
     c.setPropertyValue("LineColor", GREY)
+    if straight:
+        c.setPropertyValue("EdgeKind",
+            uno.Enum("com.sun.star.drawing.ConnectorType", "LINE"))
     return c
 
 
@@ -174,21 +177,21 @@ def draw_sequential_chevron(doc, page):
 
 
 def draw_hub_and_spoke(doc, page):
-    """Hub ellipse in the centre; 5 spoke ellipses around it."""
-    HUB_W, HUB_H = 3000, 1800
-    SPOKE_W, SPOKE_H = 2000, 1200
-    CX, CY = 12700, 9000   # centre of slide (254 mm × 190 mm → 25400 × 19050)
-    RADIUS = 5000
+    """Hub circle in the centre; 5 spoke circles around it."""
+    HUB_D   = 2200   # hub diameter (equal width & height → circle)
+    SPOKE_D = 1500   # spoke diameter
+    CX, CY  = 12700, 9000   # centre of slide (254 mm × 190 mm → 25400 × 19050)
+    RADIUS  = 5000
 
-    hub = add_ellipse(doc, page, CX - HUB_W//2, CY - HUB_H//2, HUB_W, HUB_H,
+    hub = add_ellipse(doc, page, CX - HUB_D//2, CY - HUB_D//2, HUB_D, HUB_D,
                       "Alpha", BLUE)
     spokes_labels = ["Bravo", "Charlie", "Delta", "Echo", "Foxtrot"]
     for i, label in enumerate(spokes_labels):
         angle = math.radians(-90 + i * 360 / len(spokes_labels))
-        sx = int(CX + RADIUS * math.cos(angle)) - SPOKE_W // 2
-        sy = int(CY + RADIUS * math.sin(angle)) - SPOKE_H // 2
-        spoke = add_ellipse(doc, page, sx, sy, SPOKE_W, SPOKE_H, label, BLUE2)
-        add_connector(doc, page, hub, spoke)
+        sx = int(CX + RADIUS * math.cos(angle)) - SPOKE_D // 2
+        sy = int(CY + RADIUS * math.sin(angle)) - SPOKE_D // 2
+        spoke = add_ellipse(doc, page, sx, sy, SPOKE_D, SPOKE_D, label, BLUE2)
+        add_connector(doc, page, hub, spoke, straight=True)
 
 
 def draw_process_flow(doc, page):

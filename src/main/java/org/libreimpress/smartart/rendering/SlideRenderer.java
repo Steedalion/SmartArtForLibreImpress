@@ -130,6 +130,10 @@ public class SlideRenderer {
                     Integer.valueOf(edge.getStartGlue()));
             props.setPropertyValue("EndGluePointIndex",
                     Integer.valueOf(edge.getEndGlue()));
+            if (edge.isStraight()) {
+                props.setPropertyValue("EdgeKind",
+                        com.sun.star.drawing.ConnectorType.LINE);
+            }
             created.add(xConnector);
         }
 

@@ -13,17 +13,23 @@ public final class Edge {
     private final int child;
     private final int startGlue;
     private final int endGlue;
+    private final boolean straight;
 
-    /** Auto-routed connector (glue points chosen by LibreOffice). */
+    /** Auto-routed elbowed connector (glue points chosen by LibreOffice). */
     public Edge(int parent, int child) {
-        this(parent, child, -1, -1);
+        this(parent, child, -1, -1, false);
     }
 
     public Edge(int parent, int child, int startGlue, int endGlue) {
+        this(parent, child, startGlue, endGlue, false);
+    }
+
+    public Edge(int parent, int child, int startGlue, int endGlue, boolean straight) {
         this.parent = parent;
         this.child = child;
         this.startGlue = startGlue;
         this.endGlue = endGlue;
+        this.straight = straight;
     }
 
     public int getParent() {
@@ -42,5 +48,10 @@ public final class Edge {
     /** Glue point on the child shape, or -1 for auto. */
     public int getEndGlue() {
         return endGlue;
+    }
+
+    /** True when the connector should be a straight LINE rather than elbowed. */
+    public boolean isStraight() {
+        return straight;
     }
 }

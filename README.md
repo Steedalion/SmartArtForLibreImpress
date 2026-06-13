@@ -1,7 +1,8 @@
 # LibreImpress SmartArt
 
 A LibreOffice Impress UNO extension that generates structured diagrams
-(hierarchy, hub-and-spoke, process flow) from hierarchical text input.
+(hierarchy, hub-and-spoke, process flow, sequential chevron) from hierarchical
+text input.
 
 **Current status**
 - ✅ **Phase 1 — Empty OXT extension:** a minimal, installable `.oxt` skeleton.
@@ -10,14 +11,20 @@ A LibreOffice Impress UNO extension that generates structured diagrams
 - ✅ **Phase 3 — Dialog & text parsing:** *Create Diagram…* opens an input
   dialog (text + diagram-type dropdown); on Create the indented text is parsed
   into a validated hierarchy and the parsed tree (or a clear error) is shown.
-- 🚧 **Phase 4 — Shape rendering:** draw the parsed tree as grouped, editable
-  shapes on the slide. **4.1–4.3 done** — Create renders a multi-level
-  **Hierarchy** (a labelled box per node as a top-down tree with parent→child
-  connectors) and groups it into one editable object. The other diagram types
-  (4.4) are next.
+- ✅ **Phase 4 — Shape rendering:** the parsed tree is drawn as grouped,
+  editable shapes on the slide. All four diagram types are fully rendered.
 
 See [`impressSmartArt.md`](impressSmartArt.md) for the master specification and
 the full document hierarchy.
+
+## Diagram types
+
+| Type | Description | Screenshot |
+|------|-------------|------------|
+| **Hierarchy** | Top-down tree: one box per node, parents centred over children, connected by lines | ![Hierarchy](docs/screenshots/hierarchy.png) |
+| **Hub & Spoke** | Central circle hub with spoke circles radiating outward, connected by straight lines | ![Hub & Spoke](docs/screenshots/hub-and-spoke.png) |
+| **Process Flow** | Left-to-right sequence of rectangles joined by connectors, with sub-steps below each | ![Process Flow](docs/screenshots/process-flow.png) |
+| **Sequential Chevron** | Horizontal arrow-chevron sequence (first step is a flat-back pentagon; subsequent steps are notched chevrons) with sub-items below | ![Sequential Chevron](docs/screenshots/sequential-chevron.png) |
 
 ## Prerequisites
 
@@ -62,8 +69,17 @@ unopkg add --suppress-license target/SmartArt.oxt
 ```
 
 Then open Impress — a **SmartArt** menu appears in the menu bar with
-*Create Diagram…*. (Clicking it currently prints `SmartArt command executed!`
-to the terminal where `soffice` was launched; the dialog arrives in Phase 3.)
+*Create Diagram…*.
+
+## Regenerate screenshots
+
+```bash
+bash scripts/make-screenshots.sh
+```
+
+This builds the `.oxt`, starts a throwaway headless LibreOffice, draws each
+diagram type, and exports PNGs to `docs/screenshots/`. Pass `--oxt
+target/SmartArt.oxt` to skip the build step.
 
 ## Project structure
 
@@ -77,34 +93,48 @@ LibreImpress-SmartArt/
 │   │   │   ├── SmartArtDialog.java         # programmatic UNO input dialog (outline editor)
 │   │   │   ├── models/                     # DiagramNode, DiagramType
 │   │   │   ├── parsers/                     # HierarchyParser, ParseResult (pure Java)
-│   │   │   ├── editing/                     # OutlineEditor — indent/outdent/newline transforms (pure Java)
-│   │   │   ├── layout/                       # HierarchyLayout — top-down tree positions (pure Java)
-│   │   │   ├── rendering/                    # SlideRenderer — draws boxes + connectors on the slide
+│   │   │   ├── editing/                     # OutlineEditor — indent/outdent/newline transforms
+│   │   │   ├── layout/                      # layout algorithms (pure Java, unit-tested)
+│   │   │   │   ├── HierarchyLayout.java
+│   │   │   │   ├── HubAndSpokeLayout.java
+│   │   │   │   ├── ProcessFlowLayout.java
+│   │   │   │   ├── SequentialChevronLayout.java
+│   │   │   │   ├── DiagramLayout.java
+│   │   │   │   ├── LaidOutShape.java
+│   │   │   │   ├── Edge.java
+│   │   │   │   └── ShapeKind.java
+│   │   │   ├── rendering/                   # SlideRenderer — draws boxes + connectors
 │   │   │   └── helpers/                     # LibreOfficeHelper (message boxes)
 │   │   ├── assembly/
 │   │   │   └── oxt.xml                      # assembles the .oxt
 │   │   └── resources/
 │   │       ├── META-INF/
-│   │       │   ├── manifest.xml            # OXT package manifest
-│   │       │   └── MANIFEST.MF             # JAR manifest (RegistrationClassName)
-│   │       ├── description.xml             # extension metadata (identifier/version)
-│   │       ├── Addons.xcu                  # menu definition
-│   │       ├── ProtocolHandler.xcu         # command-URL → handler binding
+│   │       │   ├── manifest.xml
+│   │       │   └── MANIFEST.MF
+│   │       ├── description.xml
+│   │       ├── Addons.xcu
+│   │       ├── ProtocolHandler.xcu
 │   │       └── uno/
-│   │           └── SmartArtImpl.xml         # UNO component descriptor
+│   │           └── SmartArtImpl.xml
 │   └── test/java/org/libreimpress/smartart/
-│       ├── parsers/HierarchyParserTest.java # parser unit tests (run in mvn package)
-│       ├── editing/OutlineEditorTest.java   # outline-editing unit tests
-│       └── layout/HierarchyLayoutTest.java  # tree-layout unit tests
-├── uno-tests/                              # live headless-LibreOffice tests (layer 3)
-│   ├── run.sh                              # launch throwaway LibreOffice, run a probe, tear down
+│       ├── parsers/HierarchyParserTest.java
+│       ├── editing/OutlineEditorTest.java
+│       └── layout/                          # layout unit tests
+├── uno-tests/                               # live headless-LibreOffice tests
+│   ├── run.sh
 │   └── probes/
-│       ├── _connect.py                     # shared UNO connection helper
-│       ├── registration_probe.py           # menu in merged config + command dispatches
-│       └── render_probe.py                 # rectangle/connector/group API the renderer uses
-└── target/
-    ├── smartart.jar
-    └── SmartArt.oxt
+│       ├── _connect.py
+│       ├── registration_probe.py
+│       ├── render_probe.py
+│       └── screenshot_probe.py              # draws all diagram types → PNG
+├── scripts/
+│   └── make-screenshots.sh                  # regenerates docs/screenshots/
+└── docs/
+    └── screenshots/
+        ├── hierarchy.png
+        ├── hub-and-spoke.png
+        ├── process-flow.png
+        └── sequential-chevron.png
 ```
 
 ## Continuous integration
@@ -123,7 +153,7 @@ only surfacing during a manual install.
 | [`Phase1_ImplementationPlan.md`](Phase1_ImplementationPlan.md) | Phase 1 — empty OXT extension |
 | [`Phase2_ImplementationPlan.md`](Phase2_ImplementationPlan.md) | Phase 2 — menu integration |
 | [`Phase3_ImplementationPlan.md`](Phase3_ImplementationPlan.md) | Phase 3 — dialog & text parsing |
-| [`Phase4_ImplementationPlan.md`](Phase4_ImplementationPlan.md) | Phase 4 — shape rendering (4.1 single shape) |
+| [`Phase4_ImplementationPlan.md`](Phase4_ImplementationPlan.md) | Phase 4 — shape rendering |
 | [`Architecture_VDiagram.md`](Architecture_VDiagram.md) | Architecture & V-model process |
 | [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) | Testing approach |
 

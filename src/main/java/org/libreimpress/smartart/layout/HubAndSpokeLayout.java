@@ -21,14 +21,9 @@ public final class HubAndSpokeLayout {
     private HubAndSpokeLayout() {
     }
 
-    /** Calculate node width based on level (reduces 30/level from base). */
-    private static int nodeWidth(int level) {
-        return Math.max(1500, BASE_NODE_W - (level - 1) * SIZE_DECREMENT);
-    }
-
-    /** Calculate node height based on level (reduces 30/level from base). */
-    private static int nodeHeight(int level) {
-        return Math.max(600, BASE_NODE_H - (level - 1) * SIZE_DECREMENT);
+    /** Diameter of a circle node at the given level. */
+    private static int nodeDiameter(int level) {
+        return Math.max(1500, BASE_NODE_H - (level - 1) * SIZE_DECREMENT);
     }
 
     /**
@@ -53,11 +48,10 @@ public final class HubAndSpokeLayout {
             int hubCX = startX + h * HUB_SPACING;
             int hubCY = centerY;
 
-            int hubW = nodeWidth(1);
-            int hubH = nodeHeight(1);
+            int hubD = nodeDiameter(1);
             LaidOutShape hubShape = new LaidOutShape(
                     hubNode.getText(), 1,
-                    hubCX - hubW / 2, hubCY - hubH / 2, hubW, hubH,
+                    hubCX - hubD / 2, hubCY - hubD / 2, hubD, hubD,
                     ShapeKind.ELLIPSE);
             int hubIndex = out.addShape(hubShape);
 
@@ -69,14 +63,13 @@ public final class HubAndSpokeLayout {
                 int spokeCX = hubCX + (int) Math.round(SPOKE_RADIUS * Math.cos(angle));
                 int spokeCY = hubCY + (int) Math.round(SPOKE_RADIUS * Math.sin(angle));
                 DiagramNode spokeNode = spokes.get(i);
-                int spokeW = nodeWidth(2);
-                int spokeH = nodeHeight(2);
+                int spokeD = nodeDiameter(2);
                 LaidOutShape spokeShape = new LaidOutShape(
                         spokeNode.getText(), 2,
-                        spokeCX - spokeW / 2, spokeCY - spokeH / 2, spokeW, spokeH,
+                        spokeCX - spokeD / 2, spokeCY - spokeD / 2, spokeD, spokeD,
                         ShapeKind.ELLIPSE);
                 int spokeIndex = out.addShape(spokeShape);
-                out.addEdge(hubIndex, spokeIndex);
+                out.addEdge(new Edge(hubIndex, spokeIndex, -1, -1, true));
             }
         }
 

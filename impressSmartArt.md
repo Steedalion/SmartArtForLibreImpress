@@ -40,19 +40,20 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 1 | Empty, installable `.oxt` skeleton | ✅ Done |
 | 2 | Top-level **SmartArt** menu → dispatch to the Java handler | ✅ Done |
 | 3 | Input dialog + hierarchy parser (validate, preview the parsed tree) | ✅ Done |
-| 4 | Render the parsed tree as grouped, editable shapes on the slide | ⏳ In progress |
+| 4 | Render the parsed tree as grouped, editable shapes on the slide | ✅ Done |
 | 4.1 | Draw a single rectangle on the current slide (prove the drawing pipeline) | ✅ Done |
 | 4.2 | Multi-level Hierarchy: a box per node as a top-down tree + connectors | ✅ Done |
 | 4.3 | Group the diagram's shapes into one editable group object | ✅ Done |
-| later | Hub & Spoke / Process Flow layouts (4.4); colour palette & styling | ⏳ Planned |
+| 4.4 | Diagram-type shapes/layouts (Hub & Spoke, Process Flow, Sequential Chevron) | ✅ Done |
+| later | Colour palette & styling | ⏳ Planned |
 
 **What works today:** clicking **SmartArt → Create Diagram…** opens a
 programmatic dialog (diagram-type dropdown + multiline text); on **Create** the
-indented text is parsed into a validated hierarchy (each indentation step = one
-level; ≥ 3 nodes and ≥ 3 levels required) and the parsed tree — or a specific
-error — is shown. **Shapes are not drawn yet** (Phase 4), and the colour-palette
-input described in §3.2 / §5.1 is deferred to a later phase. Sections 2–8 below
-describe the *target* product; see this table for what is implemented now.
+indented text is parsed into a validated hierarchy and the chosen diagram type is
+rendered as grouped, editable shapes on the current slide. All four diagram types
+are implemented — Hierarchy, Hub & Spoke, Process Flow, and Sequential Chevron.
+The colour-palette input described in §3.2 / §5.1 is deferred to a later phase.
+Sections 2–8 below describe the target product.
 
 ### 1.3 How these documents are written (and the one-shot goal)
 
@@ -292,7 +293,7 @@ Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
 ✅ UNO extension architecture implemented  
 ✅ Hierarchy is visually reflected in output (Phase 4.2)  
 ✅ Output is grouped and editable (Phase 4.3)  
-⏳ All three diagram types generate correctly — Hierarchy done; Hub & Spoke / Process Flow in Phase 4.4  
+✅ All diagram types generate correctly — Hierarchy, Hub & Spoke, Process Flow, Sequential Chevron (Phase 4.4)  
 ⏳ Color palette (when provided) is applied — later phase  
 ⏳ Default styling applied when palette missing — later phase
 
