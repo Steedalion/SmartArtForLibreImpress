@@ -25,6 +25,7 @@ import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.Edge;
 import org.libreimpress.smartart.layout.LaidOutShape;
 import org.libreimpress.smartart.layout.ShapeKind;
+import org.libreimpress.smartart.models.ColorPalette;
 
 /**
  * Draws shapes on the current Impress slide. Phase 4.1 only adds a single
@@ -73,11 +74,17 @@ public class SlideRenderer {
     }
 
     /**
-     * Draws a laid-out hierarchy: one rectangle per node and a connector glued
-     * between each parent and child (connectors auto-route, glue indices -1),
-     * then groups the whole diagram into one editable group object.
+     * Draws a laid-out diagram using the built-in default palette.
      */
     public void drawHierarchy(DiagramLayout layout) throws Exception {
+        drawHierarchy(layout, ColorPalette.EMPTY);
+    }
+
+    /**
+     * Draws a laid-out diagram, applying {@code palette} fill colours where set
+     * and falling back to {@link DefaultPalette} for unset levels.
+     */
+    public void drawHierarchy(DiagramLayout layout, ColorPalette palette) throws Exception {
         XComponent document = currentComponent();
         XDrawPage page = currentPage(document);
         if (page == null) {
@@ -108,13 +115,19 @@ public class SlideRenderer {
             xShape.setPosition(new Point(s.getX(), s.getY()));
             if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
                 applyChevronGeometry(shape, s.getKind());
-                applyStyle(shape, DefaultPalette.chevronFill(chevronSeq++),
-                        DefaultPalette.TEXT_WHITE,
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor
+                        : DefaultPalette.chevronFill(chevronSeq);
+                chevronSeq++;
+                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
                         DefaultPalette.fontSize(s.getLevel()));
             } else {
-                applyStyle(shape,
-                        DefaultPalette.fill(s.getKind(), s.getLevel()),
-                        DefaultPalette.TEXT_WHITE,
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor
+                        : DefaultPalette.fill(s.getKind(), s.getLevel());
+                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
                         DefaultPalette.fontSize(s.getLevel()));
             }
             XText xText = UnoRuntime.queryInterface(XText.class, shape);

@@ -38,10 +38,12 @@ public class SmartArtDialog {
     public static final class Result {
         private final String text;
         private final DiagramType type;
+        private final String paletteText;
 
-        Result(String text, DiagramType type) {
+        Result(String text, DiagramType type, String paletteText) {
             this.text = text;
             this.type = type;
+            this.paletteText = paletteText;
         }
 
         public String getText() {
@@ -50,6 +52,11 @@ public class SmartArtDialog {
 
         public DiagramType getType() {
             return type;
+        }
+
+        /** Raw palette text entered by the user, or empty string if not provided. */
+        public String getPaletteText() {
+            return paletteText != null ? paletteText : "";
         }
     }
 
@@ -75,7 +82,7 @@ public class SmartArtDialog {
         dialogProps.setPropertyValue("PositionX", Integer.valueOf(100));
         dialogProps.setPropertyValue("PositionY", Integer.valueOf(80));
         dialogProps.setPropertyValue("Width", Integer.valueOf(230));
-        dialogProps.setPropertyValue("Height", Integer.valueOf(190));
+        dialogProps.setPropertyValue("Height", Integer.valueOf(216));
         dialogProps.setPropertyValue("Title", "SmartArt – Create Diagram");
 
         XMultiServiceFactory modelFactory =
@@ -90,10 +97,13 @@ public class SmartArtDialog {
                 PushButtonType.STANDARD_value, false);
         addButton(modelFactory, container, "btnIndent", "Indent →", 164, 26, 58, 14,
                 PushButtonType.STANDARD_value, false);
-        addEdit(modelFactory, container, "txtInput", 8, 44, 214, 110);
-        addButton(modelFactory, container, "btnOk", "Create", 110, 162, 54, 16,
+        addEdit(modelFactory, container, "txtInput", 8, 44, 214, 86);
+        addLabel(modelFactory, container, "lblPalette",
+                "Colours (optional, e.g. 1=#4472C4):", 8, 136, 214, 10);
+        addPaletteEdit(modelFactory, container, "txtPalette", 8, 148, 214, 36);
+        addButton(modelFactory, container, "btnOk", "Create", 110, 190, 54, 16,
                 PushButtonType.OK_value, true);
-        addButton(modelFactory, container, "btnCancel", "Cancel", 168, 162, 54, 16,
+        addButton(modelFactory, container, "btnCancel", "Cancel", 168, 190, 54, 16,
                 PushButtonType.CANCEL_value, false);
 
         Object dialog = smgr.createInstanceWithContext(
@@ -134,7 +144,9 @@ public class SmartArtDialog {
             String text = (String) getModelProp(container, "txtInput", "Text");
             short[] selected = (short[]) getModelProp(container, "lstType", "SelectedItems");
             int index = (selected != null && selected.length > 0) ? selected[0] : 0;
-            return new Result(text == null ? "" : text, DiagramType.fromIndex(index));
+            String paletteText = (String) getModelProp(container, "txtPalette", "Text");
+            return new Result(text == null ? "" : text, DiagramType.fromIndex(index),
+                    paletteText == null ? "" : paletteText);
         } finally {
             if (extToolkit != null) {
                 extToolkit.removeKeyHandler(keyHandler);
@@ -293,6 +305,17 @@ public class SmartArtDialog {
                 "One item per line. Enter = new item; Ctrl+] / Ctrl+[ or the "
                         + "Indent/Outdent buttons change the level.");
         p.setPropertyValue("Text", SmartArtConfig.getSeedText());
+    }
+
+    private void addPaletteEdit(XMultiServiceFactory factory, XNameContainer container,
+            String name, int x, int y, int w, int h) throws Exception {
+        XPropertySet p = newControl(factory, container,
+                "com.sun.star.awt.UnoControlEditModel", name, x, y, w, h);
+        p.setPropertyValue("MultiLine", Boolean.TRUE);
+        p.setPropertyValue("VScroll", Boolean.TRUE);
+        p.setPropertyValue("HideInactiveSelection", Boolean.TRUE);
+        p.setPropertyValue("HelpText",
+                "One line per level: 1=#4472C4   Leave blank to use the default colours.");
     }
 
     private void addListBox(XMultiServiceFactory factory, XNameContainer container,

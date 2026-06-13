@@ -18,9 +18,11 @@ import org.libreimpress.smartart.layout.HierarchyLayout;
 import org.libreimpress.smartart.layout.HubAndSpokeLayout;
 import org.libreimpress.smartart.layout.ProcessFlowLayout;
 import org.libreimpress.smartart.layout.SequentialChevronLayout;
+import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramNode;
 import org.libreimpress.smartart.models.DiagramType;
 import org.libreimpress.smartart.parsers.HierarchyParser;
+import org.libreimpress.smartart.parsers.PaletteParser;
 import org.libreimpress.smartart.parsers.ParseResult;
 import org.libreimpress.smartart.rendering.SlideRenderer;
 
@@ -124,7 +126,8 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
             if (parsed.isValid()) {
                 DiagramNode root = parsed.getRoot();
                 DiagramLayout layout = buildLayout(result.getType(), root);
-                new SlideRenderer(xComponentContext).drawHierarchy(layout);
+                ColorPalette palette = PaletteParser.parse(result.getPaletteText());
+                new SlideRenderer(xComponentContext).drawHierarchy(layout, palette);
             } else {
                 LibreOfficeHelper.showMessage(xComponentContext,
                         "SmartArt – Invalid input", parsed.getErrorMessage(), true);
