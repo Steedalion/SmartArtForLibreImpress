@@ -102,6 +102,23 @@ public class HierarchyLayoutTest {
     }
 
     @Test
+    public void manyLeavesScaleDownToFitSlide() {
+        // 10 siblings at BASE_NODE_W=4000 + gaps=1500 each would overflow 25400.
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode parent = new DiagramNode("Root", 1);
+        root.addChild(parent);
+        for (int i = 0; i < 10; i++) {
+            parent.addChild(new DiagramNode("C" + i, 2));
+        }
+        DiagramLayout layout = HierarchyLayout.layout(root);
+        int rightLimit = HierarchyLayout.SLIDE_W - HierarchyLayout.MARGIN_X;
+        for (LaidOutShape s : layout.getShapes()) {
+            assertTrue("shape right edge must stay on slide",
+                    s.getX() + s.getWidth() <= rightLimit);
+        }
+    }
+
+    @Test
     public void forestPlacesEachTopLevelTree() {
         // root(0) -> {A(1)->A1(2)->A1a(3), B(1)->B1(2)->B1a(3)}
         DiagramNode root = new DiagramNode("", 0);

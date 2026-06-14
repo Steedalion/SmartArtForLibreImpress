@@ -107,4 +107,31 @@ public class CycleBlockLayoutTest {
             assertEquals("", layout.getShapes().get(i).getText());
         }
     }
+
+    @Test
+    public void manyNodesScaleRadiusToPreventOverlap() {
+        // 12 nodes at default RING_RADIUS=5500 would overlap (chord < NODE_W + gap).
+        DiagramNode root = new DiagramNode("", 0);
+        for (int i = 0; i < 12; i++) {
+            root.addChild(new DiagramNode("N" + i, 1));
+        }
+        DiagramLayout layout = CycleBlockLayout.layout(root);
+
+        int cx = CycleBlockLayout.SLIDE_W / 2;
+        int cy = CycleBlockLayout.SLIDE_H / 2;
+        LaidOutShape first = layout.getShapes().get(0);
+        double actualRadius = Math.sqrt(Math.pow(first.centerX() - cx, 2)
+                + Math.pow(first.centerY() - cy, 2));
+        assertTrue("radius with 12 nodes must exceed default RING_RADIUS",
+                actualRadius > CycleBlockLayout.RING_RADIUS);
+
+        for (int i = 0; i < 12; i++) {
+            LaidOutShape a = layout.getShapes().get(i);
+            LaidOutShape b = layout.getShapes().get((i + 1) % 12);
+            double chord = Math.sqrt(Math.pow(b.centerX() - a.centerX(), 2)
+                    + Math.pow(b.centerY() - a.centerY(), 2));
+            assertTrue("adjacent nodes must not overlap (chord=" + (int) chord + ")",
+                    chord > CycleBlockLayout.NODE_W);
+        }
+    }
 }

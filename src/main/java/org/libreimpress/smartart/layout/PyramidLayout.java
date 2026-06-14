@@ -62,13 +62,19 @@ public final class PyramidLayout {
                 continue;
             }
             int nc = children.size();
-            int totalH = nc * CHILD_H + (nc - 1) * CHILD_V_GAP;
+            int h = CHILD_H;
+            // Scale child height down if many children don't fit within the tier height.
+            int totalH = nc * h + (nc - 1) * CHILD_V_GAP;
+            if (totalH > TIER_H) {
+                h = Math.max(150, (TIER_H - (nc - 1) * CHILD_V_GAP) / nc);
+                totalH = nc * h + (nc - 1) * CHILD_V_GAP;
+            }
             int childY = tierYs[i] + (TIER_H - totalH) / 2;
             for (DiagramNode child : children) {
                 out.addShape(new LaidOutShape(
                         child.getText(), child.getLevel(), childColumnX, childY,
-                        CHILD_W, CHILD_H, ShapeKind.RECTANGLE));
-                childY += CHILD_H + CHILD_V_GAP;
+                        CHILD_W, h, ShapeKind.RECTANGLE));
+                childY += h + CHILD_V_GAP;
             }
         }
 

@@ -11,10 +11,12 @@ import java.util.List;
  */
 public final class CycleArrowLayout {
 
-    static final int CIRCLE_D    = 2200;  // circle diameter
-    static final int RING_RADIUS = 5500;  // slide-centre to circle-centre
-    static final int SLIDE_W     = 25400;
-    static final int SLIDE_H     = 19050;
+    static final int CIRCLE_D        = 2200;  // circle diameter
+    static final int RING_RADIUS     = 5500;  // default slide-centre to circle-centre
+    static final int MIN_NODE_GAP    = 400;   // minimum gap between adjacent circle edges
+    static final int MAX_RING_RADIUS = 7800;  // cap to keep shapes on-slide
+    static final int SLIDE_W         = 25400;
+    static final int SLIDE_H         = 19050;
 
     private CycleArrowLayout() {
     }
@@ -35,10 +37,19 @@ public final class CycleArrowLayout {
         int cy = SLIDE_H / 2;
         int[] indices = new int[n];
 
+        // Scale radius up when many circles would otherwise overlap.
+        // Minimum radius: chord between adjacent circles ≥ CIRCLE_D + MIN_NODE_GAP.
+        int ringRadius = RING_RADIUS;
+        if (n >= 2) {
+            int rMin = (int) Math.ceil(
+                    (CIRCLE_D + MIN_NODE_GAP) / (2.0 * Math.sin(Math.PI / n)));
+            ringRadius = Math.min(MAX_RING_RADIUS, Math.max(RING_RADIUS, rMin));
+        }
+
         for (int i = 0; i < n; i++) {
             double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
-            int nodeCX = cx + (int) Math.round(RING_RADIUS * Math.cos(angle));
-            int nodeCY = cy + (int) Math.round(RING_RADIUS * Math.sin(angle));
+            int nodeCX = cx + (int) Math.round(ringRadius * Math.cos(angle));
+            int nodeCY = cy + (int) Math.round(ringRadius * Math.sin(angle));
             LaidOutShape shape = new LaidOutShape(
                     nodes.get(i).getText(), 1,
                     nodeCX - CIRCLE_D / 2, nodeCY - CIRCLE_D / 2,
