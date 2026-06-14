@@ -14,7 +14,9 @@ import com.sun.star.awt.XControlModel;
 import com.sun.star.awt.XDialog;
 import com.sun.star.awt.XExtendedToolkit;
 import com.sun.star.awt.XKeyHandler;
+import com.sun.star.awt.XListBox;
 import com.sun.star.awt.XTextComponent;
+import com.sun.star.awt.XTextListener;
 import com.sun.star.awt.XToolkit;
 import com.sun.star.awt.XWindow2;
 import com.sun.star.beans.PropertyState;
@@ -32,6 +34,7 @@ import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XMultiServiceFactory;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
+import com.sun.star.util.XModifiable;
 
 import java.io.File;
 
@@ -190,11 +193,32 @@ public class SmartArtDialog {
                     + " factory=" + docFactory;
         }
 
-        bindButton(controls, "btnPreview",
-                new PreviewButtonListener(container, currentDoc, currentPages,
-                        docFactory, previewInitError));
+        PreviewController preview = new PreviewController(container, currentDoc,
+                currentPages, docFactory, previewInitError);
+        bindButton(controls, "btnPreview", new PreviewButtonListener(preview));
+
+        // Live preview: re-render (debounced) whenever the input, palette, or
+        // diagram type changes. The outline buttons and key handler edit the
+        // text via setText(), which also fires textChanged — so they are covered
+        // automatically without separate wiring.
+        XTextListener previewText = new PreviewTextListener(preview);
+        if (editText != null) {
+            editText.addTextListener(previewText);
+        }
+        XTextComponent paletteEdit = UnoRuntime.queryInterface(
+                XTextComponent.class, controls.getControl("txtPalette"));
+        if (paletteEdit != null) {
+            paletteEdit.addTextListener(previewText);
+        }
+        XListBox typeList = UnoRuntime.queryInterface(
+                XListBox.class, controls.getControl("lstType"));
+        if (typeList != null) {
+            typeList.addItemListener(new PreviewItemListener(preview));
+        }
 
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
+        // Render an initial preview shortly after the dialog appears.
+        preview.schedule();
         try {
             short ret = xDialog.execute();
             if (ret != PushButtonType.OK_value) {
@@ -207,6 +231,7 @@ public class SmartArtDialog {
             return new Result(text == null ? "" : text, DiagramType.fromIndex(index),
                     paletteText == null ? "" : paletteText);
         } finally {
+            preview.shutdown();
             if (extToolkit != null) {
                 extToolkit.removeKeyHandler(keyHandler);
             }
@@ -314,14 +339,21 @@ public class SmartArtDialog {
      * avoids that — inserting a slide into an open document works fine from
      * within a modal dialog's event handler.
      */
-    private final class PreviewButtonListener implements XActionListener {
+    private final class PreviewController {
+        private static final long DEBOUNCE_MS = 350;
+
         private final XNameContainer container;
         private final XComponent currentDoc;
         private final XDrawPages currentPages;
         private final XMultiServiceFactory docFactory;
         private final String initError;
 
-        PreviewButtonListener(XNameContainer container,
+        private final java.util.Timer timer =
+                new java.util.Timer("smartart-preview", true);
+        private java.util.TimerTask pending;
+        private volatile boolean active = true;
+
+        PreviewController(XNameContainer container,
                 XComponent currentDoc, XDrawPages currentPages,
                 XMultiServiceFactory docFactory, String initError) {
             this.container    = container;
@@ -331,13 +363,51 @@ public class SmartArtDialog {
             this.initError    = initError;
         }
 
-        @Override
-        public void actionPerformed(ActionEvent event) {
+        /** Coalesces rapid edits into a single render after a short pause. */
+        synchronized void schedule() {
+            if (!active) {
+                return;
+            }
+            if (pending != null) {
+                pending.cancel();
+            }
+            pending = new java.util.TimerTask() {
+                @Override public void run() { render(); }
+            };
+            try {
+                timer.schedule(pending, DEBOUNCE_MS);
+            } catch (IllegalStateException ignored) {
+                // Timer already cancelled because the dialog is closing.
+            }
+        }
+
+        /** Stops any further renders; called when the dialog closes. */
+        synchronized void shutdown() {
+            active = false;
+            timer.cancel();
+        }
+
+        /**
+         * Renders the current input into a temporary slide appended to the open
+         * document, exports it as PNG, removes the slide, and shows the PNG.
+         * Synchronized so the button click and the debounce timer never overlap.
+         * The document's modified flag is preserved so previewing never marks
+         * the document dirty or triggers a save prompt.
+         */
+        synchronized void render() {
+            if (!active) {
+                return;
+            }
             if (initError != null) {
                 setStatus("Init error: " + initError);
                 return;
             }
             setStatus("Rendering…");
+            XModifiable mod = UnoRuntime.queryInterface(XModifiable.class, currentDoc);
+            boolean wasModified = false;
+            try {
+                wasModified = mod != null && mod.isModified();
+            } catch (Exception ignored) {}
             // Track the last operation attempted so a "Null pointer" RuntimeException
             // (whose message alone doesn't say where it came from) is pinpointed.
             String step = "start";
@@ -422,10 +492,11 @@ public class SmartArtDialog {
                 if (e.getMessage() != null) desc += ": " + e.getMessage();
                 setStatus("Error@" + step + ": " + desc);
             } finally {
-                if (inserted) {
-                    try {
-                        if (renderPage != null) currentPages.remove(renderPage);
-                    } catch (Exception ignored) {}
+                if (inserted && renderPage != null) {
+                    try { currentPages.remove(renderPage); } catch (Exception ignored) {}
+                }
+                if (mod != null) {
+                    try { mod.setModified(wasModified); } catch (Exception ignored) {}
                 }
             }
         }
@@ -437,7 +508,29 @@ public class SmartArtDialog {
                 p.setPropertyValue("Label", msg);
             } catch (Exception ignored) {}
         }
+    }
 
+    /** "▶ Preview" button — forces an immediate render. */
+    private final class PreviewButtonListener implements XActionListener {
+        private final PreviewController controller;
+        PreviewButtonListener(PreviewController controller) { this.controller = controller; }
+        @Override public void actionPerformed(ActionEvent event) { controller.render(); }
+        @Override public void disposing(com.sun.star.lang.EventObject event) {}
+    }
+
+    /** Re-renders (debounced) when the input or palette text changes. */
+    private final class PreviewTextListener implements XTextListener {
+        private final PreviewController controller;
+        PreviewTextListener(PreviewController controller) { this.controller = controller; }
+        @Override public void textChanged(com.sun.star.awt.TextEvent event) { controller.schedule(); }
+        @Override public void disposing(com.sun.star.lang.EventObject event) {}
+    }
+
+    /** Re-renders (debounced) when the diagram type selection changes. */
+    private final class PreviewItemListener implements com.sun.star.awt.XItemListener {
+        private final PreviewController controller;
+        PreviewItemListener(PreviewController controller) { this.controller = controller; }
+        @Override public void itemStateChanged(com.sun.star.awt.ItemEvent event) { controller.schedule(); }
         @Override public void disposing(com.sun.star.lang.EventObject event) {}
     }
 
