@@ -258,21 +258,24 @@ public class SlideRenderer {
     }
 
     /** Groups all the diagram's shapes into one editable group on the page. */
-    private void groupShapes(XDrawPage page, List<XShape> created) throws Exception {
+    private void groupShapes(XDrawPage page, List<XShape> created) {
         if (created.size() < 2) {
-            return; // nothing meaningful to group
+            return;
         }
-        // ShapeCollection is a global service, not a document one.
-        XMultiComponentFactory smgr = context.getServiceManager();
-        Object collectionObj =
-                smgr.createInstanceWithContext("com.sun.star.drawing.ShapeCollection", context);
-        XShapes collection = UnoRuntime.queryInterface(XShapes.class, collectionObj);
-        for (XShape shape : created) {
-            collection.add(shape);
-        }
-        XShapeGrouper grouper = UnoRuntime.queryInterface(XShapeGrouper.class, page);
-        if (grouper != null) {
-            grouper.group(collection);
+        try {
+            XMultiComponentFactory smgr = context.getServiceManager();
+            Object collectionObj = smgr.createInstanceWithContext(
+                    "com.sun.star.drawing.ShapeCollection", context);
+            XShapes collection = UnoRuntime.queryInterface(XShapes.class, collectionObj);
+            for (XShape shape : created) {
+                collection.add(shape);
+            }
+            XShapeGrouper grouper = UnoRuntime.queryInterface(XShapeGrouper.class, page);
+            if (grouper != null) {
+                grouper.group(collection);
+            }
+        } catch (Exception e) {
+            // Grouping is cosmetic; leave shapes ungrouped if it fails.
         }
     }
 

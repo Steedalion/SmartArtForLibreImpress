@@ -24,9 +24,9 @@ import com.sun.star.container.XNameContainer;
 import com.sun.star.document.XExporter;
 import com.sun.star.document.XFilter;
 import com.sun.star.drawing.XDrawPage;
+import com.sun.star.drawing.XDrawPages;
 import com.sun.star.drawing.XDrawPagesSupplier;
 import com.sun.star.frame.XComponentLoader;
-import com.sun.star.frame.XDesktop;
 import com.sun.star.lang.XComponent;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XMultiServiceFactory;
@@ -46,10 +46,10 @@ import org.libreimpress.smartart.rendering.SlideRenderer;
 
 /**
  * A programmatically-built UNO dialog that collects the diagram type and the
- * hierarchical text. The right panel shows a live preview rendered via a hidden
- * Impress document — click "Preview" to refresh it. No {@code .xdl} file is
- * packaged, so the dialog adds nothing to the extension's registration contract
- * (master spec §5.5).
+ * hierarchical text. A preview panel on the right renders the diagram into a
+ * hidden Impress document (pre-created before the modal loop starts) and
+ * displays it as a PNG when the user clicks "▶ Preview". No {@code .xdl}
+ * file is packaged (master spec §5.5).
  */
 public class SmartArtDialog {
 
@@ -65,26 +65,17 @@ public class SmartArtDialog {
             this.paletteText = paletteText;
         }
 
-        public String getText() {
-            return text;
-        }
-
-        public DiagramType getType() {
-            return type;
-        }
-
-        /** Raw palette text entered by the user, or empty string if not provided. */
-        public String getPaletteText() {
-            return paletteText != null ? paletteText : "";
-        }
+        public String getText() { return text; }
+        public DiagramType getType() { return type; }
+        public String getPaletteText() { return paletteText != null ? paletteText : ""; }
     }
 
     // ---- layout constants (UNO dialog units) ----
-    private static final int LEFT_W    = 230;  // left-panel width
-    private static final int SEP       = 8;    // gap between panels
-    private static final int PREV_W    = 240;  // preview panel width
-    private static final int DIALOG_W  = LEFT_W + SEP + PREV_W; // 478
-    private static final int DIALOG_H  = 216;
+    private static final int LEFT_W   = 230;
+    private static final int SEP      = 8;
+    private static final int PREV_W   = 242;
+    private static final int DIALOG_W = LEFT_W + SEP + PREV_W;  // 480
+    private static final int DIALOG_H = 216;
 
     private final XComponentContext context;
 
@@ -115,7 +106,7 @@ public class SmartArtDialog {
         XNameContainer container =
                 UnoRuntime.queryInterface(XNameContainer.class, dialogModel);
 
-        // ---- left panel (unchanged) ----
+        // ---- left panel (unchanged from before) ----
         addLabel(modelFactory, container, "lblType", "Diagram type:", 8, 8, 60, 12);
         addListBox(modelFactory, container, "lstType", 70, 6, 152, 14);
         addLabel(modelFactory, container, "lblText", "List points:", 8, 28, 96, 12);
@@ -134,9 +125,11 @@ public class SmartArtDialog {
 
         // ---- right panel: preview ----
         int px = LEFT_W + SEP;
-        addLabel(modelFactory, container, "lblPreview", "Preview", px, 8, 60, 12);
-        addImageControl(modelFactory, container, "imgPreview", px, 22, PREV_W, 172);
-        addButton(modelFactory, container, "btnPreview", "▶ Preview", px, 198, 60, 12,
+        addLabel(modelFactory, container, "lblPreview", "Preview", px, 8, 60, 10);
+        addImageControl(modelFactory, container, "imgPreview", px, 20, PREV_W, 166);
+        addLabel(modelFactory, container, "lblPreviewStatus",
+                "Click ▶ to preview", px, 188, PREV_W, 10);
+        addButton(modelFactory, container, "btnPreview", "▶ Preview", px, 200, 64, 12,
                 PushButtonType.STANDARD_value, false);
 
         Object dialog = smgr.createInstanceWithContext(
@@ -166,8 +159,32 @@ public class SmartArtDialog {
                 new LevelButtonListener(editing, OutlineEditing.Op.INDENT));
         bindButton(controls, "btnOutdent",
                 new LevelButtonListener(editing, OutlineEditing.Op.OUTDENT));
+
+        // Pre-create the hidden Impress doc BEFORE execute() — creating a new
+        // document from inside a modal dialog's event handler is blocked by the
+        // UNO event loop.
+        XComponent previewDoc = null;
+        XDrawPages previewPages = null;
+        XMultiServiceFactory previewFactory = null;
+        try {
+            Object desktopObj = smgr.createInstanceWithContext(
+                    "com.sun.star.frame.Desktop", context);
+            XComponentLoader loader =
+                    UnoRuntime.queryInterface(XComponentLoader.class, desktopObj);
+            previewDoc = UnoRuntime.queryInterface(XComponent.class,
+                    loader.loadComponentFromURL(
+                            "private:factory/simpress", "_blank", 0,
+                            new PropertyValue[]{ pv("Hidden", Boolean.TRUE) }));
+            XDrawPagesSupplier pagesSupplier =
+                    UnoRuntime.queryInterface(XDrawPagesSupplier.class, previewDoc);
+            previewPages  = pagesSupplier.getDrawPages();
+            previewFactory = UnoRuntime.queryInterface(XMultiServiceFactory.class, previewDoc);
+        } catch (Exception e) {
+            // Preview doc unavailable; button will show the error when clicked.
+        }
+
         bindButton(controls, "btnPreview",
-                new PreviewButtonListener(container));
+                new PreviewButtonListener(container, previewDoc, previewPages, previewFactory));
 
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
         try {
@@ -185,79 +202,14 @@ public class SmartArtDialog {
             if (extToolkit != null) {
                 extToolkit.removeKeyHandler(keyHandler);
             }
+            if (previewDoc != null) {
+                try { previewDoc.dispose(); } catch (Exception ignored) {}
+            }
             com.sun.star.lang.XComponent disposable =
                     UnoRuntime.queryInterface(com.sun.star.lang.XComponent.class, dialog);
             if (disposable != null) {
                 disposable.dispose();
             }
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Preview rendering
-    // -------------------------------------------------------------------------
-
-    /**
-     * Renders {@code inputText} as diagram type {@code type} into a hidden Impress
-     * document, exports the slide as a PNG temp file, and returns a {@code file://}
-     * URL ready for the {@code ImageURL} property of an image control.
-     * Returns {@code null} if the input is invalid or rendering fails.
-     */
-    private String renderPreview(String inputText, DiagramType type) {
-        try {
-            ParseResult parsed = new HierarchyParser().parse(
-                    inputText == null ? "" : inputText);
-            if (!parsed.isValid()) {
-                return null;
-            }
-            DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
-
-            XMultiComponentFactory smgr = context.getServiceManager();
-            Object desktopObj = smgr.createInstanceWithContext(
-                    "com.sun.star.frame.Desktop", context);
-            XComponentLoader loader = UnoRuntime.queryInterface(XComponentLoader.class, desktopObj);
-
-            // Create an invisible Impress document for off-screen rendering.
-            XComponent tempDoc = UnoRuntime.queryInterface(XComponent.class,
-                    loader.loadComponentFromURL(
-                            "private:factory/simpress", "_blank", 0,
-                            new PropertyValue[]{ pv("Hidden", Boolean.TRUE) }));
-            try {
-                XDrawPagesSupplier pagesSupplier =
-                        UnoRuntime.queryInterface(XDrawPagesSupplier.class, tempDoc);
-                XDrawPage page = UnoRuntime.queryInterface(XDrawPage.class,
-                        pagesSupplier.getDrawPages().getByIndex(0));
-                XMultiServiceFactory factory =
-                        UnoRuntime.queryInterface(XMultiServiceFactory.class, tempDoc);
-
-                new SlideRenderer(context)
-                        .drawHierarchy(page, factory, layout, ColorPalette.EMPTY);
-
-                File tempFile = File.createTempFile("smartart_prev_", ".png");
-                tempFile.deleteOnExit();
-                String fileUrl = tempFile.toURI().toString();
-
-                Object expObj = smgr.createInstanceWithContext(
-                        "com.sun.star.drawing.GraphicExporter", context);
-                XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
-                XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
-
-                exporter.setSourceDocument(tempDoc);
-                filter.filter(new PropertyValue[] {
-                    pv("MediaType",  "image/png"),
-                    pv("URL",        fileUrl),
-                    pv("Selection",  page),
-                    pv("FilterData", new PropertyValue[] {
-                        pv("PixelWidth",  Integer.valueOf(800)),
-                        pv("PixelHeight", Integer.valueOf(600)),
-                    }),
-                });
-                return fileUrl;
-            } finally {
-                tempDoc.dispose();
-            }
-        } catch (Exception e) {
-            return null;
         }
     }
 
@@ -273,10 +225,6 @@ public class SmartArtDialog {
         }
     }
 
-    /**
-     * Applies the {@link OutlineEditor} transforms to the dialog's text control.
-     * Shared by the key handler and the Indent/Outdent buttons.
-     */
     private static final class OutlineEditing {
         enum Op { INDENT, OUTDENT, NEWLINE }
 
@@ -293,62 +241,38 @@ public class SmartArtDialog {
         }
 
         void focusEdit() {
-            if (window != null) {
-                window.setFocus();
-            }
+            if (window != null) window.setFocus();
         }
 
         void apply(Op op) {
-            if (edit == null) {
-                return;
-            }
+            if (edit == null) return;
             String text = edit.getText();
             Selection sel = edit.getSelection();
             int min = Math.min(sel.Min, sel.Max);
             int max = Math.max(sel.Min, sel.Max);
             OutlineEditor.Edit result;
             switch (op) {
-                case INDENT:
-                    result = OutlineEditor.indent(text, min, max);
-                    break;
-                case OUTDENT:
-                    result = OutlineEditor.outdent(text, min, max);
-                    break;
-                default:
-                    result = OutlineEditor.newlineKeepingIndent(text, min, max);
-                    break;
+                case INDENT:  result = OutlineEditor.indent(text, min, max); break;
+                case OUTDENT: result = OutlineEditor.outdent(text, min, max); break;
+                default:      result = OutlineEditor.newlineKeepingIndent(text, min, max); break;
             }
             edit.setText(result.text);
             edit.setSelection(new Selection(result.selStart, result.selEnd));
         }
     }
 
-    /**
-     * Keyboard shortcuts inside the text box: Ctrl+] indents, Ctrl+[ outdents,
-     * Enter starts a new item at the current level.
-     */
     private static final class OutlineKeyHandler implements XKeyHandler {
         private final OutlineEditing editing;
 
-        OutlineKeyHandler(OutlineEditing editing) {
-            this.editing = editing;
-        }
+        OutlineKeyHandler(OutlineEditing editing) { this.editing = editing; }
 
         @Override
         public boolean keyPressed(KeyEvent event) {
-            if (!editing.editFocused()) {
-                return false;
-            }
+            if (!editing.editFocused()) return false;
             if ((event.Modifiers & KeyModifier.MOD1) != 0) {
                 char c = event.KeyChar;
-                if (c == ']' || c == 0x1d) {
-                    editing.apply(OutlineEditing.Op.INDENT);
-                    return true;
-                }
-                if (c == '[' || c == 0x1b) {
-                    editing.apply(OutlineEditing.Op.OUTDENT);
-                    return true;
-                }
+                if (c == ']' || c == 0x1d) { editing.apply(OutlineEditing.Op.INDENT);  return true; }
+                if (c == '[' || c == 0x1b) { editing.apply(OutlineEditing.Op.OUTDENT); return true; }
             }
             if (event.KeyCode == Key.RETURN && event.Modifiers == 0) {
                 editing.apply(OutlineEditing.Op.NEWLINE);
@@ -357,16 +281,10 @@ public class SmartArtDialog {
             return false;
         }
 
-        @Override
-        public boolean keyReleased(KeyEvent event) {
-            return false;
-        }
-
-        @Override
-        public void disposing(com.sun.star.lang.EventObject event) {}
+        @Override public boolean keyReleased(KeyEvent event) { return false; }
+        @Override public void disposing(com.sun.star.lang.EventObject event) {}
     }
 
-    /** Indent/Outdent button click → apply the transform, then return focus. */
     private static final class LevelButtonListener implements XActionListener {
         private final OutlineEditing editing;
         private final OutlineEditing.Op op;
@@ -376,48 +294,100 @@ public class SmartArtDialog {
             this.op = op;
         }
 
-        @Override
-        public void actionPerformed(ActionEvent event) {
-            editing.apply(op);
-            editing.focusEdit();
-        }
-
-        @Override
-        public void disposing(com.sun.star.lang.EventObject event) {}
+        @Override public void actionPerformed(ActionEvent event) { editing.apply(op); editing.focusEdit(); }
+        @Override public void disposing(com.sun.star.lang.EventObject event) {}
     }
 
     /**
-     * "Preview" button click: reads current input + type, renders to a hidden
-     * Impress document, exports as PNG, and updates the image control.
+     * Renders the current input into a fresh page on the pre-created hidden
+     * document, exports as PNG, and sets the ImageControl's URL. All failures
+     * are displayed in the status label rather than being silently swallowed.
      */
     private final class PreviewButtonListener implements XActionListener {
         private final XNameContainer container;
+        private final XComponent previewDoc;
+        private final XDrawPages previewPages;
+        private final XMultiServiceFactory previewFactory;
 
-        PreviewButtonListener(XNameContainer container) {
-            this.container = container;
+        PreviewButtonListener(XNameContainer container,
+                XComponent previewDoc, XDrawPages previewPages,
+                XMultiServiceFactory previewFactory) {
+            this.container     = container;
+            this.previewDoc    = previewDoc;
+            this.previewPages  = previewPages;
+            this.previewFactory = previewFactory;
         }
 
         @Override
         public void actionPerformed(ActionEvent event) {
+            if (previewDoc == null) {
+                setStatus("Preview doc unavailable");
+                return;
+            }
+            setStatus("Rendering…");
             try {
                 String inputText = (String) getModelProp(container, "txtInput", "Text");
                 short[] selected = (short[]) getModelProp(container, "lstType", "SelectedItems");
                 int index = (selected != null && selected.length > 0) ? selected[0] : 0;
                 DiagramType type = DiagramType.fromIndex(index);
 
-                String imageUrl = renderPreview(inputText, type);
-                if (imageUrl != null) {
-                    XPropertySet p = UnoRuntime.queryInterface(XPropertySet.class,
+                ParseResult parsed = new HierarchyParser()
+                        .parse(inputText == null ? "" : inputText);
+                if (!parsed.isValid()) {
+                    setStatus("Parse error: " + parsed.getErrorMessage());
+                    return;
+                }
+                DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
+
+                // Add a fresh page for this render; remove it afterwards.
+                previewPages.insertNewByIndex(previewPages.getCount());
+                XDrawPage renderPage = UnoRuntime.queryInterface(XDrawPage.class,
+                        previewPages.getByIndex(previewPages.getCount() - 1));
+                try {
+                    new SlideRenderer(context)
+                            .drawHierarchy(renderPage, previewFactory, layout, ColorPalette.EMPTY);
+
+                    File tmp = File.createTempFile("smartart_prev_", ".png");
+                    tmp.deleteOnExit();
+                    String fileUrl = tmp.toURI().toString();
+
+                    XMultiComponentFactory smgr = context.getServiceManager();
+                    Object expObj = smgr.createInstanceWithContext(
+                            "com.sun.star.drawing.GraphicExporter", context);
+                    XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
+                    XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
+                    exporter.setSourceDocument(previewDoc);
+                    filter.filter(new PropertyValue[]{
+                        pv("MediaType",  "image/png"),
+                        pv("URL",        fileUrl),
+                        pv("Selection",  renderPage),
+                        pv("FilterData", new PropertyValue[]{
+                            pv("PixelWidth",  Integer.valueOf(800)),
+                            pv("PixelHeight", Integer.valueOf(600)),
+                        }),
+                    });
+
+                    XPropertySet imgModel = UnoRuntime.queryInterface(XPropertySet.class,
                             container.getByName("imgPreview"));
-                    p.setPropertyValue("ImageURL", imageUrl);
+                    imgModel.setPropertyValue("ImageURL", fileUrl);
+                    setStatus("");
+                } finally {
+                    previewPages.remove(renderPage);
                 }
             } catch (Exception e) {
-                // silent — preview is best-effort
+                setStatus("Error: " + e.getMessage());
             }
         }
 
-        @Override
-        public void disposing(com.sun.star.lang.EventObject event) {}
+        private void setStatus(String msg) {
+            try {
+                XPropertySet p = UnoRuntime.queryInterface(XPropertySet.class,
+                        container.getByName("lblPreviewStatus"));
+                p.setPropertyValue("Label", msg);
+            } catch (Exception ignored) {}
+        }
+
+        @Override public void disposing(com.sun.star.lang.EventObject event) {}
     }
 
     // -------------------------------------------------------------------------
@@ -461,7 +431,7 @@ public class SmartArtDialog {
                 "com.sun.star.awt.UnoControlListBoxModel", name, x, y, w, h);
         p.setPropertyValue("Dropdown", Boolean.TRUE);
         p.setPropertyValue("StringItemList", DiagramType.labels());
-        p.setPropertyValue("SelectedItems", new short[] { 0 });
+        p.setPropertyValue("SelectedItems", new short[]{ 0 });
     }
 
     private void addButton(XMultiServiceFactory factory, XNameContainer container,
@@ -481,7 +451,7 @@ public class SmartArtDialog {
         XPropertySet p = newControl(factory, container,
                 "com.sun.star.awt.UnoControlImageControlModel", name, x, y, w, h);
         p.setPropertyValue("ScaleImage", Boolean.TRUE);
-        p.setPropertyValue("Border", Short.valueOf((short) 1)); // sunken border
+        p.setPropertyValue("Border", Short.valueOf((short) 1));
     }
 
     private XPropertySet newControl(XMultiServiceFactory factory, XNameContainer container,
