@@ -107,7 +107,7 @@ public class SlideRenderer {
                     || s.getKind() == ShapeKind.CIRCULAR_ARROW) {
                 service = "com.sun.star.drawing.CustomShape";
             } else {
-                service = "com.sun.star.drawing.RectangleShape";
+                service = "com.sun.star.drawing.RectangleShape"; // RECTANGLE and PYRAMID_TIER
             }
             Object shape = factory.createInstance(service);
             XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
@@ -135,6 +135,14 @@ public class SlideRenderer {
                 XPropertySet rProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
                 rProps.setPropertyValue("RotateAngle",
                         Integer.valueOf(s.getRotateAngle100()));
+            } else if (s.getKind() == ShapeKind.PYRAMID_TIER) {
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor
+                        : DefaultPalette.chevronFill(chevronSeq);
+                chevronSeq++;
+                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
+                        DefaultPalette.fontSize(s.getLevel()));
             } else {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)

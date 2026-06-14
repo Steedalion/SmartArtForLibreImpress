@@ -322,6 +322,51 @@ def draw_hierarchy(doc, page):
             add_connector(doc, page, cs, gs)
 
 
+def draw_pyramid(doc, page):
+    """4 tiers: Strategy (apex) → Goals → Tactics → Actions (base).
+    Goals tier has two children (Goal A, Goal B) to verify child placement."""
+    TIER_H    = 1600
+    GAP       = 150
+    MAX_W     = 18000
+    MIN_W     = 3000
+    TOP_Y     = 2000
+    SLIDE_W   = 25400
+    CHILD_W   = 3000
+    CHILD_H   = 900
+    CHILD_GAP = 300
+    CHILD_V_GAP = 150
+
+    tiers = [
+        ("Strategy", BLUE,  []),
+        ("Goals",    BLUE2, ["Goal A", "Goal B"]),
+        ("Tactics",  BLUE3, []),
+        ("Actions",  BLUE,  []),
+    ]
+    n = len(tiers)
+    tier_shapes = []
+    tier_ws     = []
+    tier_ys     = []
+    for i, (label, color, _) in enumerate(tiers):
+        w = MIN_W + (MAX_W - MIN_W) * i // (n - 1)
+        x = (SLIDE_W - w) // 2
+        y = TOP_Y + i * (TIER_H + GAP)
+        s = add_rect(doc, page, x, y, w, TIER_H, label, color)
+        font_size(s, 14 if i == 0 else 11)
+        tier_shapes.append(s)
+        tier_ws.append(w)
+        tier_ys.append(y)
+
+    for i, (_, _, children) in enumerate(tiers):
+        if not children:
+            continue
+        cx = (SLIDE_W + tier_ws[i]) // 2 + CHILD_GAP
+        cy = tier_ys[i]
+        for child_label in children:
+            cs = add_rect(doc, page, cx, cy, CHILD_W, CHILD_H, child_label, GREEN)
+            font_size(cs, 9)
+            cy += CHILD_H + CHILD_V_GAP
+
+
 def draw_cycle(doc, page):
     """5 nodes in a clockwise ring joined by directed straight arrows."""
     NODE_W, NODE_H = 3500, 1400
@@ -349,6 +394,7 @@ def draw_cycle(doc, page):
 # ---------------------------------------------------------------------------
 
 DIAGRAMS = [
+    ("pyramid",            draw_pyramid),
     ("cycle",              draw_cycle),
     ("sequential-chevron", draw_sequential_chevron),
     ("hub-and-spoke",      draw_hub_and_spoke),

@@ -19,6 +19,7 @@ import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.HierarchyLayout;
 import org.libreimpress.smartart.layout.HubAndSpokeLayout;
 import org.libreimpress.smartart.layout.ProcessFlowLayout;
+import org.libreimpress.smartart.layout.PyramidLayout;
 import org.libreimpress.smartart.layout.SequentialChevronLayout;
 import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramNode;
@@ -122,6 +123,7 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
             case SEQUENTIAL_CHEVRON:   return SequentialChevronLayout.layout(root);
             case CYCLE:                return CycleLayout.layout(root);
             case CYCLE_ARROW:          return CycleArrowLayout.layout(root);
+            case PYRAMID:              return PyramidLayout.layout(root);
             default:                   return HierarchyLayout.layout(root);
         }
     }

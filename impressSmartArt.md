@@ -27,7 +27,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 │   ├── Phase8_ImplementationPlan.md   — Phase 8: Hub & Spoke children
 │   ├── Phase9_ImplementationPlan.md   — Phase 9: Sequential Chevron level-3+ children
 │   ├── Phase10_ImplementationPlan.md  — Phase 10: User colour palette via dialog
-│   └── Phase11_ImplementationPlan.md  — Phase 11: Cycle diagram type
+│   ├── Phase11_ImplementationPlan.md  — Phase 11: Cycle diagram type
+│   └── Phase12_ImplementationPlan.md  — Phase 12: Pyramid diagram type
 │
 ├── Architecture_VDiagram.md       — architecture overview & V-model development process
 ├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)
@@ -59,15 +60,18 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 9 | Sequential Chevron level-3+ children stacked below sub-items | ✅ Done |
 | 10 | User-provided colour palette via dialog (optional, per-level hex colours) | ✅ Done |
 | 11 | Cycle diagram: clockwise ring of rectangles with directed arrows | ✅ Done |
+| 12 | Pyramid diagram: stepped rectangular tiers, narrowest at top, widest at base | ⏳ Planned |
 
-**What works today:** clicking **SmartArt → Create Diagram…** opens a
-programmatic dialog (diagram-type dropdown + multiline text + optional colour
-palette field); on **Create** the indented text is parsed into a validated
-hierarchy and the chosen diagram type is rendered as grouped, editable shapes on
-the current slide. All five diagram types are fully implemented with unlimited
-sub-item depth, a built-in colour palette, font sizing by level, directional
-arrow connectors on Process Flow and Cycle, and per-level colour overrides via
-the palette field (format: `1=#4472C4`).
+**What works today (Phases 1–11):** clicking **SmartArt → Create Diagram…**
+opens a programmatic dialog (diagram-type dropdown + multiline text + optional
+colour palette field); on **Create** the indented text is parsed into a
+validated hierarchy and the chosen diagram type is rendered as grouped, editable
+shapes on the current slide. Six diagram types are fully implemented (Hierarchy,
+Hub & Spoke, Process Flow, Sequential Chevron, Cycle, Cycle (Arrows)) with
+unlimited sub-item depth, a built-in colour palette, font sizing by level,
+directional arrow connectors on Process Flow and Cycle, and per-level colour
+overrides via the palette field (format: `1=#4472C4`).
+Phase 12 (Pyramid) is planned next.
 Sections 2–8 below describe the target product.
 
 ### 1.3 How these documents are written (and the one-shot goal)
@@ -121,7 +125,15 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 - **Layout:** Circular/radial arrangement around center
 - **Connections:** All items connect to hub; secondary items connect to their parent spokes
 
-#### 2.2.3 Process Flow Diagram
+#### 2.2.3 Pyramid Diagram
+- **Purpose:** Hierarchical levels where size or importance decreases from base to apex
+- **Level Structure:**
+  - Level 1: Each item is one tier of the pyramid (first = apex, last = base)
+  - Level 2+: Sub-items stacked to the right of their parent tier
+- **Layout:** Center-aligned rectangular tiers stacked vertically, width increasing linearly from top to bottom
+- **Connections:** None — the stepped shape expresses hierarchy visually
+
+#### 2.2.4 Process Flow Diagram
 - **Purpose:** Sequential steps or workflow
 - **Level Structure:**
   - Level 1: Primary process steps
@@ -141,10 +153,8 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
   - **Process Flow:** Rectangles for steps, diamonds for decisions
 
 ### 3.2 Styling & Color Palette
-> ⏳ *Target feature — not yet implemented (deferred to a later phase). The
-> current dialog has no palette field.*
-- **Input:** Optional `@paletteObject` parameter
-- **Default Behavior:** If no palette provided, use LibreOffice template defaults
+- **Input:** Optional palette field in the dialog (`1=#4472C4` format, one entry per line)
+- **Default Behavior:** If no palette provided, built-in blue/green palette applied by level
 - **Palette Structure:**
   - Color definitions per level
   - Optional font styling (size, family, weight)
@@ -162,8 +172,7 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 ### 4.2 Creating a Diagram
 1. User selects diagram type (Hierarchy / Hub & Spoke / Process Flow)
 2. User enters text points in multi-line input with indentation
-3. User (optionally) provides a color palette object *(planned; not in the
-   current dialog)*
+3. User (optionally) provides a color palette object in the palette field
 4. User clicks **Create**
 5. Plugin generates the diagram on the current slide *(Phase 4; the current
    build instead previews the parsed hierarchy and reports validation errors)*
@@ -194,9 +203,7 @@ The dialog collects, with **Create** and **Cancel** actions:
     - Level 2 Item
       - Level 3 Item
     - Level 2 Item B
-- **Colour palette (optional)** — a palette assigning a fill colour, and
-  optionally font and shape styling, per level (see §3.2). *(Planned; not in the
-  current dialog.)*
+- **Colour palette (optional)** — a palette assigning a fill colour per level (format: `1=#4472C4`, one entry per line). See §3.2.
 
 ### 5.2 Parsing
 - Parse text input to identify hierarchy levels based on indentation
@@ -311,7 +318,8 @@ Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
 ✅ All diagram types generate correctly — Hierarchy, Hub & Spoke, Process Flow, Sequential Chevron (Phase 4.4)  
 ✅ Sub-items rendered in all diagram types — Process Flow (Phase 7), Hub & Spoke (Phase 8)  
 ✅ Default styling applied when palette missing — built-in palette, font sizing, arrow heads (Phases 5–6)  
-⏳ Sequential Chevron level-3+ children — planned  
-⏳ Color palette (when provided) is applied — planned
+✅ Sequential Chevron level-3+ children (Phase 9)  
+✅ Color palette (when provided) is applied (Phase 10)
+⏳ Pyramid diagram renders stepped tiers with apex at top and base at bottom (Phase 12)
 
 

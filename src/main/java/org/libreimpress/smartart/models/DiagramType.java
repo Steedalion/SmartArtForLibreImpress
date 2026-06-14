@@ -12,7 +12,8 @@ public enum DiagramType {
     PROCESS_FLOW("Process Flow"),
     SEQUENTIAL_CHEVRON("Sequential Chevron"),
     CYCLE("Cycle"),
-    CYCLE_ARROW("Cycle (Arrows)");
+    CYCLE_ARROW("Cycle (Arrows)"),
+    PYRAMID("Pyramid");
 
     private final String label;
 
