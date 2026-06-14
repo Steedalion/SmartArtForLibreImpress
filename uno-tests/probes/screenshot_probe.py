@@ -381,6 +381,47 @@ def draw_pyramid(doc, page):
             cy += CHILD_H + CHILD_V_GAP
 
 
+def draw_cycle_blocks(doc, page):
+    """4 rectangles in a ring with solid right-arrow block shapes between them."""
+    from com.sun.star.beans import PropertyValue as PV
+    NODE_W, NODE_H = 3000, 1400
+    RING_R = 5500
+    ARROW_W, ARROW_H = 1000, 600
+    CX, CY = 25400 // 2, 19050 // 2
+    labels = ["Alpha", "Bravo", "Charlie", "Delta"]
+    colors = [BLUE, BLUE2, BLUE3, BLUE]
+
+    rect_cx, rect_cy = [], []
+    for i, (label, color) in enumerate(zip(labels, colors)):
+        angle = math.radians(-90 + i * 360 / len(labels))
+        rx = CX + int(RING_R * math.cos(angle))
+        ry = CY + int(RING_R * math.sin(angle))
+        rect_cx.append(rx); rect_cy.append(ry)
+        s = add_rect(doc, page, rx - NODE_W // 2, ry - NODE_H // 2,
+                     NODE_W, NODE_H, label, color)
+        font_size(s, 14)
+
+    n = len(labels)
+    for i in range(n):
+        nx = rect_cx[(i + 1) % n]; ny = rect_cy[(i + 1) % n]
+        ax = (rect_cx[i] + nx) // 2; ay = (rect_cy[i] + ny) // 2
+        dx = nx - rect_cx[i]; dy = ny - rect_cy[i]
+        angle_deg = math.degrees(math.atan2(dy, dx))
+        # Normalise to [0, 360)
+        if angle_deg < 0:
+            angle_deg += 360
+        rotate100 = int(round(angle_deg * 100))
+
+        arr = doc.createInstance("com.sun.star.drawing.CustomShape")
+        page.add(arr)
+        arr.setSize(sz(ARROW_W, ARROW_H))
+        arr.setPosition(pt(ax - ARROW_W // 2, ay - ARROW_H // 2))
+        pv = PV(); pv.Name = "Type"; pv.Value = "right-arrow"
+        arr.CustomShapeGeometry = (pv,)
+        solid_fill(arr, BLUE2)
+        arr.setPropertyValue("RotateAngle", rotate100)
+
+
 def draw_cycle_arrows(doc, page):
     """5 circles in a ring with curved directed arrows between adjacent circles."""
     CIRCLE_D = 2200
@@ -432,6 +473,7 @@ def draw_cycle(doc, page):
 
 DIAGRAMS = [
     ("pyramid",            draw_pyramid),
+    ("cycle-blocks",       draw_cycle_blocks),
     ("cycle-arrows",       draw_cycle_arrows),
     ("cycle",              draw_cycle),
     ("sequential-chevron", draw_sequential_chevron),

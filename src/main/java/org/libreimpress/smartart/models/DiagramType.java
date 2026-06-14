@@ -13,7 +13,8 @@ public enum DiagramType {
     SEQUENTIAL_CHEVRON("Sequential Chevron"),
     CYCLE("Cycle"),
     CYCLE_ARROW("Cycle (Arrows)"),
-    PYRAMID("Pyramid");
+    PYRAMID("Pyramid"),
+    CYCLE_BLOCK("Cycle (Blocks)");
 
     private final String label;
 

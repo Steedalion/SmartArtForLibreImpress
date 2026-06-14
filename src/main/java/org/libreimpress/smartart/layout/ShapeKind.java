@@ -6,5 +6,6 @@ public enum ShapeKind {
     ELLIPSE,
     PENTAGON,         // Flat-left, pointed-right first step in Sequential Chevron
     CHEVRON,          // Notched-left, pointed-right intermediate step
-    PYRAMID_TIER      // Centered rectangle whose width encodes tier depth
+    PYRAMID_TIER,     // Centered rectangle whose width encodes tier depth
+    BLOCK_ARROW       // "right-arrow" CustomShape rotated to point toward the next node
 }

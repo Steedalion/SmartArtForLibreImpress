@@ -103,7 +103,8 @@ public class SlideRenderer {
             String service;
             if (s.getKind() == ShapeKind.ELLIPSE) {
                 service = "com.sun.star.drawing.EllipseShape";
-            } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
+            } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
+                    || s.getKind() == ShapeKind.BLOCK_ARROW) {
                 service = "com.sun.star.drawing.CustomShape";
             } else {
                 service = "com.sun.star.drawing.RectangleShape"; // RECTANGLE and PYRAMID_TIER
@@ -122,6 +123,14 @@ public class SlideRenderer {
                 chevronSeq++;
                 applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
                         DefaultPalette.fontSize(s.getLevel()));
+            } else if (s.getKind() == ShapeKind.BLOCK_ARROW) {
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor : DefaultPalette.ARROW_ACCENT;
+                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE, 9f);
+                applyBlockArrowGeometry(shape);
+                XPropertySet rProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
+                rProps.setPropertyValue("RotateAngle", Integer.valueOf(s.getRotateAngle100()));
             } else if (s.getKind() == ShapeKind.PYRAMID_TIER) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
@@ -206,6 +215,16 @@ public class SlideRenderer {
         com.sun.star.beans.PropertyValue typeVal = new com.sun.star.beans.PropertyValue();
         typeVal.Name  = "Type";
         typeVal.Value = typeName;
+        XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
+        props.setPropertyValue("CustomShapeGeometry",
+                new com.sun.star.beans.PropertyValue[]{ typeVal });
+    }
+
+    /** Applies the {@code right-arrow} block-arrow preset geometry. */
+    private static void applyBlockArrowGeometry(Object shape) throws Exception {
+        com.sun.star.beans.PropertyValue typeVal = new com.sun.star.beans.PropertyValue();
+        typeVal.Name  = "Type";
+        typeVal.Value = "right-arrow";
         XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
         props.setPropertyValue("CustomShapeGeometry",
                 new com.sun.star.beans.PropertyValue[]{ typeVal });

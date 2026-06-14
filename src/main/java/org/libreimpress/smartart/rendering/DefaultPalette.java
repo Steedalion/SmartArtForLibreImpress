@@ -22,7 +22,9 @@ public final class DefaultPalette {
     private static final int STEEL_BLUE  = 0x2E75B6;
     private static final int NAVY_BLUE   = 0x1F4E79;
     private static final int GREEN       = 0x70AD47;
-    public  static final int TEXT_WHITE  = 0xFFFFFF;
+    public  static final int TEXT_WHITE   = 0xFFFFFF;
+    /** Fill colour for BLOCK_ARROW connector shapes. */
+    public  static final int ARROW_ACCENT = 0x5B9BD5;
 
     private static final int[] CHEVRON_BLUES = {DARK_BLUE, MED_BLUE, STEEL_BLUE, NAVY_BLUE};
 

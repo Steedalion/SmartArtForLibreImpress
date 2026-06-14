@@ -14,6 +14,7 @@ import com.sun.star.beans.PropertyValue;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
 import org.libreimpress.smartart.layout.CycleArrowLayout;
+import org.libreimpress.smartart.layout.CycleBlockLayout;
 import org.libreimpress.smartart.layout.CycleLayout;
 import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.HierarchyLayout;
@@ -124,6 +125,7 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
             case CYCLE:                return CycleLayout.layout(root);
             case CYCLE_ARROW:          return CycleArrowLayout.layout(root);
             case PYRAMID:              return PyramidLayout.layout(root);
+            case CYCLE_BLOCK:          return CycleBlockLayout.layout(root);
             default:                   return HierarchyLayout.layout(root);
         }
     }
