@@ -2,7 +2,11 @@ package org.libreimpress.smartart;
 
 import com.sun.star.awt.Point;
 import com.sun.star.awt.Size;
+import com.sun.star.beans.PropertyState;
+import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.XPropertySet;
+import com.sun.star.document.XExporter;
+import com.sun.star.document.XFilter;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawPages;
 import com.sun.star.drawing.XDrawPagesSupplier;
@@ -19,25 +23,22 @@ import com.sun.star.text.XText;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
+import java.io.File;
+
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
-import org.libreimpress.smartart.layout.CycleArrowLayout;
-import org.libreimpress.smartart.layout.CycleBlockLayout;
-import org.libreimpress.smartart.layout.CycleLayout;
 import org.libreimpress.smartart.layout.DiagramLayout;
-import org.libreimpress.smartart.layout.HierarchyLayout;
-import org.libreimpress.smartart.layout.HubAndSpokeLayout;
-import org.libreimpress.smartart.layout.ProcessFlowLayout;
-import org.libreimpress.smartart.layout.PyramidLayout;
-import org.libreimpress.smartart.layout.SequentialChevronLayout;
+import org.libreimpress.smartart.layout.LayoutFactory;
 import org.libreimpress.smartart.models.ColorPalette;
-import org.libreimpress.smartart.models.DiagramNode;
 import org.libreimpress.smartart.models.DiagramType;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
 import org.libreimpress.smartart.rendering.SlideRenderer;
 
 /**
- * [DEV ONLY] Appends one demo slide per diagram type to the current presentation.
+ * [DEV ONLY] Appends one demo slide per diagram type to the current presentation,
+ * then exports each slide as a PNG to {@code docs/screenshots/} (if the directory
+ * exists). The output directory can be overridden with the system property
+ * {@code smartart.screenshots.dir}.
  *
  * <p>To remove this feature entirely:
  * <ol>
@@ -52,12 +53,12 @@ final class DemoRunner {
     private static final String I2 = "-- ";   // two dash levels (level 3)
 
     /**
-     * One entry per diagram type: {DiagramType, slide-label, sample-input}.
+     * One entry per diagram type: {DiagramType, slide-label, sample-input, screenshot-slug}.
      * Sample texts are hard-coded so the demo never touches the dialog or parser error paths.
      */
     private static final Object[][] DEMOS = {
         {
-            DiagramType.HIERARCHY, "Hierarchy",
+            DiagramType.HIERARCHY, "Hierarchy", "hierarchy",
             "Company\n"
             + I  + "Products\n"
             + I2 + "Alpha\n"
@@ -67,7 +68,7 @@ final class DemoRunner {
             + I2 + "Delta"
         },
         {
-            DiagramType.HUB_AND_SPOKE, "Hub & Spoke",
+            DiagramType.HUB_AND_SPOKE, "Hub & Spoke", "hub-and-spoke",
             "Innovation\n"
             + I  + "People\n"
             + I2 + "Training\n"
@@ -76,7 +77,7 @@ final class DemoRunner {
             + I  + "Partners"
         },
         {
-            DiagramType.PROCESS_FLOW, "Process Flow",
+            DiagramType.PROCESS_FLOW, "Process Flow", "process-flow",
             "Research\n"
             + I + "Survey\n"
             + I + "Analysis\n"
@@ -86,7 +87,7 @@ final class DemoRunner {
             + "Launch"
         },
         {
-            DiagramType.SEQUENTIAL_CHEVRON, "Sequential Chevron",
+            DiagramType.SEQUENTIAL_CHEVRON, "Sequential Chevron", "sequential-chevron",
             "Plan\n"
             + I + "Scope\n"
             + I + "Schedule\n"
@@ -96,19 +97,19 @@ final class DemoRunner {
             + "Review"
         },
         {
-            DiagramType.CYCLE, "Cycle",
+            DiagramType.CYCLE, "Cycle", "cycle",
             "Plan\nDo\nCheck\nAct"
         },
         {
-            DiagramType.CYCLE_ARROW, "Cycle (Arrows)",
+            DiagramType.CYCLE_ARROW, "Cycle (Arrows)", "cycle-arrows",
             "Plan\nDo\nCheck\nAct"
         },
         {
-            DiagramType.CYCLE_BLOCK, "Cycle (Blocks)",
+            DiagramType.CYCLE_BLOCK, "Cycle (Blocks)", "cycle-blocks",
             "Plan\nDo\nCheck\nAct"
         },
         {
-            DiagramType.PYRAMID, "Pyramid",
+            DiagramType.PYRAMID, "Pyramid", "pyramid",
             "Vision\n"
             + I  + "Goal A\n"
             + "Strategy\n"
@@ -150,7 +151,8 @@ final class DemoRunner {
         for (Object[] demo : DEMOS) {
             DiagramType type   = (DiagramType) demo[0];
             String slideLabel  = (String) demo[1];
-            String inputText   = (String) demo[2];
+            String slug        = (String) demo[2];
+            String inputText   = (String) demo[3];
 
             // Append a new blank slide.
             pages.insertNewByIndex(pages.getCount());
@@ -165,26 +167,53 @@ final class DemoRunner {
 
             ParseResult parsed = new HierarchyParser().parse(inputText);
             if (!parsed.isValid()) {
-                // Guard against future regressions in the hard-coded strings.
                 LibreOfficeHelper.showMessage(context, "SmartArt Demo – internal error",
                         slideLabel + ": " + parsed.getErrorMessage(), true);
                 continue;
             }
-            DiagramLayout layout = buildLayout(type, parsed.getRoot());
+            DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
             renderer.drawHierarchy(layout, ColorPalette.EMPTY);
+
+            exportScreenshot(document, page, slug);
         }
     }
 
-    private static DiagramLayout buildLayout(DiagramType type, DiagramNode root) {
-        switch (type) {
-            case HUB_AND_SPOKE:      return HubAndSpokeLayout.layout(root);
-            case PROCESS_FLOW:       return ProcessFlowLayout.layout(root);
-            case SEQUENTIAL_CHEVRON: return SequentialChevronLayout.layout(root);
-            case CYCLE:              return CycleLayout.layout(root);
-            case CYCLE_ARROW:        return CycleArrowLayout.layout(root);
-            case CYCLE_BLOCK:        return CycleBlockLayout.layout(root);
-            case PYRAMID:            return PyramidLayout.layout(root);
-            default:                 return HierarchyLayout.layout(root);
+    /**
+     * Exports {@code page} as a 1280×960 PNG to the screenshots directory.
+     * Silently skips if the directory does not exist. Output directory is
+     * controlled by the system property {@code smartart.screenshots.dir};
+     * defaults to {@code ~/Documents/SmartArtForLibreImpress/docs/screenshots}.
+     */
+    private void exportScreenshot(XComponent document, XDrawPage page, String slug) {
+        try {
+            String dir = System.getProperty("smartart.screenshots.dir",
+                    System.getProperty("user.home")
+                    + "/Documents/SmartArtForLibreImpress/docs/screenshots");
+            File outDir = new File(dir);
+            if (!outDir.exists()) {
+                return;
+            }
+            String fileUrl = new File(outDir, slug + ".png").toURI().toString();
+
+            XMultiComponentFactory smgr = context.getServiceManager();
+            Object expObj = smgr.createInstanceWithContext(
+                    "com.sun.star.drawing.GraphicExporter", context);
+            XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
+            XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
+
+            exporter.setSourceDocument(document);
+
+            filter.filter(new PropertyValue[] {
+                pv("MediaType",   "image/png"),
+                pv("URL",         fileUrl),
+                pv("Selection",   page),
+                pv("FilterData",  new PropertyValue[] {
+                    pv("PixelWidth",  Integer.valueOf(1280)),
+                    pv("PixelHeight", Integer.valueOf(960)),
+                }),
+            });
+        } catch (Exception e) {
+            // Screenshot export is best-effort; don't break the demo flow.
         }
     }
 
@@ -235,5 +264,13 @@ final class DemoRunner {
         props.setPropertyValue("CharHeight", Float.valueOf(8f));
         props.setPropertyValue("CharPosture",
                 com.sun.star.awt.FontSlant.ITALIC);
+    }
+
+    private static PropertyValue pv(String name, Object value) {
+        PropertyValue p = new PropertyValue();
+        p.Name  = name;
+        p.Value = value;
+        p.State = PropertyState.DIRECT_VALUE;
+        return p;
     }
 }

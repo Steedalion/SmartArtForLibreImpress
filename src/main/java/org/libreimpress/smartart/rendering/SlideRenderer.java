@@ -81,8 +81,8 @@ public class SlideRenderer {
     }
 
     /**
-     * Draws a laid-out diagram, applying {@code palette} fill colours where set
-     * and falling back to {@link DefaultPalette} for unset levels.
+     * Draws a laid-out diagram onto the current slide of the current document,
+     * applying {@code palette} fill colours where set.
      */
     public void drawHierarchy(DiagramLayout layout, ColorPalette palette) throws Exception {
         XComponent document = currentComponent();
@@ -92,6 +92,16 @@ public class SlideRenderer {
         }
         XMultiServiceFactory factory =
                 UnoRuntime.queryInterface(XMultiServiceFactory.class, document);
+        drawHierarchy(page, factory, layout, palette);
+    }
+
+    /**
+     * Draws a laid-out diagram onto an explicit {@code page} using the given
+     * {@code factory}. Used by preview and screenshot export where the target
+     * page is not the desktop's current view.
+     */
+    public void drawHierarchy(XDrawPage page, XMultiServiceFactory factory,
+            DiagramLayout layout, ColorPalette palette) throws Exception {
         XShapes shapes = UnoRuntime.queryInterface(XShapes.class, page);
         List<XShape> created = new ArrayList<>();
 
