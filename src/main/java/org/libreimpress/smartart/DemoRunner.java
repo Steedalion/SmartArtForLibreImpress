@@ -197,16 +197,18 @@ final class DemoRunner {
 
             XMultiComponentFactory smgr = context.getServiceManager();
             Object expObj = smgr.createInstanceWithContext(
-                    "com.sun.star.drawing.GraphicExporter", context);
+                    "com.sun.star.drawing.GraphicExportFilter", context);
             XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
             XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
 
-            exporter.setSourceDocument(document);
+            // Export the draw page directly — it implements XComponent. Passing the
+            // whole document with a Selection needs a live view and can fail.
+            XComponent pageComp = UnoRuntime.queryInterface(XComponent.class, page);
+            exporter.setSourceDocument(pageComp);
 
             filter.filter(new PropertyValue[] {
                 pv("MediaType",   "image/png"),
                 pv("URL",         fileUrl),
-                pv("Selection",   page),
                 pv("FilterData",  new PropertyValue[] {
                     pv("PixelWidth",  Integer.valueOf(1280)),
                     pv("PixelHeight", Integer.valueOf(960)),
