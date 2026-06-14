@@ -50,13 +50,22 @@ public class CycleBlockLayoutTest {
     }
 
     @Test
-    public void arrowsHaveNonZeroRotationForNonTrivialCycles() {
+    public void arrowsPointTowardNextNode() {
         DiagramLayout layout = CycleBlockLayout.layout(root("A", "B", "C", "D"));
-        // In a 4-node ring the arrows between top→right, right→bottom, etc. are all
-        // at 45° increments — none of them is at 0° (east), so all rotate100 != 0.
-        for (int i = 4; i < 8; i++) {
-            assertTrue("block arrow should have a non-zero rotation",
-                    layout.getShapes().get(i).getRotateAngle100() != 0);
+        int n = 4;
+        for (int i = 0; i < n; i++) {
+            LaidOutShape from = layout.getShapes().get(i);
+            LaidOutShape to   = layout.getShapes().get((i + 1) % n);
+            LaidOutShape arr  = layout.getShapes().get(n + i);
+
+            double dx = to.centerX() - from.centerX();
+            double dy = to.centerY() - from.centerY();
+            // RotateAngle is counter-clockwise; negate dy to convert screen coords.
+            int expected = (int) Math.round(Math.atan2(-dy, dx) * 18000.0 / Math.PI);
+            if (expected < 0) expected += 36000;
+
+            assertEquals("arrow " + i + " should point toward next node",
+                    expected, arr.getRotateAngle100());
         }
     }
 
