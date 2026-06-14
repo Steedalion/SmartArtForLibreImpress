@@ -54,6 +54,11 @@ public final class SequentialChevronLayout {
 
         int w1 = nodeWidth(1);
         int h1 = nodeHeight(1);
+        // Scale chevron width down if all chevrons would overflow the slide.
+        int availableW = SLIDE_W - 2 * MARGIN_X;
+        if (n * w1 + (n - 1) * CHEVRON_SPACING > availableW) {
+            w1 = Math.max(1500, (availableW - (n - 1) * CHEVRON_SPACING) / n);
+        }
 
         // Calculate chevron row layout (left-to-right, top-centered).
         int totalChevronWidth = n * w1 + (n - 1) * CHEVRON_SPACING;

@@ -99,4 +99,25 @@ public class PyramidLayoutTest {
         assertEquals(0, layout.getShapes().size());
         assertEquals(0, layout.getEdges().size());
     }
+
+    @Test
+    public void manyChildrenPerTierFitWithinTierHeight() {
+        // 5 children: 5*CHILD_H + 4*CHILD_V_GAP = 5*900 + 4*150 = 5100 > TIER_H=1600. Must scale.
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode tier = new DiagramNode("T", 1);
+        root.addChild(tier);
+        for (int i = 0; i < 5; i++) {
+            tier.addChild(new DiagramNode("C" + i, 2));
+        }
+        DiagramLayout layout = PyramidLayout.layout(root);
+        LaidOutShape tierShape = layout.getShapes().get(0);
+        int tierTop = tierShape.getY();
+        int tierBot = tierTop + tierShape.getHeight();
+        for (int i = 1; i <= 5; i++) {
+            LaidOutShape child = layout.getShapes().get(i);
+            assertTrue("child top must be within tier", child.getY() >= tierTop);
+            assertTrue("child bottom must be within tier",
+                    child.getY() + child.getHeight() <= tierBot);
+        }
+    }
 }

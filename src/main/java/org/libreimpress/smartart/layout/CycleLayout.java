@@ -13,11 +13,13 @@ import java.util.List;
  */
 public final class CycleLayout {
 
-    static final int NODE_W       = 3500;  // node width
-    static final int NODE_H       = 1400;  // node height
-    static final int RING_RADIUS  = 6000;  // slide-centre to node-centre
-    static final int SLIDE_W      = 25400;
-    static final int SLIDE_H      = 19050;
+    static final int NODE_W          = 3500;  // node width
+    static final int NODE_H          = 1400;  // node height
+    static final int RING_RADIUS     = 6000;  // default slide-centre to node-centre
+    static final int MIN_NODE_GAP    = 400;   // minimum gap between adjacent node edges
+    static final int MAX_RING_RADIUS = 7800;  // cap to keep shapes on-slide
+    static final int SLIDE_W         = 25400;
+    static final int SLIDE_H         = 19050;
 
     private CycleLayout() {
     }
@@ -39,13 +41,22 @@ public final class CycleLayout {
         int cy = SLIDE_H / 2;
         int[] indices = new int[n];
 
+        // Scale radius up when many nodes would otherwise overlap.
+        // Minimum radius: chord between adjacent nodes ≥ NODE_W + MIN_NODE_GAP.
+        int ringRadius = RING_RADIUS;
+        if (n >= 2) {
+            int rMin = (int) Math.ceil(
+                    (NODE_W + MIN_NODE_GAP) / (2.0 * Math.sin(Math.PI / n)));
+            ringRadius = Math.min(MAX_RING_RADIUS, Math.max(RING_RADIUS, rMin));
+        }
+
         // Place cycle nodes on the ring.
         for (int i = 0; i < n; i++) {
             // Start at the top (−90°) and advance clockwise.
             double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
             DiagramNode node = nodes.get(i);
-            int nodeCX = cx + (int) Math.round(RING_RADIUS * Math.cos(angle));
-            int nodeCY = cy + (int) Math.round(RING_RADIUS * Math.sin(angle));
+            int nodeCX = cx + (int) Math.round(ringRadius * Math.cos(angle));
+            int nodeCY = cy + (int) Math.round(ringRadius * Math.sin(angle));
             LaidOutShape shape = new LaidOutShape(node.getText(), 1,
                     nodeCX - NODE_W / 2, nodeCY - NODE_H / 2, NODE_W, NODE_H);
             indices[i] = out.addShape(shape);
