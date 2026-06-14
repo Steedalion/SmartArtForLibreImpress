@@ -17,20 +17,39 @@ import com.sun.star.awt.XKeyHandler;
 import com.sun.star.awt.XTextComponent;
 import com.sun.star.awt.XToolkit;
 import com.sun.star.awt.XWindow2;
+import com.sun.star.beans.PropertyState;
+import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.XPropertySet;
 import com.sun.star.container.XNameContainer;
+import com.sun.star.document.XExporter;
+import com.sun.star.document.XFilter;
+import com.sun.star.drawing.XDrawPage;
+import com.sun.star.drawing.XDrawPagesSupplier;
+import com.sun.star.frame.XComponentLoader;
+import com.sun.star.frame.XDesktop;
+import com.sun.star.lang.XComponent;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XMultiServiceFactory;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
+import java.io.File;
+
 import org.libreimpress.smartart.editing.OutlineEditor;
+import org.libreimpress.smartart.layout.DiagramLayout;
+import org.libreimpress.smartart.layout.LayoutFactory;
+import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramType;
+import org.libreimpress.smartart.parsers.HierarchyParser;
+import org.libreimpress.smartart.parsers.ParseResult;
+import org.libreimpress.smartart.rendering.SlideRenderer;
 
 /**
  * A programmatically-built UNO dialog that collects the diagram type and the
- * hierarchical text. No {@code .xdl} file is packaged, so the dialog adds
- * nothing to the extension's registration contract (master spec §5.5).
+ * hierarchical text. The right panel shows a live preview rendered via a hidden
+ * Impress document — click "Preview" to refresh it. No {@code .xdl} file is
+ * packaged, so the dialog adds nothing to the extension's registration contract
+ * (master spec §5.5).
  */
 public class SmartArtDialog {
 
@@ -60,6 +79,12 @@ public class SmartArtDialog {
         }
     }
 
+    // ---- layout constants (UNO dialog units) ----
+    private static final int LEFT_W    = 230;  // left-panel width
+    private static final int SEP       = 8;    // gap between panels
+    private static final int PREV_W    = 240;  // preview panel width
+    private static final int DIALOG_W  = LEFT_W + SEP + PREV_W; // 478
+    private static final int DIALOG_H  = 216;
 
     private final XComponentContext context;
 
@@ -81,15 +106,16 @@ public class SmartArtDialog {
                 UnoRuntime.queryInterface(XPropertySet.class, dialogModel);
         dialogProps.setPropertyValue("PositionX", Integer.valueOf(100));
         dialogProps.setPropertyValue("PositionY", Integer.valueOf(80));
-        dialogProps.setPropertyValue("Width", Integer.valueOf(230));
-        dialogProps.setPropertyValue("Height", Integer.valueOf(216));
-        dialogProps.setPropertyValue("Title", "SmartArt – Create Diagram");
+        dialogProps.setPropertyValue("Width",     Integer.valueOf(DIALOG_W));
+        dialogProps.setPropertyValue("Height",    Integer.valueOf(DIALOG_H));
+        dialogProps.setPropertyValue("Title",     "SmartArt – Create Diagram");
 
         XMultiServiceFactory modelFactory =
                 UnoRuntime.queryInterface(XMultiServiceFactory.class, dialogModel);
         XNameContainer container =
                 UnoRuntime.queryInterface(XNameContainer.class, dialogModel);
 
+        // ---- left panel (unchanged) ----
         addLabel(modelFactory, container, "lblType", "Diagram type:", 8, 8, 60, 12);
         addListBox(modelFactory, container, "lstType", 70, 6, 152, 14);
         addLabel(modelFactory, container, "lblText", "List points:", 8, 28, 96, 12);
@@ -106,6 +132,13 @@ public class SmartArtDialog {
         addButton(modelFactory, container, "btnCancel", "Cancel", 168, 190, 54, 16,
                 PushButtonType.CANCEL_value, false);
 
+        // ---- right panel: preview ----
+        int px = LEFT_W + SEP;
+        addLabel(modelFactory, container, "lblPreview", "Preview", px, 8, 60, 12);
+        addImageControl(modelFactory, container, "imgPreview", px, 22, PREV_W, 172);
+        addButton(modelFactory, container, "btnPreview", "▶ Preview", px, 198, 60, 12,
+                PushButtonType.STANDARD_value, false);
+
         Object dialog = smgr.createInstanceWithContext(
                 "com.sun.star.awt.UnoControlDialog", context);
         XControl control = UnoRuntime.queryInterface(XControl.class, dialog);
@@ -116,9 +149,6 @@ public class SmartArtDialog {
         XToolkit toolkit = UnoRuntime.queryInterface(XToolkit.class, toolkitObj);
         control.createPeer(toolkit, null);
 
-        // Drive the text box as an outline list. Level changes come from the
-        // Indent/Outdent buttons (always work) and Ctrl+] / Ctrl+[ (the key
-        // handler can intercept these; Tab can't be — it's focus traversal).
         XControlContainer controls = UnoRuntime.queryInterface(XControlContainer.class, dialog);
         XControl editControl = controls.getControl("txtInput");
         XTextComponent editText = UnoRuntime.queryInterface(XTextComponent.class, editControl);
@@ -132,8 +162,12 @@ public class SmartArtDialog {
             extToolkit.addKeyHandler(keyHandler);
         }
 
-        bindButton(controls, "btnIndent", new LevelButtonListener(editing, OutlineEditing.Op.INDENT));
-        bindButton(controls, "btnOutdent", new LevelButtonListener(editing, OutlineEditing.Op.OUTDENT));
+        bindButton(controls, "btnIndent",
+                new LevelButtonListener(editing, OutlineEditing.Op.INDENT));
+        bindButton(controls, "btnOutdent",
+                new LevelButtonListener(editing, OutlineEditing.Op.OUTDENT));
+        bindButton(controls, "btnPreview",
+                new PreviewButtonListener(container));
 
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
         try {
@@ -158,6 +192,78 @@ public class SmartArtDialog {
             }
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Preview rendering
+    // -------------------------------------------------------------------------
+
+    /**
+     * Renders {@code inputText} as diagram type {@code type} into a hidden Impress
+     * document, exports the slide as a PNG temp file, and returns a {@code file://}
+     * URL ready for the {@code ImageURL} property of an image control.
+     * Returns {@code null} if the input is invalid or rendering fails.
+     */
+    private String renderPreview(String inputText, DiagramType type) {
+        try {
+            ParseResult parsed = new HierarchyParser().parse(
+                    inputText == null ? "" : inputText);
+            if (!parsed.isValid()) {
+                return null;
+            }
+            DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
+
+            XMultiComponentFactory smgr = context.getServiceManager();
+            Object desktopObj = smgr.createInstanceWithContext(
+                    "com.sun.star.frame.Desktop", context);
+            XComponentLoader loader = UnoRuntime.queryInterface(XComponentLoader.class, desktopObj);
+
+            // Create an invisible Impress document for off-screen rendering.
+            XComponent tempDoc = UnoRuntime.queryInterface(XComponent.class,
+                    loader.loadComponentFromURL(
+                            "private:factory/simpress", "_blank", 0,
+                            new PropertyValue[]{ pv("Hidden", Boolean.TRUE) }));
+            try {
+                XDrawPagesSupplier pagesSupplier =
+                        UnoRuntime.queryInterface(XDrawPagesSupplier.class, tempDoc);
+                XDrawPage page = UnoRuntime.queryInterface(XDrawPage.class,
+                        pagesSupplier.getDrawPages().getByIndex(0));
+                XMultiServiceFactory factory =
+                        UnoRuntime.queryInterface(XMultiServiceFactory.class, tempDoc);
+
+                new SlideRenderer(context)
+                        .drawHierarchy(page, factory, layout, ColorPalette.EMPTY);
+
+                File tempFile = File.createTempFile("smartart_prev_", ".png");
+                tempFile.deleteOnExit();
+                String fileUrl = tempFile.toURI().toString();
+
+                Object expObj = smgr.createInstanceWithContext(
+                        "com.sun.star.drawing.GraphicExporter", context);
+                XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
+                XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
+
+                exporter.setSourceDocument(tempDoc);
+                filter.filter(new PropertyValue[] {
+                    pv("MediaType",  "image/png"),
+                    pv("URL",        fileUrl),
+                    pv("Selection",  page),
+                    pv("FilterData", new PropertyValue[] {
+                        pv("PixelWidth",  Integer.valueOf(800)),
+                        pv("PixelHeight", Integer.valueOf(600)),
+                    }),
+                });
+                return fileUrl;
+            } finally {
+                tempDoc.dispose();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Event handlers
+    // -------------------------------------------------------------------------
 
     private void bindButton(XControlContainer controls, String name,
             XActionListener listener) {
@@ -218,11 +324,8 @@ public class SmartArtDialog {
     }
 
     /**
-     * Keyboard shortcuts inside the text box, active only while it has focus:
-     * Ctrl+] indents, Ctrl+[ outdents, Enter starts a new item at the current
-     * level. Tab is intentionally NOT handled — a UNO dialog reserves it for
-     * focus traversal and it cannot be reliably intercepted; the Indent/Outdent
-     * buttons cover that case. All other keys pass through.
+     * Keyboard shortcuts inside the text box: Ctrl+] indents, Ctrl+[ outdents,
+     * Enter starts a new item at the current level.
      */
     private static final class OutlineKeyHandler implements XKeyHandler {
         private final OutlineEditing editing;
@@ -236,13 +339,13 @@ public class SmartArtDialog {
             if (!editing.editFocused()) {
                 return false;
             }
-            if ((event.Modifiers & KeyModifier.MOD1) != 0) { // Ctrl
+            if ((event.Modifiers & KeyModifier.MOD1) != 0) {
                 char c = event.KeyChar;
-                if (c == ']' || c == 0x1d) { // ']' or Ctrl+] control char
+                if (c == ']' || c == 0x1d) {
                     editing.apply(OutlineEditing.Op.INDENT);
                     return true;
                 }
-                if (c == '[' || c == 0x1b) { // '[' or Ctrl+[ control char
+                if (c == '[' || c == 0x1b) {
                     editing.apply(OutlineEditing.Op.OUTDENT);
                     return true;
                 }
@@ -260,9 +363,7 @@ public class SmartArtDialog {
         }
 
         @Override
-        public void disposing(com.sun.star.lang.EventObject event) {
-            // nothing to release
-        }
+        public void disposing(com.sun.star.lang.EventObject event) {}
     }
 
     /** Indent/Outdent button click → apply the transform, then return focus. */
@@ -282,10 +383,46 @@ public class SmartArtDialog {
         }
 
         @Override
-        public void disposing(com.sun.star.lang.EventObject event) {
-            // nothing to release
-        }
+        public void disposing(com.sun.star.lang.EventObject event) {}
     }
+
+    /**
+     * "Preview" button click: reads current input + type, renders to a hidden
+     * Impress document, exports as PNG, and updates the image control.
+     */
+    private final class PreviewButtonListener implements XActionListener {
+        private final XNameContainer container;
+
+        PreviewButtonListener(XNameContainer container) {
+            this.container = container;
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent event) {
+            try {
+                String inputText = (String) getModelProp(container, "txtInput", "Text");
+                short[] selected = (short[]) getModelProp(container, "lstType", "SelectedItems");
+                int index = (selected != null && selected.length > 0) ? selected[0] : 0;
+                DiagramType type = DiagramType.fromIndex(index);
+
+                String imageUrl = renderPreview(inputText, type);
+                if (imageUrl != null) {
+                    XPropertySet p = UnoRuntime.queryInterface(XPropertySet.class,
+                            container.getByName("imgPreview"));
+                    p.setPropertyValue("ImageURL", imageUrl);
+                }
+            } catch (Exception e) {
+                // silent — preview is best-effort
+            }
+        }
+
+        @Override
+        public void disposing(com.sun.star.lang.EventObject event) {}
+    }
+
+    // -------------------------------------------------------------------------
+    // Control factory helpers
+    // -------------------------------------------------------------------------
 
     private void addLabel(XMultiServiceFactory factory, XNameContainer container,
             String name, String caption, int x, int y, int w, int h) throws Exception {
@@ -339,15 +476,23 @@ public class SmartArtDialog {
         }
     }
 
+    private void addImageControl(XMultiServiceFactory factory, XNameContainer container,
+            String name, int x, int y, int w, int h) throws Exception {
+        XPropertySet p = newControl(factory, container,
+                "com.sun.star.awt.UnoControlImageControlModel", name, x, y, w, h);
+        p.setPropertyValue("ScaleImage", Boolean.TRUE);
+        p.setPropertyValue("Border", Short.valueOf((short) 1)); // sunken border
+    }
+
     private XPropertySet newControl(XMultiServiceFactory factory, XNameContainer container,
             String service, String name, int x, int y, int w, int h) throws Exception {
         Object model = factory.createInstance(service);
         XPropertySet p = UnoRuntime.queryInterface(XPropertySet.class, model);
         p.setPropertyValue("PositionX", Integer.valueOf(x));
         p.setPropertyValue("PositionY", Integer.valueOf(y));
-        p.setPropertyValue("Width", Integer.valueOf(w));
-        p.setPropertyValue("Height", Integer.valueOf(h));
-        p.setPropertyValue("Name", name);
+        p.setPropertyValue("Width",     Integer.valueOf(w));
+        p.setPropertyValue("Height",    Integer.valueOf(h));
+        p.setPropertyValue("Name",      name);
         container.insertByName(name, model);
         return p;
     }
@@ -357,5 +502,13 @@ public class SmartArtDialog {
         Object model = container.getByName(controlName);
         XPropertySet p = UnoRuntime.queryInterface(XPropertySet.class, model);
         return p.getPropertyValue(property);
+    }
+
+    private static PropertyValue pv(String name, Object value) {
+        PropertyValue p = new PropertyValue();
+        p.Name  = name;
+        p.Value = value;
+        p.State = PropertyState.DIRECT_VALUE;
+        return p;
     }
 }

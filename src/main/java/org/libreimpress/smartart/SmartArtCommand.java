@@ -13,15 +13,8 @@ import com.sun.star.frame.DispatchDescriptor;
 import com.sun.star.beans.PropertyValue;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
-import org.libreimpress.smartart.layout.CycleArrowLayout;
-import org.libreimpress.smartart.layout.CycleBlockLayout;
-import org.libreimpress.smartart.layout.CycleLayout;
 import org.libreimpress.smartart.layout.DiagramLayout;
-import org.libreimpress.smartart.layout.HierarchyLayout;
-import org.libreimpress.smartart.layout.HubAndSpokeLayout;
-import org.libreimpress.smartart.layout.ProcessFlowLayout;
-import org.libreimpress.smartart.layout.PyramidLayout;
-import org.libreimpress.smartart.layout.SequentialChevronLayout;
+import org.libreimpress.smartart.layout.LayoutFactory;
 import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramNode;
 import org.libreimpress.smartart.models.DiagramType;
@@ -117,19 +110,6 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
         return new String[]{SERVICE_NAME};
     }
 
-    private static DiagramLayout buildLayout(DiagramType type, DiagramNode root) {
-        switch (type) {
-            case HUB_AND_SPOKE:        return HubAndSpokeLayout.layout(root);
-            case PROCESS_FLOW:         return ProcessFlowLayout.layout(root);
-            case SEQUENTIAL_CHEVRON:   return SequentialChevronLayout.layout(root);
-            case CYCLE:                return CycleLayout.layout(root);
-            case CYCLE_ARROW:          return CycleArrowLayout.layout(root);
-            case PYRAMID:              return PyramidLayout.layout(root);
-            case CYCLE_BLOCK:          return CycleBlockLayout.layout(root);
-            default:                   return HierarchyLayout.layout(root);
-        }
-    }
-
     private void execute() {
         try {
             SmartArtDialog dialog = new SmartArtDialog(xComponentContext);
@@ -141,7 +121,7 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
             ParseResult parsed = new HierarchyParser().parse(result.getText());
             if (parsed.isValid()) {
                 DiagramNode root = parsed.getRoot();
-                DiagramLayout layout = buildLayout(result.getType(), root);
+                DiagramLayout layout = LayoutFactory.build(result.getType(), root);
                 ColorPalette palette = PaletteParser.parse(result.getPaletteText());
                 new SlideRenderer(xComponentContext).drawHierarchy(layout, palette);
             } else {
