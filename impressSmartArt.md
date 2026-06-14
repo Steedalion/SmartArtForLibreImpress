@@ -112,10 +112,10 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 - **Interface:** Multi-point dialog box
 - **Features:**
   - Text input field for entering diagram points/nodes
-  - Support for list level indentation (minimum 3 levels deep)
-  - List levels organize the hierarchy structure
+  - Support for up to N levels of hierarchy depth
   - Each line represents one node
-  - Indentation/nesting indicates parent-child relationships
+  - Leading dashes indicate depth: no dash = level 1, one dash = level 2, two dashes = level 3, etc.
+  - Depth may increase by at most one level per line; it may decrease by any amount
 
 ### 2.2 Diagram Types (v1.0)
 
@@ -217,9 +217,9 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 3. Plugin dialog opens
 
 ### 4.2 Creating a Diagram
-1. User selects diagram type (Hierarchy / Hub & Spoke / Process Flow)
-2. User enters text points in multi-line input with indentation
-3. User (optionally) provides a color palette object in the palette field
+1. User selects diagram type from the dropdown
+2. User enters text points in the multi-line outline field using dash-prefix notation
+3. User (optionally) provides a color palette in the palette field
 4. User clicks **Create**
 5. Plugin generates the diagram on the current slide *(Phase 4; the current
    build instead previews the parsed hierarchy and reports validation errors)*
@@ -239,25 +239,27 @@ The dialog collects, with **Create** and **Cancel** actions:
 
 - **Diagram type** — one of Hierarchy, Hub & Spoke, Process Flow, Sequential
   Chevron, Cycle, Cycle (Arrows), Cycle (Blocks), or Pyramid (a dropdown).
-- **Text points** — a multi-line field that **is a list and stays a list**: it
-  opens pre-filled with a starter outline, each line is one node, and leading
-  indentation expresses nesting (per the rules in §5.2). It behaves as an outline
-  editor — **Enter** starts a new item at the current level, and the level of the
+- **Text points** — a multi-line outline field; each line is one node. Hierarchy
+  depth is expressed by **leading dashes** followed by a space, resembling
+  Markdown list syntax (per the rules in §5.2). It behaves as an outline
+  editor — **Enter** starts a new item at the current depth, and the depth of the
   current line is changed with the **Indent / Outdent buttons** or the keyboard
-  shortcuts **Ctrl+]** (deeper) / **Ctrl+[** (shallower). (Tab is *not* used for
-  indentation — in a LibreOffice dialog it moves focus between controls.) For
-  example:
-  - Level 1 Item
-    - Level 2 Item
-      - Level 3 Item
-    - Level 2 Item B
+  shortcuts **Ctrl+]** (deeper) / **Ctrl+[** (shallower). For example:
+  ```
+  Level 1 Item
+  - Level 2 Item
+  -- Level 3 Item
+  - Level 2 Item B
+  ```
 - **Colour palette (optional)** — a palette assigning a fill colour per level (format: `1=#4472C4`, one entry per line). See §3.2.
 
 ### 5.2 Parsing
-- Parse text input to identify hierarchy levels based on indentation
-- Validate that hierarchy depth is at least 3 levels for all types
-- Extract node text and parent-child relationships
-- Validate against diagram type constraints
+- Each non-blank line is one node; blank lines are ignored
+- Depth = number of leading `-` characters; the text starts after the dashes and one optional space
+- Level = depth + 1 (a line with zero dashes is level 1, one dash is level 2, etc.)
+- Depth must not increase by more than one between consecutive non-blank lines; it may decrease by any amount
+- The first non-blank line must have zero dashes (depth 0)
+- A diagram needs at least 3 nodes
 
 ### 5.3 Diagram Generation Algorithm
 
