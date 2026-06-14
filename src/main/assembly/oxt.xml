@@ -9,14 +9,23 @@
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <fileSets>
-        <!-- Use the filtered build output so ${project.version} and other
-             Maven properties are substituted in description.xml and .xcu files. -->
+        <!-- description.xml contains ${project.version}; read it from the
+             filtered build output so Maven has substituted the variable. -->
         <fileSet>
             <directory>${project.build.outputDirectory}</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
-                <include>META-INF/**</include>
                 <include>description.xml</include>
+            </includes>
+        </fileSet>
+        <!-- All other OXT resources come straight from source — they do not
+             need Maven filtering and .xcu files are not copied to target/classes/
+             by the resource plugin (which only handles *.xml / *.properties). -->
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>META-INF/**</include>
                 <include>Addons.xcu</include>
                 <include>ProtocolHandler.xcu</include>
                 <include>uno/**</include>
