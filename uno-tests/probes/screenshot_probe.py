@@ -406,7 +406,8 @@ def draw_cycle_blocks(doc, page):
         nx = rect_cx[(i + 1) % n]; ny = rect_cy[(i + 1) % n]
         ax = (rect_cx[i] + nx) // 2; ay = (rect_cy[i] + ny) // 2
         dx = nx - rect_cx[i]; dy = ny - rect_cy[i]
-        angle_deg = math.degrees(math.atan2(dy, dx))
+        # RotateAngle is counter-clockwise; negate dy to convert screen coords.
+        angle_deg = math.degrees(math.atan2(-dy, dx))
         # Normalise to [0, 360)
         if angle_deg < 0:
             angle_deg += 360

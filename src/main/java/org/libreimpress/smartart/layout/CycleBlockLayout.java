@@ -59,8 +59,9 @@ public final class CycleBlockLayout {
             int arrowCY = (rectCY[i] + rectCY[next]) / 2;
             double dx = rectCX[next] - rectCX[i];
             double dy = rectCY[next] - rectCY[i];
-            // atan2 in screen coords (Y-down) gives angle clockwise from east.
-            int rotate100 = (int) Math.round(Math.atan2(dy, dx) * 18000.0 / Math.PI);
+            // RotateAngle is counter-clockwise. Screen Y is inverted, so negate dy
+            // to convert from screen coords to standard math angle.
+            int rotate100 = (int) Math.round(Math.atan2(-dy, dx) * 18000.0 / Math.PI);
             if (rotate100 < 0) {
                 rotate100 += 36000;
             }

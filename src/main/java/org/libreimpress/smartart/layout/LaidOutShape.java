@@ -13,7 +13,7 @@ public final class LaidOutShape {
     private final int width;
     private final int height;
     private final ShapeKind kind;
-    /** Clockwise rotation in 1/100 degrees (0 = no rotation). */
+    /** Counter-clockwise rotation in 1/100 degrees (LibreOffice RotateAngle convention) (0 = no rotation). */
     private final int rotateAngle100;
     /** Arc span in 1/100 degrees; only meaningful for CIRCULAR_ARROW shapes. */
     private final int arcSpan100;
@@ -51,7 +51,7 @@ public final class LaidOutShape {
     public int centerX() { return x + width / 2; }
     public int centerY() { return y + height / 2; }
 
-    /** Clockwise rotation in 1/100 degrees (0 = upright). */
+    /** Counter-clockwise rotation in 1/100 degrees (LibreOffice RotateAngle convention) (0 = upright). */
     public int getRotateAngle100() { return rotateAngle100; }
 
     /** Arc span in 1/100 degrees; only meaningful for {@link ShapeKind#CIRCULAR_ARROW}. */
