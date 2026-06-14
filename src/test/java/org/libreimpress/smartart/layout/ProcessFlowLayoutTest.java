@@ -143,6 +143,23 @@ public class ProcessFlowLayoutTest {
     }
 
     @Test
+    public void manyStepsScaleDownToFitSlide() {
+        // 8 steps at default width overflow; layout must shrink them to fit.
+        DiagramNode root = new DiagramNode("", 0);
+        for (int i = 0; i < 8; i++) {
+            root.addChild(new DiagramNode("S" + i, 1));
+        }
+        DiagramLayout layout = ProcessFlowLayout.layout(root);
+        int rightLimit = ProcessFlowLayout.SLIDE_W - ProcessFlowLayout.MARGIN_X;
+        for (LaidOutShape s : layout.getShapes()) {
+            if (s.getLevel() == 1) {
+                assertTrue("step right edge must stay within slide",
+                        s.getX() + s.getWidth() <= rightLimit);
+            }
+        }
+    }
+
+    @Test
     public void childEdgesUseBottomToTopGluePoints() {
         DiagramNode root = new DiagramNode("", 0);
         DiagramNode step = new DiagramNode("Step", 1);

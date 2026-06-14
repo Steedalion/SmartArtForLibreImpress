@@ -144,6 +144,35 @@ public class HubAndSpokeLayoutTest {
     }
 
     @Test
+    public void manySpokesScaleRadiusToPreventOverlap() {
+        // 12 spokes at the default radius (3500) would heavily overlap.
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode hub = new DiagramNode("Hub", 1);
+        root.addChild(hub);
+        for (int i = 0; i < 12; i++) {
+            hub.addChild(new DiagramNode("S" + i, 2));
+        }
+        DiagramLayout layout = HubAndSpokeLayout.layout(root);
+        LaidOutShape hubShape = layout.getShapes().get(0);
+
+        // Radius should be larger than the default for 12 spokes.
+        LaidOutShape firstSpoke = layout.getShapes().get(1);
+        double actualRadius = distance(hubShape.centerX(), hubShape.centerY(),
+                firstSpoke.centerX(), firstSpoke.centerY());
+        assertTrue("radius with 12 spokes should exceed default SPOKE_RADIUS",
+                actualRadius > HubAndSpokeLayout.SPOKE_RADIUS);
+
+        // No two adjacent spokes should overlap.
+        int spokeD = firstSpoke.getWidth();
+        for (int i = 1; i <= 12; i++) {
+            LaidOutShape s1 = layout.getShapes().get(i);
+            LaidOutShape s2 = layout.getShapes().get(i < 12 ? i + 1 : 1);
+            double chord = distance(s1.centerX(), s1.centerY(), s2.centerX(), s2.centerY());
+            assertTrue("adjacent spokes must not overlap", chord > spokeD);
+        }
+    }
+
+    @Test
     public void threeHubsWithMultipleSpokes() {
         DiagramNode root = new DiagramNode("", 0);
         for (String hubName : new String[]{"H1", "H2", "H3"}) {

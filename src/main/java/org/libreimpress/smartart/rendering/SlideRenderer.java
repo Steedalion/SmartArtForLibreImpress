@@ -186,7 +186,7 @@ public class SlideRenderer {
         groupShapes(page, created);
     }
 
-    /** Applies solid fill, text colour, and font size to a shape. */
+    /** Applies solid fill, text colour, font size, and auto-shrink to a shape. */
     private static void applyStyle(Object shape, int fillColor, int textColor,
                                    float fontSize) throws Exception {
         XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
@@ -197,6 +197,9 @@ public class SlideRenderer {
         props.setPropertyValue("CharHeight", Float.valueOf(fontSize));
         props.setPropertyValue("LineStyle",
                 com.sun.star.drawing.LineStyle.NONE);
+        // Auto-shrink text when it doesn't fit; never enlarges text that already fits.
+        props.setPropertyValue("TextFitToSize",
+                com.sun.star.drawing.TextFitToSizeType.AUTOFIT);
     }
 
     /**

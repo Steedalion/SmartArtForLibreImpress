@@ -56,6 +56,11 @@ public final class ProcessFlowLayout {
 
         int w1 = nodeWidth(1);
         int h1 = nodeHeight(1);
+        // Scale step width down if all steps would overflow the slide.
+        int availableW = SLIDE_W - 2 * MARGIN_X;
+        if (n * w1 + (n - 1) * H_GAP > availableW) {
+            w1 = Math.max(1500, (availableW - (n - 1) * H_GAP) / n);
+        }
         int totalWidth = n * w1 + (n - 1) * H_GAP;
         int startX = Math.max(MARGIN_X, (SLIDE_W - totalWidth) / 2);
         int y1 = MARGIN_Y;

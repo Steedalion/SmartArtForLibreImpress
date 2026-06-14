@@ -115,6 +115,23 @@ public class SequentialChevronLayoutTest {
     }
 
     @Test
+    public void manyChevronsScaleDownToFitSlide() {
+        // 8 chevrons at default width overflow; layout must shrink them to fit.
+        DiagramNode root = new DiagramNode("", 0);
+        for (int i = 0; i < 8; i++) {
+            root.addChild(new DiagramNode("C" + i, 1));
+        }
+        DiagramLayout layout = SequentialChevronLayout.layout(root);
+        int rightLimit = SequentialChevronLayout.SLIDE_W - SequentialChevronLayout.MARGIN_X;
+        for (LaidOutShape s : layout.getShapes()) {
+            if (s.getLevel() == 1) {
+                assertTrue("chevron right edge must stay within slide",
+                        s.getX() + s.getWidth() <= rightLimit);
+            }
+        }
+    }
+
+    @Test
     public void subitemsSizedSmaller() {
         DiagramNode root = new DiagramNode("", 0);
         DiagramNode chevron = new DiagramNode("Step", 1);

@@ -16,7 +16,8 @@ public final class HubAndSpokeLayout {
     static final int BASE_NODE_W = 4000;
     static final int BASE_NODE_H = 1500;
     static final int SIZE_DECREMENT = 30; // reduce diameter by 30 per level depth
-    static final int SPOKE_RADIUS = 3500; // hub-centre to spoke-centre distance
+    static final int SPOKE_RADIUS = 3500; // minimum hub-centre to spoke-centre distance
+    static final int MIN_SPOKE_GAP = 400; // minimum gap between adjacent spoke edges
     static final int CHILD_GAP    = 600;  // gap between spoke edge and first child edge
     static final int HUB_SPACING  = 16000; // space from one hub centre to the next
 
@@ -58,10 +59,18 @@ public final class HubAndSpokeLayout {
 
             List<DiagramNode> spokes = hubNode.getChildren();
             int n = spokes.size();
+            // Scale radius up when many spokes would otherwise overlap.
+            // Minimum radius: chord between adjacent spokes ≥ spokeD + MIN_SPOKE_GAP.
+            int spokeRadius = SPOKE_RADIUS;
+            if (n >= 2) {
+                int rMin = (int) Math.ceil(
+                        (nodeDiameter(2) + MIN_SPOKE_GAP) / (2.0 * Math.sin(Math.PI / n)));
+                spokeRadius = Math.max(SPOKE_RADIUS, rMin);
+            }
             for (int i = 0; i < n; i++) {
                 double angle = -Math.PI / 2 + 2 * Math.PI * i / n;
-                int spokeCX = hubCX + (int) Math.round(SPOKE_RADIUS * Math.cos(angle));
-                int spokeCY = hubCY + (int) Math.round(SPOKE_RADIUS * Math.sin(angle));
+                int spokeCX = hubCX + (int) Math.round(spokeRadius * Math.cos(angle));
+                int spokeCY = hubCY + (int) Math.round(spokeRadius * Math.sin(angle));
                 DiagramNode spokeNode = spokes.get(i);
                 int spokeD = nodeDiameter(2);
                 LaidOutShape spokeShape = new LaidOutShape(
