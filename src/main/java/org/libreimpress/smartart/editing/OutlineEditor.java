@@ -5,16 +5,19 @@ import java.util.List;
 
 /**
  * Pure-Java text transforms that make a plain multi-line field behave like an
- * indented outline: Tab indents the touched line(s), Shift+Tab outdents them,
- * and Enter starts a new line at the current indent. One indent level is
- * {@link #INDENT} (four spaces), which matches the parser's space-indentation
- * model. No UNO dependencies, so this is fully unit-testable; {@code SmartArtDialog}
- * wires it to the dialog's edit control via a key handler.
+ * indented outline using the dash-prefix format:
+ * <pre>
+ *   Root
+ *   - Child        (depth 1: one dash + space)
+ *   -- Grandchild  (depth 2: two dashes + space)
+ * </pre>
+ * {@link #indent} adds one dash level; {@link #outdent} removes one dash level.
+ * No UNO dependencies — fully unit-testable.
  */
 public final class OutlineEditor {
 
-    /** One indentation level. */
-    public static final String INDENT = "    ";
+    private OutlineEditor() {
+    }
 
     /** Result of an edit: the new text and the new selection/caret offsets. */
     public static final class Edit {
@@ -29,81 +32,23 @@ public final class OutlineEditor {
         }
     }
 
-    private OutlineEditor() {
-    }
+    // -------------------------------------------------------------------------
+    // Public operations
+    // -------------------------------------------------------------------------
 
-    /** Indents every line touched by the selection by one level. */
+    /** Increases the dash depth of every line touched by the selection by one. */
     public static Edit indent(String text, int selStart, int selEnd) {
-        int[] n = normalize(text, selStart, selEnd);
-        int s = n[0];
-        int e = n[1];
-        int[] starts = lineStarts(text);
-        int first = lineIndexOf(starts, s);
-        int last = lineIndexOf(starts, e);
-        if (e > s && last > first && starts[last] == e) {
-            last--; // selection ends exactly at a line start: that line is untouched
-        }
-
-        List<Integer> affected = new ArrayList<>();
-        for (int i = first; i <= last; i++) {
-            affected.add(starts[i]);
-        }
-
-        StringBuilder sb = new StringBuilder();
-        int idx = 0;
-        for (int i = 0; i <= text.length(); i++) {
-            if (idx < affected.size() && affected.get(idx) == i) {
-                sb.append(INDENT);
-                idx++;
-            }
-            if (i < text.length()) {
-                sb.append(text.charAt(i));
-            }
-        }
-
-        int ns = s + INDENT.length() * countLE(affected, s);
-        int ne = e + INDENT.length() * countLE(affected, e);
-        return new Edit(sb.toString(), ns, ne);
+        return transformDepth(text, selStart, selEnd, +1);
     }
 
-    /** Removes up to one indent level of leading spaces from each touched line. */
+    /** Decreases the dash depth of every line touched by the selection by one (minimum 0). */
     public static Edit outdent(String text, int selStart, int selEnd) {
-        int[] n = normalize(text, selStart, selEnd);
-        int s = n[0];
-        int e = n[1];
-        int[] starts = lineStarts(text);
-        int first = lineIndexOf(starts, s);
-        int last = lineIndexOf(starts, e);
-        if (e > s && last > first && starts[last] == e) {
-            last--;
-        }
-
-        int[] removed = new int[starts.length];
-        for (int li = first; li <= last; li++) {
-            int ls = starts[li];
-            int k = 0;
-            while (k < INDENT.length() && ls + k < text.length() && text.charAt(ls + k) == ' ') {
-                k++;
-            }
-            removed[li] = k;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (int li = 0; li < starts.length; li++) {
-            int ls = starts[li];
-            int le = (li + 1 < starts.length) ? starts[li + 1] : text.length();
-            sb.append(text, ls + removed[li], le);
-        }
-
-        int ns = s - removedBefore(starts, removed, s);
-        int ne = e - removedBefore(starts, removed, e);
-        return new Edit(sb.toString(), ns, ne);
+        return transformDepth(text, selStart, selEnd, -1);
     }
 
     /**
      * Replaces the selection with a newline followed by the current line's
-     * leading indentation, so a new item stays at the same level as the line
-     * it was started from.
+     * dash prefix, so a new item appears at the same depth as the current one.
      */
     public static Edit newlineKeepingIndent(String text, int selStart, int selEnd) {
         int[] n = normalize(text, selStart, selEnd);
@@ -112,49 +57,140 @@ public final class OutlineEditor {
         String merged = text.substring(0, s) + text.substring(e);
         int caret = s;
         int ls = lineStartOf(merged, caret);
-        int k = 0;
-        while (ls + k < merged.length() && merged.charAt(ls + k) == ' ') {
-            k++;
-        }
-        String leading = repeat(' ', k);
-        String out = merged.substring(0, caret) + "\n" + leading + merged.substring(caret);
-        int caretOut = caret + 1 + k;
+        int depth = dashDepth(merged.substring(ls));
+        String newPrefix = prefix(depth);
+        String out = merged.substring(0, caret) + "\n" + newPrefix + merged.substring(caret);
+        int caretOut = caret + 1 + newPrefix.length();
         return new Edit(out, caretOut, caretOut);
     }
 
-    // --- helpers ---------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Package-visible helpers (used by HierarchyParser and tests)
+    // -------------------------------------------------------------------------
 
-    private static int[] normalize(String text, int s, int e) {
-        int len = text.length();
-        s = Math.max(0, Math.min(s, len));
-        e = Math.max(0, Math.min(e, len));
-        if (s > e) {
-            int t = s;
-            s = e;
-            e = t;
+    /** Returns the dash-prefix string for a given depth (0 → "", 1 → "- ", 2 → "-- ", …). */
+    static String prefix(int depth) {
+        if (depth == 0) {
+            return "";
         }
-        return new int[] { s, e };
+        StringBuilder sb = new StringBuilder(depth + 1);
+        for (int i = 0; i < depth; i++) {
+            sb.append('-');
+        }
+        sb.append(' ');
+        return sb.toString();
     }
 
-    private static int[] lineStarts(String text) {
-        List<Integer> list = new ArrayList<>();
-        list.add(0);
+    /** Counts leading {@code -} characters (ignores everything after them). */
+    static int dashDepth(String line) {
+        int i = 0;
+        while (i < line.length() && line.charAt(i) == '-') {
+            i++;
+        }
+        return i;
+    }
+
+    /** Strips the leading dashes and one optional space, returning bare content. */
+    static String bareText(String line) {
+        int d = dashDepth(line);
+        String rest = line.substring(d);
+        if (rest.startsWith(" ")) {
+            rest = rest.substring(1);
+        }
+        return rest;
+    }
+
+    // -------------------------------------------------------------------------
+    // Private implementation
+    // -------------------------------------------------------------------------
+
+    private static Edit transformDepth(String text, int selStart, int selEnd, int delta) {
+        int[] n = normalize(text, selStart, selEnd);
+        int s = n[0];
+        int e = n[1];
+
+        List<String> lines = new ArrayList<>();
+        List<Integer> lineStarts = new ArrayList<>();
+        splitLines(text, lines, lineStarts);
+
+        int first = lineAt(lineStarts, s);
+        int last  = lineAt(lineStarts, e);
+        // If selection ends exactly at a line boundary, that line is untouched.
+        if (e > s && last > first && lineStarts.get(last).intValue() == e) {
+            last--;
+        }
+
+        List<String> newLines = new ArrayList<>(lines);
+        int[] prefixChange = new int[lines.size()];
+
+        for (int i = first; i <= last; i++) {
+            String line = lines.get(i);
+            int oldDepth = dashDepth(line);
+            int newDepth = Math.max(0, oldDepth + delta);
+            newLines.set(i, prefix(newDepth) + bareText(line));
+            prefixChange[i] = prefix(newDepth).length() - prefix(oldDepth).length();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < newLines.size(); i++) {
+            if (i > 0) {
+                sb.append('\n');
+            }
+            sb.append(newLines.get(i));
+        }
+
+        int ns = adjustCaret(s, lines, lineStarts, prefixChange, first, last);
+        int ne = adjustCaret(e, lines, lineStarts, prefixChange, first, last);
+        return new Edit(sb.toString(), ns, ne);
+    }
+
+    /**
+     * Recomputes a caret offset after prefix lengths have changed on lines
+     * {@code first..last}.
+     */
+    private static int adjustCaret(int offset, List<String> lines, List<Integer> lineStarts,
+            int[] prefixChange, int first, int last) {
+        int lineIdx = lineAt(lineStarts, offset);
+
+        // Sum prefix changes from affected lines that come before the caret line.
+        int cumDelta = 0;
+        for (int i = first; i < lineIdx && i <= last; i++) {
+            cumDelta += prefixChange[i];
+        }
+
+        // If the caret is on an affected line, handle intra-line adjustment.
+        if (lineIdx >= first && lineIdx <= last && prefixChange[lineIdx] != 0) {
+            int ls = lineStarts.get(lineIdx);
+            int posInLine = offset - ls;
+            int oldPrefLen = prefix(dashDepth(lines.get(lineIdx))).length();
+            if (posInLine <= oldPrefLen) {
+                // Caret was inside the old prefix — snap to end of the new prefix.
+                int newPrefLen = Math.max(0, oldPrefLen + prefixChange[lineIdx]);
+                return ls + cumDelta + newPrefLen;
+            }
+            cumDelta += prefixChange[lineIdx];
+        }
+
+        return offset + cumDelta;
+    }
+
+    private static void splitLines(String text, List<String> lines, List<Integer> starts) {
+        starts.add(0);
+        int p = 0;
         for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) == '\n') {
-                list.add(i + 1);
+                lines.add(text.substring(p, i));
+                starts.add(i + 1);
+                p = i + 1;
             }
         }
-        int[] arr = new int[list.size()];
-        for (int i = 0; i < arr.length; i++) {
-            arr[i] = list.get(i);
-        }
-        return arr;
+        lines.add(text.substring(p));
     }
 
-    private static int lineIndexOf(int[] starts, int offset) {
+    private static int lineAt(List<Integer> starts, int offset) {
         int idx = 0;
-        for (int i = 0; i < starts.length; i++) {
-            if (starts[i] <= offset) {
+        for (int i = 0; i < starts.size(); i++) {
+            if (starts.get(i) <= offset) {
                 idx = i;
             } else {
                 break;
@@ -173,35 +209,15 @@ public final class OutlineEditor {
         return start;
     }
 
-    private static int countLE(List<Integer> values, int x) {
-        int c = 0;
-        for (int v : values) {
-            if (v <= x) {
-                c++;
-            }
+    private static int[] normalize(String text, int s, int e) {
+        int len = text.length();
+        s = Math.max(0, Math.min(s, len));
+        e = Math.max(0, Math.min(e, len));
+        if (s > e) {
+            int t = s;
+            s = e;
+            e = t;
         }
-        return c;
-    }
-
-    private static int removedBefore(int[] starts, int[] removed, int offset) {
-        int d = 0;
-        for (int li = 0; li < starts.length; li++) {
-            if (removed[li] == 0) {
-                continue;
-            }
-            int ls = starts[li];
-            if (offset > ls) {
-                d += Math.min(offset - ls, removed[li]);
-            }
-        }
-        return d;
-    }
-
-    private static String repeat(char c, int n) {
-        StringBuilder sb = new StringBuilder(n);
-        for (int i = 0; i < n; i++) {
-            sb.append(c);
-        }
-        return sb.toString();
+        return new int[]{ s, e };
     }
 }

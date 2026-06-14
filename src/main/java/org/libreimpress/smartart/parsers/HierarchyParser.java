@@ -1,33 +1,24 @@
 package org.libreimpress.smartart.parsers;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.libreimpress.smartart.models.DiagramNode;
 
 /**
- * Parses indented multi-line text into a {@link DiagramNode} tree using standard
- * outline semantics, and validates it against the diagram constraints. Pure
- * Java (no UNO) so it is fully unit-testable.
+ * Parses dash-prefix multi-line text into a {@link DiagramNode} tree and
+ * validates it against diagram constraints. Pure Java (no UNO).
  *
- * <p>See {@code Phase3_ImplementationPlan.md} §2 for the indentation model.
+ * <p>Format: level is expressed by the number of leading {@code -} characters
+ * followed by one space, e.g.:
+ * <pre>
+ *   Root
+ *   - Child
+ *   -- Grandchild
+ * </pre>
+ * Zero dashes = level 1; N dashes = level N+1.
  */
 public class HierarchyParser {
 
     public static final int MIN_LEVELS = 1;
     public static final int MIN_NODES = 3;
-
-    private static final class Frame {
-        final int indent;
-        final DiagramNode node;
-
-        Frame(int indent, DiagramNode node) {
-            this.indent = indent;
-            this.node = node;
-        }
-    }
 
     public ParseResult parse(String input) {
         if (input == null) {
@@ -36,14 +27,12 @@ public class HierarchyParser {
         String[] lines = input.split("\n", -1);
 
         DiagramNode root = new DiagramNode("", 0);
-        Deque<Frame> stack = new ArrayDeque<>();
-        stack.push(new Frame(-1, root));
-        Map<Integer, Integer> levelIndent = new HashMap<>();
+        // lastAtDepth[d] = the most-recently-seen node at dash-depth d
+        DiagramNode[] lastAtDepth = new DiagramNode[64];
 
-        boolean usesTab = false;
-        boolean usesSpace = false;
-        int lineNo = 0;
         int nonBlank = 0;
+        int lineNo = 0;
+        int prevDepth = -1;
 
         for (String raw : lines) {
             lineNo++;
@@ -52,54 +41,27 @@ public class HierarchyParser {
             }
             nonBlank++;
 
-            int indent = leadingWhitespace(raw);
-            for (int i = 0; i < indent; i++) {
-                char c = raw.charAt(i);
-                if (c == '\t') {
-                    usesTab = true;
-                } else if (c == ' ') {
-                    usesSpace = true;
-                }
-            }
-            if (usesTab && usesSpace) {
+            int depth = countLeadingDashes(raw);
+            String text = stripDashPrefix(raw, depth);
+
+            if (nonBlank == 1 && depth != 0) {
                 return ParseResult.error(
-                        "Inconsistent indentation: mix of tabs and spaces (line "
-                                + lineNo + "). Use one or the other.");
+                        "The first line must not have a '-' prefix (line " + lineNo + ").");
             }
 
-            if (nonBlank == 1 && indent != 0) {
+            if (depth > prevDepth + 1) {
                 return ParseResult.error(
-                        "The first line must not be indented (line " + lineNo + ").");
+                        "Level jump at line " + lineNo + ": depth " + depth
+                        + " follows depth " + prevDepth
+                        + " — introduce each level through its parent first.");
             }
 
-            while (stack.size() > 1 && indent < stack.peek().indent) {
-                stack.pop();
-            }
-
-            int newLevel;
-            if (indent == stack.peek().indent) {
-                // Sibling of the current top: drop it so the parent becomes top.
-                stack.pop();
-                newLevel = stack.peek().node.getLevel() + 1;
-            } else {
-                // indent > top.indent: one level deeper than the line above.
-                newLevel = stack.peek().node.getLevel() + 1;
-            }
-
-            Integer canonical = levelIndent.get(newLevel);
-            if (canonical == null) {
-                levelIndent.put(newLevel, indent);
-            } else if (canonical.intValue() != indent) {
-                return ParseResult.error(
-                        "Inconsistent indentation (line " + lineNo + "): expected "
-                                + canonical + " indent characters for level " + newLevel
-                                + ", found " + indent + ".");
-            }
-
-            DiagramNode parent = stack.peek().node;
-            DiagramNode node = new DiagramNode(raw.trim(), newLevel);
+            int level = depth + 1;
+            DiagramNode parent = (depth == 0) ? root : lastAtDepth[depth - 1];
+            DiagramNode node = new DiagramNode(text, level);
             parent.addChild(node);
-            stack.push(new Frame(indent, node));
+            lastAtDepth[depth] = node;
+            prevDepth = depth;
         }
 
         if (nonBlank == 0) {
@@ -116,13 +78,16 @@ public class HierarchyParser {
         if (levels < MIN_LEVELS) {
             return ParseResult.error(
                     "A diagram needs at least " + MIN_LEVELS
-                            + " levels of indentation (found " + levels + ").");
+                            + " level (found " + levels + ").");
         }
 
         return ParseResult.ok(root);
     }
 
-    /** Renders a parsed tree as an indented bullet list for display. */
+    /**
+     * Renders a parsed tree back to the dash-prefix format so the output can
+     * be round-tripped through {@link #parse}.
+     */
     public static String toOutline(DiagramNode root) {
         StringBuilder sb = new StringBuilder();
         for (DiagramNode child : root.getChildren()) {
@@ -132,20 +97,37 @@ public class HierarchyParser {
     }
 
     private static void appendOutline(StringBuilder sb, DiagramNode node) {
-        for (int i = 1; i < node.getLevel(); i++) {
-            sb.append("    ");
+        int depth = node.getLevel() - 1;
+        for (int i = 0; i < depth; i++) {
+            sb.append('-');
         }
-        sb.append("• ").append(node.getText()).append('\n');
+        if (depth > 0) {
+            sb.append(' ');
+        }
+        sb.append(node.getText()).append('\n');
         for (DiagramNode child : node.getChildren()) {
             appendOutline(sb, child);
         }
     }
 
-    private static int leadingWhitespace(String line) {
+    /** Returns the number of leading {@code -} characters on a line. */
+    static int countLeadingDashes(String line) {
         int i = 0;
-        while (i < line.length() && (line.charAt(i) == ' ' || line.charAt(i) == '\t')) {
+        while (i < line.length() && line.charAt(i) == '-') {
             i++;
         }
         return i;
+    }
+
+    /**
+     * Strips the leading {@code depth} dashes and one optional space, then
+     * trims the remainder.
+     */
+    static String stripDashPrefix(String line, int depth) {
+        String s = line.substring(depth);
+        if (s.startsWith(" ")) {
+            s = s.substring(1);
+        }
+        return s.trim();
     }
 }

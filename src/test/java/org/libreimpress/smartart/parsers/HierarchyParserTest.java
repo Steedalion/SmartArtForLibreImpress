@@ -15,7 +15,7 @@ public class HierarchyParserTest {
 
     @Test
     public void parsesThreeLevelOutline() {
-        ParseResult r = parser.parse("Root\n  Child\n    Grandchild");
+        ParseResult r = parser.parse("Root\n- Child\n-- Grandchild");
         assertTrue(r.getErrorMessage(), r.isValid());
         DiagramNode root = r.getRoot();
         assertEquals(3, root.countDescendants());
@@ -38,7 +38,7 @@ public class HierarchyParserTest {
 
     @Test
     public void supportsMultipleTopLevelItemsAndSiblings() {
-        String text = "A\n  A1\n    A1a\n  A2\nB\n  B1\n    B1a";
+        String text = "A\n- A1\n-- A1a\n- A2\nB\n- B1\n-- B1a";
         ParseResult r = parser.parse(text);
         assertTrue(r.getErrorMessage(), r.isValid());
         DiagramNode root = r.getRoot();
@@ -53,14 +53,14 @@ public class HierarchyParserTest {
 
     @Test
     public void ignoresBlankLines() {
-        ParseResult r = parser.parse("Root\n\n  Child\n   \n    Grandchild\n");
+        ParseResult r = parser.parse("Root\n\n- Child\n\n-- Grandchild\n");
         assertTrue(r.getErrorMessage(), r.isValid());
         assertEquals(3, r.getRoot().countDescendants());
     }
 
     @Test
-    public void parsesWithTabIndentation() {
-        ParseResult r = parser.parse("Root\n\tChild\n\t\tGrandchild");
+    public void parsesWithDashPrefix() {
+        ParseResult r = parser.parse("Root\n- Child\n-- Grandchild");
         assertTrue(r.getErrorMessage(), r.isValid());
         assertEquals(3, r.getRoot().depth());
     }
@@ -74,49 +74,47 @@ public class HierarchyParserTest {
     }
 
     @Test
-    public void rejectsFirstLineIndented() {
-        ParseResult r = parser.parse("  Root\n    Child\n      Grandchild");
+    public void rejectsFirstLineWithDashPrefix() {
+        ParseResult r = parser.parse("- Root\n-- Child\n--- Grandchild");
         assertFalse(r.isValid());
         assertTrue(r.getErrorMessage().contains("first line"));
     }
 
     @Test
-    public void rejectsMixedTabsAndSpaces() {
-        ParseResult r = parser.parse("Root\n  Child\n\t\tGrandchild");
+    public void rejectsDepthJump() {
+        // Skips from depth 0 directly to depth 3 — must introduce each level via its parent.
+        ParseResult r = parser.parse("Root\n--- TooDeep\n--- Also");
         assertFalse(r.isValid());
-        assertTrue(r.getErrorMessage().toLowerCase().contains("tabs and spaces"));
+        assertTrue(r.getErrorMessage().toLowerCase().contains("jump"));
     }
 
     @Test
-    public void rejectsMisalignedIndentation() {
-        // level-2 width established as 4, then a dedent target of 2 matches nothing
-        ParseResult r = parser.parse("Root\n    Child\n  Mystery\n      Deep");
+    public void rejectsDepthJumpInMiddle() {
+        // depth 1 → depth 3: skips depth 2
+        ParseResult r = parser.parse("Root\n- Child\n--- GrandGrandChild\n--- Also");
         assertFalse(r.isValid());
-        assertTrue(r.getErrorMessage().toLowerCase().contains("inconsistent indentation"));
+        assertTrue(r.getErrorMessage().toLowerCase().contains("jump"));
     }
 
     @Test
     public void acceptsTwoLevels() {
-        ParseResult r = parser.parse("Root\n  Child\n  Child2");
+        ParseResult r = parser.parse("Root\n- Child\n- Child2");
         assertTrue(r.getErrorMessage(), r.isValid());
-        assertEquals(2, r.getRoot().depth()); // Root is level 1, children are level 2
+        assertEquals(2, r.getRoot().depth());
     }
 
     @Test
     public void rejectsFewerThanThreeNodes() {
-        ParseResult r = parser.parse("Root\n  Child");
+        ParseResult r = parser.parse("Root\n- Child");
         assertFalse(r.isValid());
-        // Two nodes only -> fails the node-count check before the level check.
         assertTrue(r.getErrorMessage().contains("3 nodes"));
     }
 
     @Test
-    public void toOutlineRendersIndentedBullets() {
-        ParseResult r = parser.parse("Root\n  Child\n    Grandchild");
+    public void toOutlineRendersDashFormat() {
+        ParseResult r = parser.parse("Root\n- Child\n-- Grandchild");
         assertNotNull(r.getRoot());
         String outline = HierarchyParser.toOutline(r.getRoot());
-        assertEquals(
-                "• Root\n    • Child\n        • Grandchild\n",
-                outline);
+        assertEquals("Root\n- Child\n-- Grandchild\n", outline);
     }
 }

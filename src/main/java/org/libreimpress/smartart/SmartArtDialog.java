@@ -302,8 +302,8 @@ public class SmartArtDialog {
         p.setPropertyValue("VScroll", Boolean.TRUE);
         p.setPropertyValue("HideInactiveSelection", Boolean.TRUE);
         p.setPropertyValue("HelpText",
-                "One item per line. Enter = new item; Ctrl+] / Ctrl+[ or the "
-                        + "Indent/Outdent buttons change the level.");
+                "One item per line. Use - for level 2, -- for level 3, etc. "
+                        + "Enter = new item; Indent/Outdent buttons or Ctrl+]/Ctrl+[ change the level.");
         p.setPropertyValue("Text", SmartArtConfig.getSeedText());
     }
 

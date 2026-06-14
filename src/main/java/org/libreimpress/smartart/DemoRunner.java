@@ -48,8 +48,8 @@ import org.libreimpress.smartart.rendering.SlideRenderer;
  */
 final class DemoRunner {
 
-    private static final String I  = "    ";   // one indent (4 spaces = one outline level)
-    private static final String I2 = I + I;
+    private static final String I  = "- ";    // one dash level (level 2)
+    private static final String I2 = "-- ";   // two dash levels (level 3)
 
     /**
      * One entry per diagram type: {DiagramType, slide-label, sample-input}.
