@@ -26,9 +26,7 @@ import com.sun.star.document.XFilter;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawPages;
 import com.sun.star.drawing.XDrawPagesSupplier;
-import com.sun.star.drawing.XShape;
-import com.sun.star.drawing.XShapes;
-import com.sun.star.frame.XComponentLoader;
+import com.sun.star.frame.XDesktop;
 import com.sun.star.lang.XComponent;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XMultiServiceFactory;
@@ -162,45 +160,39 @@ public class SmartArtDialog {
         bindButton(controls, "btnOutdent",
                 new LevelButtonListener(editing, OutlineEditing.Op.OUTDENT));
 
-        // Pre-create the hidden Impress doc BEFORE execute() — creating a new
-        // document from inside a modal dialog's event handler is blocked by the
-        // UNO event loop.
-        // Query all interfaces from the raw object returned by loadComponentFromURL
-        // (before narrowing to XComponent) to avoid UNO bridge narrowing issues.
-        XComponent previewDoc = null;
-        XDrawPages previewPages = null;
-        XMultiServiceFactory previewFactory = null;
+        // Capture the current Impress document BEFORE the modal dialog opens.
+        // getCurrentComponent() is reliable here; inside the event handler it
+        // might return the dialog itself. Creating a NEW document from inside
+        // the event handler is blocked, but inserting a slide into the existing
+        // document is fine — that is how the preview works.
+        XComponent currentDoc = null;
+        XDrawPages currentPages = null;
+        XMultiServiceFactory docFactory = null;
         String previewInitError = null;
         try {
             Object desktopObj = smgr.createInstanceWithContext(
                     "com.sun.star.frame.Desktop", context);
-            XComponentLoader loader =
-                    UnoRuntime.queryInterface(XComponentLoader.class, desktopObj);
-            Object rawDoc = loader.loadComponentFromURL(
-                    "private:factory/simpress", "_blank", 0,
-                    new PropertyValue[]{ pv("Hidden", Boolean.TRUE) });
-            if (rawDoc != null) {
-                previewDoc     = UnoRuntime.queryInterface(XComponent.class, rawDoc);
+            XDesktop desktop = UnoRuntime.queryInterface(XDesktop.class, desktopObj);
+            currentDoc = desktop.getCurrentComponent();
+            if (currentDoc != null) {
                 XDrawPagesSupplier ps =
-                        UnoRuntime.queryInterface(XDrawPagesSupplier.class, rawDoc);
-                if (ps != null) {
-                    previewPages = ps.getDrawPages();
-                }
-                previewFactory = UnoRuntime.queryInterface(XMultiServiceFactory.class, rawDoc);
+                        UnoRuntime.queryInterface(XDrawPagesSupplier.class, currentDoc);
+                if (ps != null) currentPages = ps.getDrawPages();
+                docFactory = UnoRuntime.queryInterface(XMultiServiceFactory.class, currentDoc);
             }
         } catch (Exception e) {
             previewInitError = e.getClass().getSimpleName()
                     + (e.getMessage() != null ? ": " + e.getMessage() : "");
         }
         if (previewInitError == null
-                && (previewDoc == null || previewPages == null || previewFactory == null)) {
-            previewInitError = "doc=" + previewDoc + " pages=" + previewPages
-                    + " factory=" + previewFactory;
+                && (currentDoc == null || currentPages == null || docFactory == null)) {
+            previewInitError = "doc=" + currentDoc + " pages=" + currentPages
+                    + " factory=" + docFactory;
         }
 
         bindButton(controls, "btnPreview",
-                new PreviewButtonListener(container, previewDoc, previewPages,
-                        previewFactory, previewInitError));
+                new PreviewButtonListener(container, currentDoc, currentPages,
+                        docFactory, previewInitError));
 
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
         try {
@@ -217,9 +209,6 @@ public class SmartArtDialog {
         } finally {
             if (extToolkit != null) {
                 extToolkit.removeKeyHandler(keyHandler);
-            }
-            if (previewDoc != null) {
-                try { previewDoc.dispose(); } catch (Exception ignored) {}
             }
             com.sun.star.lang.XComponent disposable =
                     UnoRuntime.queryInterface(com.sun.star.lang.XComponent.class, dialog);
@@ -315,25 +304,31 @@ public class SmartArtDialog {
     }
 
     /**
-     * Renders the current input into a fresh page on the pre-created hidden
-     * document, exports as PNG, and sets the ImageControl's URL. All failures
-     * are displayed in the status label rather than being silently swallowed.
+     * Renders the current input into a temporary slide on the already-open
+     * Impress document, exports it as PNG, removes the slide, and sets the
+     * ImageControl's URL. All failures are shown in the status label.
+     *
+     * <p>A hidden document cannot be used here because LibreOffice's internal
+     * shape/connector code dereferences a null controller on hidden docs,
+     * throwing RuntimeException("Null pointer"). Using the existing document
+     * avoids that — inserting a slide into an open document works fine from
+     * within a modal dialog's event handler.
      */
     private final class PreviewButtonListener implements XActionListener {
         private final XNameContainer container;
-        private final XComponent previewDoc;
-        private final XDrawPages previewPages;
-        private final XMultiServiceFactory previewFactory;
+        private final XComponent currentDoc;
+        private final XDrawPages currentPages;
+        private final XMultiServiceFactory docFactory;
         private final String initError;
 
         PreviewButtonListener(XNameContainer container,
-                XComponent previewDoc, XDrawPages previewPages,
-                XMultiServiceFactory previewFactory, String initError) {
-            this.container      = container;
-            this.previewDoc     = previewDoc;
-            this.previewPages   = previewPages;
-            this.previewFactory = previewFactory;
-            this.initError      = initError;
+                XComponent currentDoc, XDrawPages currentPages,
+                XMultiServiceFactory docFactory, String initError) {
+            this.container    = container;
+            this.currentDoc   = currentDoc;
+            this.currentPages = currentPages;
+            this.docFactory   = docFactory;
+            this.initError    = initError;
         }
 
         @Override
@@ -357,49 +352,43 @@ public class SmartArtDialog {
                 }
                 DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
 
-                // Use page 0 of the hidden doc — always present in a new Impress
-                // document. insertNewByIndex() triggers internal view-update code
-                // that dereferences a null controller on hidden documents, throwing
-                // "Null pointer" RuntimeException. Reusing page 0 avoids that path.
+                // Append a temporary slide, render the diagram onto it, export
+                // it as PNG, then remove the slide — leaving the document unchanged.
+                int origCount = currentPages.getCount();
+                currentPages.insertNewByIndex(origCount);
                 XDrawPage renderPage = UnoRuntime.queryInterface(XDrawPage.class,
-                        previewPages.getByIndex(0));
-                // Clear shapes left over from the previous preview click.
-                XShapes pageShapes = UnoRuntime.queryInterface(XShapes.class, renderPage);
-                if (pageShapes != null) {
-                    while (pageShapes.getCount() > 0) {
-                        XShape s = UnoRuntime.queryInterface(XShape.class,
-                                pageShapes.getByIndex(0));
-                        if (s != null) pageShapes.remove(s);
-                    }
+                        currentPages.getByIndex(origCount));
+                try {
+                    new SlideRenderer(context)
+                            .drawHierarchy(renderPage, docFactory, layout, ColorPalette.EMPTY);
+
+                    File tmp = File.createTempFile("smartart_prev_", ".png");
+                    tmp.deleteOnExit();
+                    String fileUrl = tmp.toURI().toString();
+
+                    XMultiComponentFactory smgr = context.getServiceManager();
+                    Object expObj = smgr.createInstanceWithContext(
+                            "com.sun.star.drawing.GraphicExporter", context);
+                    XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
+                    XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
+                    exporter.setSourceDocument(currentDoc);
+                    filter.filter(new PropertyValue[]{
+                        pv("MediaType",  "image/png"),
+                        pv("URL",        fileUrl),
+                        pv("Selection",  renderPage),
+                        pv("FilterData", new PropertyValue[]{
+                            pv("PixelWidth",  Integer.valueOf(800)),
+                            pv("PixelHeight", Integer.valueOf(600)),
+                        }),
+                    });
+
+                    XPropertySet imgModel = UnoRuntime.queryInterface(XPropertySet.class,
+                            container.getByName("imgPreview"));
+                    imgModel.setPropertyValue("ImageURL", fileUrl);
+                    setStatus("");
+                } finally {
+                    try { currentPages.remove(renderPage); } catch (Exception ignored) {}
                 }
-
-                new SlideRenderer(context)
-                        .drawHierarchy(renderPage, previewFactory, layout, ColorPalette.EMPTY);
-
-                File tmp = File.createTempFile("smartart_prev_", ".png");
-                tmp.deleteOnExit();
-                String fileUrl = tmp.toURI().toString();
-
-                XMultiComponentFactory smgr = context.getServiceManager();
-                Object expObj = smgr.createInstanceWithContext(
-                        "com.sun.star.drawing.GraphicExporter", context);
-                XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
-                XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
-                exporter.setSourceDocument(previewDoc);
-                filter.filter(new PropertyValue[]{
-                    pv("MediaType",  "image/png"),
-                    pv("URL",        fileUrl),
-                    pv("Selection",  renderPage),
-                    pv("FilterData", new PropertyValue[]{
-                        pv("PixelWidth",  Integer.valueOf(800)),
-                        pv("PixelHeight", Integer.valueOf(600)),
-                    }),
-                });
-
-                XPropertySet imgModel = UnoRuntime.queryInterface(XPropertySet.class,
-                        container.getByName("imgPreview"));
-                imgModel.setPropertyValue("ImageURL", fileUrl);
-                setStatus("");
             } catch (Exception e) {
                 String desc = e.getClass().getSimpleName();
                 if (e.getMessage() != null) desc += ": " + e.getMessage();
