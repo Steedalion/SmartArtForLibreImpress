@@ -163,28 +163,42 @@ public class SmartArtDialog {
         // Pre-create the hidden Impress doc BEFORE execute() — creating a new
         // document from inside a modal dialog's event handler is blocked by the
         // UNO event loop.
+        // Query all interfaces from the raw object returned by loadComponentFromURL
+        // (before narrowing to XComponent) to avoid UNO bridge narrowing issues.
         XComponent previewDoc = null;
         XDrawPages previewPages = null;
         XMultiServiceFactory previewFactory = null;
+        String previewInitError = null;
         try {
             Object desktopObj = smgr.createInstanceWithContext(
                     "com.sun.star.frame.Desktop", context);
             XComponentLoader loader =
                     UnoRuntime.queryInterface(XComponentLoader.class, desktopObj);
-            previewDoc = UnoRuntime.queryInterface(XComponent.class,
-                    loader.loadComponentFromURL(
-                            "private:factory/simpress", "_blank", 0,
-                            new PropertyValue[]{ pv("Hidden", Boolean.TRUE) }));
-            XDrawPagesSupplier pagesSupplier =
-                    UnoRuntime.queryInterface(XDrawPagesSupplier.class, previewDoc);
-            previewPages  = pagesSupplier.getDrawPages();
-            previewFactory = UnoRuntime.queryInterface(XMultiServiceFactory.class, previewDoc);
+            Object rawDoc = loader.loadComponentFromURL(
+                    "private:factory/simpress", "_blank", 0,
+                    new PropertyValue[]{ pv("Hidden", Boolean.TRUE) });
+            if (rawDoc != null) {
+                previewDoc     = UnoRuntime.queryInterface(XComponent.class, rawDoc);
+                XDrawPagesSupplier ps =
+                        UnoRuntime.queryInterface(XDrawPagesSupplier.class, rawDoc);
+                if (ps != null) {
+                    previewPages = ps.getDrawPages();
+                }
+                previewFactory = UnoRuntime.queryInterface(XMultiServiceFactory.class, rawDoc);
+            }
         } catch (Exception e) {
-            // Preview doc unavailable; button will show the error when clicked.
+            previewInitError = e.getClass().getSimpleName()
+                    + (e.getMessage() != null ? ": " + e.getMessage() : "");
+        }
+        if (previewInitError == null
+                && (previewDoc == null || previewPages == null || previewFactory == null)) {
+            previewInitError = "doc=" + previewDoc + " pages=" + previewPages
+                    + " factory=" + previewFactory;
         }
 
         bindButton(controls, "btnPreview",
-                new PreviewButtonListener(container, previewDoc, previewPages, previewFactory));
+                new PreviewButtonListener(container, previewDoc, previewPages,
+                        previewFactory, previewInitError));
 
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
         try {
@@ -308,20 +322,22 @@ public class SmartArtDialog {
         private final XComponent previewDoc;
         private final XDrawPages previewPages;
         private final XMultiServiceFactory previewFactory;
+        private final String initError;
 
         PreviewButtonListener(XNameContainer container,
                 XComponent previewDoc, XDrawPages previewPages,
-                XMultiServiceFactory previewFactory) {
-            this.container     = container;
-            this.previewDoc    = previewDoc;
-            this.previewPages  = previewPages;
+                XMultiServiceFactory previewFactory, String initError) {
+            this.container      = container;
+            this.previewDoc     = previewDoc;
+            this.previewPages   = previewPages;
             this.previewFactory = previewFactory;
+            this.initError      = initError;
         }
 
         @Override
         public void actionPerformed(ActionEvent event) {
-            if (previewDoc == null) {
-                setStatus("Preview doc unavailable");
+            if (initError != null) {
+                setStatus("Init error: " + initError);
                 return;
             }
             setStatus("Rendering…");
@@ -375,7 +391,9 @@ public class SmartArtDialog {
                     previewPages.remove(renderPage);
                 }
             } catch (Exception e) {
-                setStatus("Error: " + e.getMessage());
+                String desc = e.getClass().getSimpleName();
+                if (e.getMessage() != null) desc += ": " + e.getMessage();
+                setStatus("Error: " + desc);
             }
         }
 
