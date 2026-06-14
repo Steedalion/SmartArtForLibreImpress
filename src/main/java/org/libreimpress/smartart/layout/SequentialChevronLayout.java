@@ -74,27 +74,25 @@ public final class SequentialChevronLayout {
                     shape);
             int chevronIndex = out.addShape(chevronShape);
 
-            // Place level-2 children (subitems) as boxes below this chevron.
+            // Place level-2 children stacked vertically below this chevron,
+            // each centred on the chevron's X.  Vertical stacking prevents
+            // overlap with sub-item columns from adjacent chevrons.
             List<DiagramNode> subitems = chevronNode.getChildren();
             if (!subitems.isEmpty()) {
                 int w2 = nodeWidth(2);
                 int h2 = nodeHeight(2);
-                int totalSubitemWidth = subitems.size() * w2 + (subitems.size() - 1) * SUBITEM_GAP;
-                int subitemStartX = Math.max(chevronCX - totalSubitemWidth / 2,
-                        MARGIN_X);
+                int subitemX = chevronCX - w2 / 2;
                 int subitemY = chevronY + h1 + CHEVRON_TO_SUBITEM_GAP;
 
-                for (int j = 0; j < subitems.size(); j++) {
-                    DiagramNode subitem = subitems.get(j);
-                    int subitemX = subitemStartX + j * (w2 + SUBITEM_GAP);
+                for (DiagramNode subitem : subitems) {
                     LaidOutShape subitemShape = new LaidOutShape(
                             subitem.getText(), 2,
                             subitemX, subitemY, w2, h2);
                     int subitemIndex = out.addShape(subitemShape);
                     out.addEdge(chevronIndex, subitemIndex);
-                    // Recursively place level-3+ children below this sub-item.
                     placeSubtree(out, subitem.getChildren(),
                             subitemX + w2 / 2, subitemY + h2, subitemIndex, 3);
+                    subitemY += h2 + SUBITEM_GAP;
                 }
             }
         }
