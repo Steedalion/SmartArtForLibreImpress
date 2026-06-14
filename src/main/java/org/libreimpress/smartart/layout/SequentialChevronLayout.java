@@ -74,17 +74,24 @@ public final class SequentialChevronLayout {
                     shape);
             int chevronIndex = out.addShape(chevronShape);
 
-            // Place level-2 children stacked vertically below this chevron,
-            // each centred on the chevron's X.  Vertical stacking prevents
-            // overlap with sub-item columns from adjacent chevrons.
+            // Place level-2 children horizontally below this chevron, scaled to
+            // fit within the chevron's width.  With n children the available
+            // width is split evenly (minus gaps), so they never overflow into
+            // the adjacent chevron's column.
             List<DiagramNode> subitems = chevronNode.getChildren();
             if (!subitems.isEmpty()) {
-                int w2 = nodeWidth(2);
+                int n2 = subitems.size();
+                int baseW2 = nodeWidth(2);
                 int h2 = nodeHeight(2);
-                int subitemX = chevronCX - w2 / 2;
+                // Shrink each sub-item so the whole row fits inside the chevron.
+                int w2 = Math.min(baseW2, (w1 - (n2 - 1) * SUBITEM_GAP) / n2);
+                int totalSubitemWidth = n2 * w2 + (n2 - 1) * SUBITEM_GAP;
+                int subitemStartX = chevronCX - totalSubitemWidth / 2;
                 int subitemY = chevronY + h1 + CHEVRON_TO_SUBITEM_GAP;
 
-                for (DiagramNode subitem : subitems) {
+                for (int j = 0; j < n2; j++) {
+                    DiagramNode subitem = subitems.get(j);
+                    int subitemX = subitemStartX + j * (w2 + SUBITEM_GAP);
                     LaidOutShape subitemShape = new LaidOutShape(
                             subitem.getText(), 2,
                             subitemX, subitemY, w2, h2);
@@ -92,7 +99,6 @@ public final class SequentialChevronLayout {
                     out.addEdge(chevronIndex, subitemIndex);
                     placeSubtree(out, subitem.getChildren(),
                             subitemX + w2 / 2, subitemY + h2, subitemIndex, 3);
-                    subitemY += h2 + SUBITEM_GAP;
                 }
             }
         }
