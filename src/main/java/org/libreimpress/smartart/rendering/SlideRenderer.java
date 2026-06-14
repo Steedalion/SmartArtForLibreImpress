@@ -103,8 +103,7 @@ public class SlideRenderer {
             String service;
             if (s.getKind() == ShapeKind.ELLIPSE) {
                 service = "com.sun.star.drawing.EllipseShape";
-            } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
-                    || s.getKind() == ShapeKind.CIRCULAR_ARROW) {
+            } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
                 service = "com.sun.star.drawing.CustomShape";
             } else {
                 service = "com.sun.star.drawing.RectangleShape"; // RECTANGLE and PYRAMID_TIER
@@ -123,18 +122,6 @@ public class SlideRenderer {
                 chevronSeq++;
                 applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
                         DefaultPalette.fontSize(s.getLevel()));
-            } else if (s.getKind() == ShapeKind.CIRCULAR_ARROW) {
-                int userColor = palette.getFillColor(s.getLevel());
-                int fill = (userColor != ColorPalette.UNSET)
-                        ? userColor
-                        : DefaultPalette.chevronFill(chevronSeq);
-                chevronSeq++;
-                applyCircularArrowGeometry(shape, s.getArcSpan100());
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
-                XPropertySet rProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
-                rProps.setPropertyValue("RotateAngle",
-                        Integer.valueOf(s.getRotateAngle100()));
             } else if (s.getKind() == ShapeKind.PYRAMID_TIER) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
@@ -201,38 +188,6 @@ public class SlideRenderer {
         props.setPropertyValue("CharHeight", Float.valueOf(fontSize));
         props.setPropertyValue("LineStyle",
                 com.sun.star.drawing.LineStyle.NONE);
-    }
-
-    /**
-     * Applies the {@code circular-arrow} block-arrow custom shape geometry and
-     * sets the arc span via the first adjustment value.
-     *
-     * <p>LibreOffice's {@code circular-arrow} shape uses an adjustment value
-     * (index 0) to control how much of the full circle the arrow body spans.
-     * The value is expressed in 1/100 degrees (same unit as {@code RotateAngle}).
-     * A value of 8000 = 80°, 9000 = 90°, etc.
-     *
-     * @param arcSpan100 arc span in 1/100 degrees
-     */
-    private static void applyCircularArrowGeometry(Object shape, int arcSpan100)
-            throws Exception {
-        com.sun.star.beans.PropertyValue typeVal = new com.sun.star.beans.PropertyValue();
-        typeVal.Name  = "Type";
-        typeVal.Value = "circular-arrow";
-
-        com.sun.star.drawing.EnhancedCustomShapeAdjustmentValue arcAdj =
-                new com.sun.star.drawing.EnhancedCustomShapeAdjustmentValue();
-        arcAdj.Value = new com.sun.star.uno.Any(Double.class,
-                (double) arcSpan100 / 100.0);  // convert 1/100 deg → degrees
-        arcAdj.State = com.sun.star.beans.PropertyState.DIRECT_VALUE;
-
-        com.sun.star.beans.PropertyValue adjVal = new com.sun.star.beans.PropertyValue();
-        adjVal.Name  = "AdjustmentValues";
-        adjVal.Value = new com.sun.star.drawing.EnhancedCustomShapeAdjustmentValue[]{ arcAdj };
-
-        XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
-        props.setPropertyValue("CustomShapeGeometry",
-                new com.sun.star.beans.PropertyValue[]{ typeVal, adjVal });
     }
 
     /**

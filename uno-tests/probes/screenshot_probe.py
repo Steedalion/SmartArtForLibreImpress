@@ -367,6 +367,29 @@ def draw_pyramid(doc, page):
             cy += CHILD_H + CHILD_V_GAP
 
 
+def draw_cycle_arrows(doc, page):
+    """5 circles in a ring with curved directed arrows between adjacent circles."""
+    CIRCLE_D = 2200
+    RING_R   = 5500
+    CX, CY   = 25400 // 2, 19050 // 2
+    labels = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
+    colors = [BLUE, BLUE2, BLUE3, BLUE, BLUE2]
+    nodes = []
+    for i, (label, color) in enumerate(zip(labels, colors)):
+        angle = math.radians(-90 + i * 360 / len(labels))
+        nx = CX + int(RING_R * math.cos(angle))
+        ny = CY + int(RING_R * math.sin(angle))
+        s = add_ellipse(doc, page, nx - CIRCLE_D // 2, ny - CIRCLE_D // 2,
+                        CIRCLE_D, CIRCLE_D, label, color)
+        font_size(s, 11)
+        nodes.append(s)
+    for i in range(len(nodes)):
+        c = add_connector(doc, page, nodes[i], nodes[(i + 1) % len(nodes)],
+                          arrow_end=True)
+        c.setPropertyValue("EdgeKind",
+            uno.Enum("com.sun.star.drawing.ConnectorType", "CURVE"))
+
+
 def draw_cycle(doc, page):
     """5 nodes in a clockwise ring joined by directed straight arrows."""
     NODE_W, NODE_H = 3500, 1400
@@ -395,6 +418,7 @@ def draw_cycle(doc, page):
 
 DIAGRAMS = [
     ("pyramid",            draw_pyramid),
+    ("cycle-arrows",       draw_cycle_arrows),
     ("cycle",              draw_cycle),
     ("sequential-chevron", draw_sequential_chevron),
     ("hub-and-spoke",      draw_hub_and_spoke),
