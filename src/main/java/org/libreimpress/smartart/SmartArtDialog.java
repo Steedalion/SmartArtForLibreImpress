@@ -338,61 +338,95 @@ public class SmartArtDialog {
                 return;
             }
             setStatus("Rendering…");
+            // Track the last operation attempted so a "Null pointer" RuntimeException
+            // (whose message alone doesn't say where it came from) is pinpointed.
+            String step = "start";
+            XDrawPage renderPage = null;
+            boolean inserted = false;
             try {
+                step = "read-input";
                 String inputText = (String) getModelProp(container, "txtInput", "Text");
                 short[] selected = (short[]) getModelProp(container, "lstType", "SelectedItems");
                 int index = (selected != null && selected.length > 0) ? selected[0] : 0;
                 DiagramType type = DiagramType.fromIndex(index);
 
+                step = "parse";
                 ParseResult parsed = new HierarchyParser()
                         .parse(inputText == null ? "" : inputText);
                 if (!parsed.isValid()) {
                     setStatus("Parse error: " + parsed.getErrorMessage());
                     return;
                 }
+                step = "layout";
                 DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
 
                 // Append a temporary slide, render the diagram onto it, export
                 // it as PNG, then remove the slide — leaving the document unchanged.
+                step = "insert-slide";
                 int origCount = currentPages.getCount();
                 currentPages.insertNewByIndex(origCount);
-                XDrawPage renderPage = UnoRuntime.queryInterface(XDrawPage.class,
+                inserted = true;
+
+                step = "get-page";
+                renderPage = UnoRuntime.queryInterface(XDrawPage.class,
                         currentPages.getByIndex(origCount));
-                try {
-                    new SlideRenderer(context)
-                            .drawHierarchy(renderPage, docFactory, layout, ColorPalette.EMPTY);
 
-                    File tmp = File.createTempFile("smartart_prev_", ".png");
-                    tmp.deleteOnExit();
-                    String fileUrl = tmp.toURI().toString();
+                step = "render";
+                new SlideRenderer(context)
+                        .drawHierarchy(renderPage, docFactory, layout, ColorPalette.EMPTY);
 
-                    XMultiComponentFactory smgr = context.getServiceManager();
-                    Object expObj = smgr.createInstanceWithContext(
-                            "com.sun.star.drawing.GraphicExporter", context);
-                    XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
-                    XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
-                    exporter.setSourceDocument(currentDoc);
-                    filter.filter(new PropertyValue[]{
-                        pv("MediaType",  "image/png"),
-                        pv("URL",        fileUrl),
-                        pv("Selection",  renderPage),
-                        pv("FilterData", new PropertyValue[]{
-                            pv("PixelWidth",  Integer.valueOf(800)),
-                            pv("PixelHeight", Integer.valueOf(600)),
-                        }),
-                    });
+                step = "temp-file";
+                File tmp = File.createTempFile("smartart_prev_", ".png");
+                tmp.deleteOnExit();
+                String fileUrl = tmp.toURI().toString();
 
-                    XPropertySet imgModel = UnoRuntime.queryInterface(XPropertySet.class,
-                            container.getByName("imgPreview"));
-                    imgModel.setPropertyValue("ImageURL", fileUrl);
-                    setStatus("");
-                } finally {
-                    try { currentPages.remove(renderPage); } catch (Exception ignored) {}
+                step = "create-exporter";
+                XMultiComponentFactory smgr = context.getServiceManager();
+                Object expObj = smgr.createInstanceWithContext(
+                        "com.sun.star.drawing.GraphicExportFilter", context);
+                if (expObj == null) {
+                    throw new Exception("GraphicExportFilter service unavailable");
                 }
+                XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
+                XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
+                if (exporter == null || filter == null) {
+                    throw new Exception("exporter=" + exporter + " filter=" + filter);
+                }
+
+                // GraphicExporter exports the component passed to setSourceDocument.
+                // Pass the draw PAGE itself (it implements XComponent), not the whole
+                // document with a Selection — the document path needs a live view and
+                // can throw RuntimeException("Null pointer").
+                step = "set-source";
+                XComponent pageComp =
+                        UnoRuntime.queryInterface(XComponent.class, renderPage);
+                exporter.setSourceDocument(pageComp);
+
+                step = "filter-export";
+                filter.filter(new PropertyValue[]{
+                    pv("MediaType",  "image/png"),
+                    pv("URL",        fileUrl),
+                    pv("FilterData", new PropertyValue[]{
+                        pv("PixelWidth",  Integer.valueOf(800)),
+                        pv("PixelHeight", Integer.valueOf(600)),
+                    }),
+                });
+
+                step = "set-image";
+                XPropertySet imgModel = UnoRuntime.queryInterface(XPropertySet.class,
+                        container.getByName("imgPreview"));
+                imgModel.setPropertyValue("ImageURL", fileUrl);
+                setStatus("");
             } catch (Exception e) {
                 String desc = e.getClass().getSimpleName();
                 if (e.getMessage() != null) desc += ": " + e.getMessage();
-                setStatus("Error: " + desc);
+                setStatus("Error@" + step + ": " + desc);
+            } finally {
+                if (inserted) {
+                    try {
+                        if (renderPage != null) currentPages.remove(renderPage);
+                    } catch (Exception ignored) {}
+                }
             }
         }
 
