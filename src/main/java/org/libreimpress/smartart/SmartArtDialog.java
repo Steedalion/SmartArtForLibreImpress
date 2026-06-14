@@ -14,9 +14,7 @@ import com.sun.star.awt.XControlModel;
 import com.sun.star.awt.XDialog;
 import com.sun.star.awt.XExtendedToolkit;
 import com.sun.star.awt.XKeyHandler;
-import com.sun.star.awt.XListBox;
 import com.sun.star.awt.XTextComponent;
-import com.sun.star.awt.XTextListener;
 import com.sun.star.awt.XToolkit;
 import com.sun.star.awt.XWindow2;
 import com.sun.star.beans.PropertyState;
@@ -197,28 +195,7 @@ public class SmartArtDialog {
                 currentPages, docFactory, previewInitError);
         bindButton(controls, "btnPreview", new PreviewButtonListener(preview));
 
-        // Live preview: re-render (debounced) whenever the input, palette, or
-        // diagram type changes. The outline buttons and key handler edit the
-        // text via setText(), which also fires textChanged — so they are covered
-        // automatically without separate wiring.
-        XTextListener previewText = new PreviewTextListener(preview);
-        if (editText != null) {
-            editText.addTextListener(previewText);
-        }
-        XTextComponent paletteEdit = UnoRuntime.queryInterface(
-                XTextComponent.class, controls.getControl("txtPalette"));
-        if (paletteEdit != null) {
-            paletteEdit.addTextListener(previewText);
-        }
-        XListBox typeList = UnoRuntime.queryInterface(
-                XListBox.class, controls.getControl("lstType"));
-        if (typeList != null) {
-            typeList.addItemListener(new PreviewItemListener(preview));
-        }
-
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
-        // Render an initial preview shortly after the dialog appears.
-        preview.schedule();
         try {
             short ret = xDialog.execute();
             if (ret != PushButtonType.OK_value) {
@@ -518,21 +495,6 @@ public class SmartArtDialog {
         @Override public void disposing(com.sun.star.lang.EventObject event) {}
     }
 
-    /** Re-renders (debounced) when the input or palette text changes. */
-    private final class PreviewTextListener implements XTextListener {
-        private final PreviewController controller;
-        PreviewTextListener(PreviewController controller) { this.controller = controller; }
-        @Override public void textChanged(com.sun.star.awt.TextEvent event) { controller.schedule(); }
-        @Override public void disposing(com.sun.star.lang.EventObject event) {}
-    }
-
-    /** Re-renders (debounced) when the diagram type selection changes. */
-    private final class PreviewItemListener implements com.sun.star.awt.XItemListener {
-        private final PreviewController controller;
-        PreviewItemListener(PreviewController controller) { this.controller = controller; }
-        @Override public void itemStateChanged(com.sun.star.awt.ItemEvent event) { controller.schedule(); }
-        @Override public void disposing(com.sun.star.lang.EventObject event) {}
-    }
 
     // -------------------------------------------------------------------------
     // Control factory helpers
