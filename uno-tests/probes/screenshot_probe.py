@@ -238,16 +238,19 @@ def draw_hub_and_spoke(doc, page):
         font_size(spoke, 11)
         add_connector(doc, page, hub, spoke, straight=True)
 
-        # Level-3 children radially outward from this spoke
-        dist = SPOKE_D // 2 + CHILD_GAP + CHILD_D // 2
-        for child_label in children:
-            ccx = scx + int(dist * math.cos(angle))
-            ccy = scy + int(dist * math.sin(angle))
+        # Level-3 children in a 90° fan centred on the spoke's outward angle.
+        n_ch = len(children)
+        child_dist = SPOKE_D // 2 + CHILD_GAP + CHILD_D // 2
+        fan = math.pi / 2
+        for k, child_label in enumerate(children):
+            child_angle = angle if n_ch == 1 \
+                else angle - fan / 2 + k * fan / (n_ch - 1)
+            ccx = scx + int(child_dist * math.cos(child_angle))
+            ccy = scy + int(child_dist * math.sin(child_angle))
             child = add_ellipse(doc, page, ccx - CHILD_D//2, ccy - CHILD_D//2,
                                 CHILD_D, CHILD_D, child_label, BLUE3)
             font_size(child, 9)
             add_connector(doc, page, spoke, child, straight=True)
-            dist += CHILD_D + CHILD_GAP
 
 
 def draw_process_flow(doc, page):
@@ -275,18 +278,25 @@ def draw_process_flow(doc, page):
         c.setPropertyValue("StartGluePointIndex", 1)   # right
         c.setPropertyValue("EndGluePointIndex",   3)   # left
 
-    # Sub-items stacked below each step
+    # Sub-items in a horizontal row below each step, scaled to fit within step width.
+    CHILD_H_GAP = 400
     for i, (_, _, subs) in enumerate(steps):
+        if not subs:
+            continue
         x = start_x + i * (W + GAP)
         cx = x + W // 2
         child_y = Y1 + H + V_GAP
-        for sub in subs:
-            cs = add_rect(doc, page, cx - W2 // 2, child_y, W2, H2, sub, GREEN)
+        n_subs = len(subs)
+        sub_w = min(W2, (W - (n_subs - 1) * CHILD_H_GAP) // n_subs)
+        total_child_w = n_subs * sub_w + (n_subs - 1) * CHILD_H_GAP
+        sub_start_x = cx - total_child_w // 2
+        for j, sub in enumerate(subs):
+            sx = sub_start_x + j * (sub_w + CHILD_H_GAP)
+            cs = add_rect(doc, page, sx, child_y, sub_w, H2, sub, GREEN)
             font_size(cs, 11)
             c = add_connector(doc, page, nodes[i], cs)
             c.setPropertyValue("StartGluePointIndex", 2)   # bottom
             c.setPropertyValue("EndGluePointIndex",   0)   # top
-            child_y += H2 + V_GAP
 
 
 def draw_hierarchy(doc, page):

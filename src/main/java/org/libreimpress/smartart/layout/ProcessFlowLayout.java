@@ -18,6 +18,7 @@ public final class ProcessFlowLayout {
     static final int SIZE_DECREMENT = 30; // reduce size by 30 per level depth
     static final int H_GAP = 1500;  // space between consecutive step boxes
     static final int V_GAP = 800;   // vertical gap between parent and child rows
+    static final int CHILD_H_GAP = 400; // horizontal gap between children in a row
     static final int SLIDE_W = 25400; // standard Impress slide: 254 mm
     static final int SLIDE_H = 19050; // standard Impress slide: 190.5 mm
     static final int MARGIN_X = 1000;
@@ -74,19 +75,24 @@ public final class ProcessFlowLayout {
             out.addEdge(new Edge(indices[i], indices[i + 1], 1, 3, false, true));
         }
 
-        // Place level-2 children below each step, stacked vertically.
-        int w2 = nodeWidth(2);
+        // Place level-2 children below each step in a horizontal row, scaled to
+        // fit within the step's width so columns never overlap.
+        int baseW2 = nodeWidth(2);
         int h2 = nodeHeight(2);
+        int childY = y1 + h1 + V_GAP;
         for (int i = 0; i < n; i++) {
             List<DiagramNode> children = steps.get(i).getChildren();
-            int childY = y1 + h1 + V_GAP;
-            for (DiagramNode child : children) {
-                int childX = stepCXs[i] - w2 / 2;
-                int childIdx = out.addShape(
-                        new LaidOutShape(child.getText(), 2, childX, childY, w2, h2));
+            if (children.isEmpty()) continue;
+            int nc = children.size();
+            int w2 = Math.min(baseW2, (w1 - (nc - 1) * CHILD_H_GAP) / nc);
+            int totalChildW = nc * w2 + (nc - 1) * CHILD_H_GAP;
+            int childStartX = stepCXs[i] - totalChildW / 2;
+            for (int j = 0; j < nc; j++) {
+                int childX = childStartX + j * (w2 + CHILD_H_GAP);
+                int childIdx = out.addShape(new LaidOutShape(
+                        children.get(j).getText(), 2, childX, childY, w2, h2));
                 // bottom of parent (glue 2) → top of child (glue 0)
                 out.addEdge(indices[i], childIdx, 2, 0);
-                childY += h2 + V_GAP;
             }
         }
 

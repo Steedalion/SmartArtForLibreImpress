@@ -115,14 +115,17 @@ public class ProcessFlowLayoutTest {
         DiagramLayout layout = ProcessFlowLayout.layout(root);
         assertEquals(3, layout.getShapes().size()); // 1 step + 2 children
 
-        LaidOutShape s = layout.getShapes().get(0); // the step
+        LaidOutShape s  = layout.getShapes().get(0); // the step
         LaidOutShape c1 = layout.getShapes().get(1);
         LaidOutShape c2 = layout.getShapes().get(2);
 
-        assertTrue("child 1 should be below step", c1.getY() > s.getY());
-        assertTrue("child 2 should be below child 1", c2.getY() > c1.getY());
-        assertEquals("children centred under step", s.centerX(), c1.centerX());
-        assertEquals("children centred under step", s.centerX(), c2.centerX());
+        // Both children are on the same horizontal row below the step.
+        assertTrue("children should be below step", c1.getY() > s.getY());
+        assertEquals("both children share the same Y", c1.getY(), c2.getY());
+        assertTrue("c2 should be to the right of c1", c2.getX() > c1.getX());
+        // The row as a whole is centred under the step.
+        int rowMidX = (c1.centerX() + c2.centerX()) / 2;
+        assertEquals("row midpoint should align with step centre", s.centerX(), rowMidX);
     }
 
     @Test

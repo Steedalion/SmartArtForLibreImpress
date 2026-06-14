@@ -80,41 +80,49 @@ public final class HubAndSpokeLayout {
         return out;
     }
 
+    /** Total angular spread (radians) for a fan of children around a parent. */
+    private static final double FAN_ANGLE = Math.PI / 2;  // 90°
+
     /**
-     * Recursively places children of a spoke (or a child node) along the
-     * same radial angle, further from the hub centre.
+     * Recursively places children in a fan centred on the parent's outward
+     * angle.  Each child gets its own angle within the fan; that angle is then
+     * used as the outward angle for the child's own descendants, so the tree
+     * fans naturally at every level.
      *
-     * @param parentCX  centre X of the parent circle
-     * @param parentCY  centre Y of the parent circle
-     * @param parentD   diameter of the parent circle
-     * @param angle     radial angle from hub (radians)
-     * @param level     level of these children
-     * @param parentIdx shape index of the parent
+     * @param parentCX    centre X of the parent circle
+     * @param parentCY    centre Y of the parent circle
+     * @param parentD     diameter of the parent circle
+     * @param outAngle    radial angle pointing away from the hub (radians)
+     * @param level       level of these children
+     * @param parentIdx   shape index of the parent
      */
     private static void placeChildren(DiagramLayout out,
                                       List<DiagramNode> children,
                                       int parentCX, int parentCY,
-                                      int parentD, double angle,
+                                      int parentD, double outAngle,
                                       int level, int parentIdx) {
         if (children.isEmpty()) {
             return;
         }
+        int n = children.size();
         int childD = nodeDiameter(level);
-        // Starting centre-to-centre distance: parent radius + gap + child radius.
         double dist = parentD / 2.0 + CHILD_GAP + childD / 2.0;
 
-        for (DiagramNode child : children) {
-            int childCX = parentCX + (int) Math.round(dist * Math.cos(angle));
-            int childCY = parentCY + (int) Math.round(dist * Math.sin(angle));
+        for (int i = 0; i < n; i++) {
+            // Spread children in a FAN_ANGLE arc centred on outAngle.
+            double childAngle = (n == 1)
+                    ? outAngle
+                    : outAngle - FAN_ANGLE / 2 + i * FAN_ANGLE / (n - 1);
+            int childCX = parentCX + (int) Math.round(dist * Math.cos(childAngle));
+            int childCY = parentCY + (int) Math.round(dist * Math.sin(childAngle));
             LaidOutShape childShape = new LaidOutShape(
-                    child.getText(), level,
+                    children.get(i).getText(), level,
                     childCX - childD / 2, childCY - childD / 2, childD, childD,
                     ShapeKind.ELLIPSE);
             int childIdx = out.addShape(childShape);
             out.addEdge(new Edge(parentIdx, childIdx, -1, -1, true));
-            placeChildren(out, child.getChildren(), childCX, childCY,
-                    childD, angle, level + 1, childIdx);
-            dist += childD + CHILD_GAP;
+            placeChildren(out, children.get(i).getChildren(), childCX, childCY,
+                    childD, childAngle, level + 1, childIdx);
         }
     }
 }
