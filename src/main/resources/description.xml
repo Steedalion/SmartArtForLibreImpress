@@ -2,7 +2,7 @@
 <description xmlns="http://openoffice.org/extensions/description/2006"
              xmlns:xlink="http://www.w3.org/1999/xlink">
     <identifier value="org.libreimpress.smartart"/>
-    <version value="0.1.0"/>
+    <version value="${project.version}"/>
     <display-name>
         <name lang="en">LibreImpress SmartArt</name>
     </display-name>

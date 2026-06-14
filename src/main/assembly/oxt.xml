@@ -9,8 +9,10 @@
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <fileSets>
+        <!-- Use the filtered build output so ${project.version} and other
+             Maven properties are substituted in description.xml and .xcu files. -->
         <fileSet>
-            <directory>${project.basedir}/src/main/resources</directory>
+            <directory>${project.build.outputDirectory}</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
                 <include>META-INF/**</include>
