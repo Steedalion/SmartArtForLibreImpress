@@ -28,7 +28,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 │   ├── Phase9_ImplementationPlan.md   — Phase 9: Sequential Chevron level-3+ children
 │   ├── Phase10_ImplementationPlan.md  — Phase 10: User colour palette via dialog
 │   ├── Phase11_ImplementationPlan.md  — Phase 11: Cycle diagram type
-│   └── Phase12_ImplementationPlan.md  — Phase 12: Pyramid diagram type
+│   ├── Phase12_ImplementationPlan.md  — Phase 12: Pyramid diagram type
+│   └── Phase13_ImplementationPlan.md  — Phase 13: Cycle (Blocks) diagram type
 │
 ├── Architecture_VDiagram.md       — architecture overview & V-model development process
 ├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)
@@ -41,7 +42,7 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 - When the master spec and a phase plan disagree, the master spec wins; update
   the phase plan to match.
 
-### 1.2 Implementation Status (as of 2026-06-13)
+### 1.2 Implementation Status (as of 2026-06-14)
 
 | Phase | Scope | Status |
 |-------|-------|--------|
@@ -55,23 +56,33 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 4.4 | Diagram-type shapes/layouts (Hub & Spoke, Process Flow, Sequential Chevron) | ✅ Done |
 | 5 | Default colour palette: blue/green by level, white text, no border | ✅ Done |
 | 6 | Arrow heads on Process Flow step connectors; font size scaling by level | ✅ Done |
-| 7 | Process Flow sub-items stacked vertically below each step | ✅ Done |
-| 8 | Hub & Spoke level-3+ children stacked radially outward from their spoke | ✅ Done |
+| 7 | Process Flow sub-items: horizontal row scaled to fit within each step's width | ✅ Done |
+| 8 | Hub & Spoke level-3+ children spread in a radial fan around their spoke | ✅ Done |
 | 9 | Sequential Chevron level-3+ children stacked below sub-items | ✅ Done |
 | 10 | User-provided colour palette via dialog (optional, per-level hex colours) | ✅ Done |
-| 11 | Cycle diagram: clockwise ring of rectangles with directed arrows | ✅ Done |
-| 12 | Pyramid diagram: stepped rectangular tiers, narrowest at top, widest at base | ⏳ Planned |
+| 11 | Cycle diagram: clockwise ring of rectangles with directed arrows; Cycle (Arrows): circles with curved connector arrows | ✅ Done |
+| 12 | Pyramid diagram: stepped rectangular tiers, narrowest at top, widest at base | ✅ Done |
+| 13 | Cycle (Blocks): rectangles in a ring with solid block-arrow shapes between them | ✅ Done |
 
-**What works today (Phases 1–11):** clicking **SmartArt → Create Diagram…**
+**What works today (Phases 1–13):** clicking **SmartArt → Create Diagram…**
 opens a programmatic dialog (diagram-type dropdown + multiline text + optional
-colour palette field); on **Create** the indented text is parsed into a
-validated hierarchy and the chosen diagram type is rendered as grouped, editable
-shapes on the current slide. Six diagram types are fully implemented (Hierarchy,
-Hub & Spoke, Process Flow, Sequential Chevron, Cycle, Cycle (Arrows)) with
-unlimited sub-item depth, a built-in colour palette, font sizing by level,
-directional arrow connectors on Process Flow and Cycle, and per-level colour
-overrides via the palette field (format: `1=#4472C4`).
-Phase 12 (Pyramid) is planned next.
+colour palette field); on **Create** the indented text is parsed into a validated
+hierarchy and the chosen diagram type is rendered as grouped, editable shapes on
+the current slide. Eight diagram types are fully implemented:
+
+| Type | Description |
+|------|-------------|
+| Hierarchy | Top-down tree of rectangles with connector lines |
+| Hub & Spoke | Central circle with spoke circles radiating outward; level-3+ children fan radially from their spoke |
+| Process Flow | Left-to-right steps; level-2 sub-items sit in a horizontal row scaled to fit the step width |
+| Sequential Chevron | Pentagon → chevron steps; level-2 sub-items in a scaled horizontal row below each step |
+| Cycle | Clockwise ring of rectangles with directed straight-line arrows |
+| Cycle (Arrows) | Clockwise ring of circles with directed curved connector arrows |
+| Cycle (Blocks) | Clockwise ring of rectangles with solid block-arrow shapes between adjacent nodes |
+| Pyramid | Centre-aligned rectangular tiers stacked top-to-bottom, apex narrowest; level-2+ sub-items to the right |
+
+All types share: built-in blue/green colour palette, font sizing by level, and
+per-level colour overrides via the palette field (format: `1=#4472C4`).
 Sections 2–8 below describe the target product.
 
 ### 1.3 How these documents are written (and the one-shot goal)
@@ -137,9 +148,45 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 - **Purpose:** Sequential steps or workflow
 - **Level Structure:**
   - Level 1: Primary process steps
-  - Level 2+: Sub-steps or decision points
-- **Layout:** Linear/sequential arrangement
-- **Connections:** Sequential connections between steps; sub-steps branch from main path
+  - Level 2+: Sub-steps branching from each step
+- **Layout:** Left-to-right row of steps; level-2 sub-items sit in a horizontal
+  row below their parent step, scaled proportionally so the row fits within the
+  step's width
+- **Connections:** Arrow connectors between consecutive steps; vertical connectors
+  from each step to its sub-items
+
+#### 2.2.5 Sequential Chevron Diagram
+- **Purpose:** Linear process with a visually progressive arrow motif
+- **Level Structure:**
+  - Level 1: Process steps (first rendered as a flat-back pentagon, rest as chevrons)
+  - Level 2+: Sub-items below each chevron
+- **Layout:** Left-to-right chevron strip; level-2 sub-items in a horizontal row
+  below each parent chevron, scaled to fit within the chevron's width
+- **Connections:** None between chevrons (the interlocking shape implies flow);
+  connectors from chevrons to sub-item boxes
+
+#### 2.2.6 Cycle Diagram
+- **Purpose:** Circular process with no defined start or end
+- **Level Structure:** Level 1 only (sub-items are ignored)
+- **Layout:** Nodes as rectangles arranged clockwise at equal angular intervals
+  around a ring
+- **Connections:** Directed straight-line arrows between adjacent nodes (wrapping
+  from the last node back to the first)
+
+#### 2.2.7 Cycle (Arrows) Diagram
+- **Purpose:** Circular process emphasising the flow between nodes
+- **Level Structure:** Level 1 only (sub-items are ignored)
+- **Layout:** Nodes as circles arranged clockwise around a ring
+- **Connections:** Directed curved connector arrows between adjacent circles
+
+#### 2.2.8 Cycle (Blocks) Diagram
+- **Purpose:** Circular process using solid block shapes for both nodes and
+  directional indicators
+- **Level Structure:** Level 1 only (sub-items are ignored)
+- **Layout:** Nodes as rectangles arranged clockwise around a ring; a solid
+  block arrow (`right-arrow` CustomShape) is placed at the midpoint between each
+  pair of adjacent rectangles and rotated to point toward the next node
+- **Connections:** None (the block arrows are positioned shapes, not connectors)
 
 ---
 
@@ -190,7 +237,8 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 
 The dialog collects, with **Create** and **Cancel** actions:
 
-- **Diagram type** — one of Hierarchy, Hub & Spoke, or Process Flow (a dropdown).
+- **Diagram type** — one of Hierarchy, Hub & Spoke, Process Flow, Sequential
+  Chevron, Cycle, Cycle (Arrows), Cycle (Blocks), or Pyramid (a dropdown).
 - **Text points** — a multi-line field that **is a list and stays a list**: it
   opens pre-filled with a starter outline, each line is one node, and leading
   indentation expresses nesting (per the rules in §5.2). It behaves as an outline
@@ -306,7 +354,7 @@ actually work is described in `TESTING_STRATEGY.md`.
 
 ## 9. Success Criteria
 
-Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
+Status as of 2026-06-14 (✅ met):
 
 ✅ Plugin loads / installs without errors (verified by `uno-tests/run.sh`)  
 ✅ Dialog accepts text input with indentation  
@@ -316,10 +364,13 @@ Status as of 2026-06-13 (✅ met · ⏳ pending the noted phase):
 ✅ Hierarchy is visually reflected in output (Phase 4.2)  
 ✅ Output is grouped and editable (Phase 4.3)  
 ✅ All diagram types generate correctly — Hierarchy, Hub & Spoke, Process Flow, Sequential Chevron (Phase 4.4)  
-✅ Sub-items rendered in all diagram types — Process Flow (Phase 7), Hub & Spoke (Phase 8)  
 ✅ Default styling applied when palette missing — built-in palette, font sizing, arrow heads (Phases 5–6)  
-✅ Sequential Chevron level-3+ children (Phase 9)  
-✅ Color palette (when provided) is applied (Phase 10)
-⏳ Pyramid diagram renders stepped tiers with apex at top and base at bottom (Phase 12)
+✅ Process Flow sub-items rendered in a horizontal row scaled to fit each step's width (Phase 7)  
+✅ Hub & Spoke level-3+ children spread in a 90° radial fan around their spoke (Phase 8)  
+✅ Sequential Chevron sub-items rendered in a horizontal row scaled to fit each chevron's width (Phase 9)  
+✅ Color palette (when provided) is applied per level (Phase 10)  
+✅ Cycle and Cycle (Arrows) diagrams render correctly — directed arrows, circular arrangement (Phase 11)  
+✅ Pyramid diagram renders stepped tiers with apex at top and base at bottom (Phase 12)  
+✅ Cycle (Blocks) renders rectangles in a ring with solid block-arrow shapes pointing clockwise (Phase 13)
 
 

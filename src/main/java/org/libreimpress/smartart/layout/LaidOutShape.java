@@ -54,6 +54,6 @@ public final class LaidOutShape {
     /** Counter-clockwise rotation in 1/100 degrees (LibreOffice RotateAngle convention) (0 = upright). */
     public int getRotateAngle100() { return rotateAngle100; }
 
-    /** Arc span in 1/100 degrees; only meaningful for {@link ShapeKind#CIRCULAR_ARROW}. */
+    /** Arc span in 1/100 degrees (reserved for future arc-shaped types). */
     public int getArcSpan100() { return arcSpan100; }
 }

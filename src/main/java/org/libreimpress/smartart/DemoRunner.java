@@ -21,11 +21,13 @@ import com.sun.star.uno.XComponentContext;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
 import org.libreimpress.smartart.layout.CycleArrowLayout;
+import org.libreimpress.smartart.layout.CycleBlockLayout;
 import org.libreimpress.smartart.layout.CycleLayout;
 import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.HierarchyLayout;
 import org.libreimpress.smartart.layout.HubAndSpokeLayout;
 import org.libreimpress.smartart.layout.ProcessFlowLayout;
+import org.libreimpress.smartart.layout.PyramidLayout;
 import org.libreimpress.smartart.layout.SequentialChevronLayout;
 import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramNode;
@@ -101,6 +103,20 @@ final class DemoRunner {
             DiagramType.CYCLE_ARROW, "Cycle (Arrows)",
             "Plan\nDo\nCheck\nAct"
         },
+        {
+            DiagramType.CYCLE_BLOCK, "Cycle (Blocks)",
+            "Plan\nDo\nCheck\nAct"
+        },
+        {
+            DiagramType.PYRAMID, "Pyramid",
+            "Vision\n"
+            + I  + "Goal A\n"
+            + "Strategy\n"
+            + I  + "Goal B\n"
+            + "Execution\n"
+            + I  + "Goal C\n"
+            + "Results"
+        },
     };
 
     private final XComponentContext context;
@@ -145,6 +161,7 @@ final class DemoRunner {
             view.setCurrentPage(page);
 
             addCornerLabel(factory, page, "[DEV DEMO] " + slideLabel);
+            addInputListing(factory, page, inputText);
 
             ParseResult parsed = new HierarchyParser().parse(inputText);
             if (!parsed.isValid()) {
@@ -165,8 +182,36 @@ final class DemoRunner {
             case SEQUENTIAL_CHEVRON: return SequentialChevronLayout.layout(root);
             case CYCLE:              return CycleLayout.layout(root);
             case CYCLE_ARROW:        return CycleArrowLayout.layout(root);
+            case CYCLE_BLOCK:        return CycleBlockLayout.layout(root);
+            case PYRAMID:            return PyramidLayout.layout(root);
             default:                 return HierarchyLayout.layout(root);
         }
+    }
+
+    /**
+     * Monospace input listing in the bottom-left corner so the viewer can see
+     * exactly what text was fed to the parser for this diagram.
+     */
+    private static void addInputListing(XMultiServiceFactory factory,
+            XDrawPage page, String inputText) throws Exception {
+        Object shape = factory.createInstance("com.sun.star.drawing.TextShape");
+        XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
+        XShapes xShapes = UnoRuntime.queryInterface(XShapes.class, page);
+        xShapes.add(xShape);
+        xShape.setPosition(new Point(400, 14200));
+        xShape.setSize(new Size(9000, 4500));
+
+        XText xText = UnoRuntime.queryInterface(XText.class, shape);
+        if (xText != null) {
+            xText.setString("Input:\n" + inputText);
+        }
+        XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
+        props.setPropertyValue("FillStyle",   com.sun.star.drawing.FillStyle.NONE);
+        props.setPropertyValue("LineStyle",   com.sun.star.drawing.LineStyle.NONE);
+        props.setPropertyValue("CharColor",   Integer.valueOf(0x555555));
+        props.setPropertyValue("CharHeight",  Float.valueOf(7.5f));
+        props.setPropertyValue("CharFontName", "Liberation Mono");
+        props.setPropertyValue("TextAutoGrowHeight", Boolean.TRUE);
     }
 
     /** Small grey italic label in the top-left corner to identify the slide as a dev demo. */

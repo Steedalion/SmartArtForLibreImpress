@@ -52,16 +52,21 @@ public final class PyramidLayout {
                     tiers.get(i).getText(), i + 1, x, y, w, TIER_H, ShapeKind.PYRAMID_TIER));
         }
 
+        // Child column is anchored to the right edge of the base (widest tier)
+        // so that all children share a consistent column regardless of tier width.
+        int childColumnX = (SLIDE_W + MAX_W) / 2 + CHILD_GAP;
+
         for (int i = 0; i < n; i++) {
             List<DiagramNode> children = tiers.get(i).getChildren();
             if (children.isEmpty()) {
                 continue;
             }
-            int childX = (SLIDE_W + tierWidths[i]) / 2 + CHILD_GAP;
-            int childY = tierYs[i];
+            int nc = children.size();
+            int totalH = nc * CHILD_H + (nc - 1) * CHILD_V_GAP;
+            int childY = tierYs[i] + (TIER_H - totalH) / 2;
             for (DiagramNode child : children) {
                 out.addShape(new LaidOutShape(
-                        child.getText(), child.getLevel(), childX, childY,
+                        child.getText(), child.getLevel(), childColumnX, childY,
                         CHILD_W, CHILD_H, ShapeKind.RECTANGLE));
                 childY += CHILD_H + CHILD_V_GAP;
             }
