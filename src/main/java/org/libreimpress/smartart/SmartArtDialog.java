@@ -26,6 +26,8 @@ import com.sun.star.document.XFilter;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawPages;
 import com.sun.star.drawing.XDrawPagesSupplier;
+import com.sun.star.drawing.XShape;
+import com.sun.star.drawing.XShapes;
 import com.sun.star.frame.XComponentLoader;
 import com.sun.star.lang.XComponent;
 import com.sun.star.lang.XMultiComponentFactory;
@@ -355,41 +357,49 @@ public class SmartArtDialog {
                 }
                 DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
 
-                // Add a fresh page for this render; remove it afterwards.
-                previewPages.insertNewByIndex(previewPages.getCount());
+                // Use page 0 of the hidden doc — always present in a new Impress
+                // document. insertNewByIndex() triggers internal view-update code
+                // that dereferences a null controller on hidden documents, throwing
+                // "Null pointer" RuntimeException. Reusing page 0 avoids that path.
                 XDrawPage renderPage = UnoRuntime.queryInterface(XDrawPage.class,
-                        previewPages.getByIndex(previewPages.getCount() - 1));
-                try {
-                    new SlideRenderer(context)
-                            .drawHierarchy(renderPage, previewFactory, layout, ColorPalette.EMPTY);
-
-                    File tmp = File.createTempFile("smartart_prev_", ".png");
-                    tmp.deleteOnExit();
-                    String fileUrl = tmp.toURI().toString();
-
-                    XMultiComponentFactory smgr = context.getServiceManager();
-                    Object expObj = smgr.createInstanceWithContext(
-                            "com.sun.star.drawing.GraphicExporter", context);
-                    XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
-                    XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
-                    exporter.setSourceDocument(previewDoc);
-                    filter.filter(new PropertyValue[]{
-                        pv("MediaType",  "image/png"),
-                        pv("URL",        fileUrl),
-                        pv("Selection",  renderPage),
-                        pv("FilterData", new PropertyValue[]{
-                            pv("PixelWidth",  Integer.valueOf(800)),
-                            pv("PixelHeight", Integer.valueOf(600)),
-                        }),
-                    });
-
-                    XPropertySet imgModel = UnoRuntime.queryInterface(XPropertySet.class,
-                            container.getByName("imgPreview"));
-                    imgModel.setPropertyValue("ImageURL", fileUrl);
-                    setStatus("");
-                } finally {
-                    previewPages.remove(renderPage);
+                        previewPages.getByIndex(0));
+                // Clear shapes left over from the previous preview click.
+                XShapes pageShapes = UnoRuntime.queryInterface(XShapes.class, renderPage);
+                if (pageShapes != null) {
+                    while (pageShapes.getCount() > 0) {
+                        XShape s = UnoRuntime.queryInterface(XShape.class,
+                                pageShapes.getByIndex(0));
+                        if (s != null) pageShapes.remove(s);
+                    }
                 }
+
+                new SlideRenderer(context)
+                        .drawHierarchy(renderPage, previewFactory, layout, ColorPalette.EMPTY);
+
+                File tmp = File.createTempFile("smartart_prev_", ".png");
+                tmp.deleteOnExit();
+                String fileUrl = tmp.toURI().toString();
+
+                XMultiComponentFactory smgr = context.getServiceManager();
+                Object expObj = smgr.createInstanceWithContext(
+                        "com.sun.star.drawing.GraphicExporter", context);
+                XExporter exporter = UnoRuntime.queryInterface(XExporter.class, expObj);
+                XFilter filter = UnoRuntime.queryInterface(XFilter.class, expObj);
+                exporter.setSourceDocument(previewDoc);
+                filter.filter(new PropertyValue[]{
+                    pv("MediaType",  "image/png"),
+                    pv("URL",        fileUrl),
+                    pv("Selection",  renderPage),
+                    pv("FilterData", new PropertyValue[]{
+                        pv("PixelWidth",  Integer.valueOf(800)),
+                        pv("PixelHeight", Integer.valueOf(600)),
+                    }),
+                });
+
+                XPropertySet imgModel = UnoRuntime.queryInterface(XPropertySet.class,
+                        container.getByName("imgPreview"));
+                imgModel.setPropertyValue("ImageURL", fileUrl);
+                setStatus("");
             } catch (Exception e) {
                 String desc = e.getClass().getSimpleName();
                 if (e.getMessage() != null) desc += ": " + e.getMessage();
