@@ -95,7 +95,7 @@ public final class ProcessFlowLayout {
             for (int j = 0; j < nc; j++) {
                 int childX = childStartX + j * (w2 + CHILD_H_GAP);
                 int childIdx = out.addShape(new LaidOutShape(
-                        children.get(j).getText(), 2, childX, childY, w2, h2));
+                        children.get(j).getText(), 2, childX, childY, w2, h2, true));
                 // bottom of parent (glue 2) → top of child (glue 0)
                 out.addEdge(indices[i], childIdx, 2, 0);
             }

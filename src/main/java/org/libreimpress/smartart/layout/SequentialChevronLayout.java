@@ -99,7 +99,7 @@ public final class SequentialChevronLayout {
                     int subitemX = subitemStartX + j * (w2 + SUBITEM_GAP);
                     LaidOutShape subitemShape = new LaidOutShape(
                             subitem.getText(), 2,
-                            subitemX, subitemY, w2, h2);
+                            subitemX, subitemY, w2, h2, true);
                     int subitemIndex = out.addShape(subitemShape);
                     out.addEdge(chevronIndex, subitemIndex);
                     placeSubtree(out, subitem.getChildren(),
@@ -131,7 +131,7 @@ public final class SequentialChevronLayout {
         int childY = parentBottomY + CHILD_V_GAP;
         for (DiagramNode child : children) {
             int childX = parentCX - w / 2;
-            LaidOutShape childShape = new LaidOutShape(child.getText(), level, childX, childY, w, h);
+            LaidOutShape childShape = new LaidOutShape(child.getText(), level, childX, childY, w, h, true);
             int childIndex = out.addShape(childShape);
             out.addEdge(parentIndex, childIndex, 2, 0); // bottom of parent → top of child
             placeSubtree(out, child.getChildren(), parentCX, childY + h, childIndex, level + 1);

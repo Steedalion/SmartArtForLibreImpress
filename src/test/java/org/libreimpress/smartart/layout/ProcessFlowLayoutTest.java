@@ -24,6 +24,25 @@ public class ProcessFlowLayoutTest {
     }
 
     @Test
+    public void subItemsScaleTextToFitButStepsDoNot() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode step = new DiagramNode("Research", 1);
+        step.addChild(new DiagramNode("Survey", 2));
+        step.addChild(new DiagramNode("Analysis", 2));
+        root.addChild(step);
+        root.addChild(new DiagramNode("Design", 1));
+
+        DiagramLayout layout = ProcessFlowLayout.layout(root);
+        for (LaidOutShape s : layout.getShapes()) {
+            if (s.getLevel() == 1) {
+                assertTrue("top-level steps keep AUTOFIT", !s.scalesTextToFit());
+            } else {
+                assertTrue("narrow sub-items scale text to fit", s.scalesTextToFit());
+            }
+        }
+    }
+
+    @Test
     public void singleStepOneShapeNoEdges() {
         DiagramLayout layout = ProcessFlowLayout.layout(root("Only"));
         assertEquals(1, layout.getShapes().size());
