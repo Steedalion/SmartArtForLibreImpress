@@ -6,7 +6,7 @@ chevron sequences, cycles, pyramids, lists, Venn, matrix, and more.
 
 ## Download
 
-**[⬇ SmartArt.oxt v0.1.0](https://github.com/Steedalion/SmartArtForLibreImpress/releases/latest/download/SmartArt.oxt)**
+**[⬇ SmartArt-0.3.0.oxt](https://github.com/Steedalion/SmartArtForLibreImpress/releases/download/v0.3.0/SmartArt-0.3.0.oxt)**
 
 Double-click the downloaded `.oxt` to install, or use the Extension Manager
 (*Tools → Extension Manager → Add*). Restart Impress — a **SmartArt** menu
@@ -58,7 +58,8 @@ or remove one dash level on the current line.
 mvn clean package
 ```
 
-Produces **`target/SmartArt.oxt`**.
+Produces **`target/SmartArt.oxt`** (plus a version-stamped copy
+**`target/SmartArt-0.3.0.oxt`** for release distribution).
 
 ## Install & verify
 
@@ -144,4 +145,4 @@ LibreImpress-SmartArt/
 
 ---
 
-**Version:** 0.1.0
+**Version:** 0.3.0
