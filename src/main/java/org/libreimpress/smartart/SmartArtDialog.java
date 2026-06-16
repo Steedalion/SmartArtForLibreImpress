@@ -14,9 +14,7 @@ import com.sun.star.awt.XControlModel;
 import com.sun.star.awt.XDialog;
 import com.sun.star.awt.XExtendedToolkit;
 import com.sun.star.awt.XKeyHandler;
-import com.sun.star.awt.XListBox;
 import com.sun.star.awt.XTextComponent;
-import com.sun.star.awt.XTextListener;
 import com.sun.star.awt.XToolkit;
 import com.sun.star.awt.XWindow2;
 import com.sun.star.beans.PropertyState;
@@ -198,8 +196,6 @@ public class SmartArtDialog {
         bindButton(controls, "btnPreview", new PreviewButtonListener(preview));
 
         XDialog xDialog = UnoRuntime.queryInterface(XDialog.class, dialog);
-        // Render an initial preview shortly after the dialog appears.
-        preview.schedule();
         try {
             short ret = xDialog.execute();
             if (ret != PushButtonType.OK_value) {
