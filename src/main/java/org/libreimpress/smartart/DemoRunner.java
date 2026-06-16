@@ -118,6 +118,48 @@ final class DemoRunner {
             + I  + "Goal C\n"
             + "Results"
         },
+        {
+            DiagramType.BASIC_BLOCK_LIST, "Basic Block List", "basic-block-list",
+            "Plan\n"
+            + I  + "Scope\n"
+            + I  + "Budget\n"
+            + "Design\n"
+            + "Build\n"
+            + I  + "Backend\n"
+            + I2 + "Database\n"
+            + I  + "Frontend\n"
+            + "Test\n"
+            + "Release\n"
+            + "Review"
+        },
+        {
+            DiagramType.VERTICAL_BULLET_LIST, "Vertical Bullet List", "vertical-bullet-list",
+            "Introductions\n"
+            + I  + "Welcome\n"
+            + I  + "Goals for today\n"
+            + "Project status\n"
+            + I  + "Milestones\n"
+            + I2 + "Phase 1 shipped\n"
+            + I  + "Risks\n"
+            + I  + "Next steps\n"
+            + "Q and A\n"
+            + I  + "Open floor"
+        },
+        {
+            DiagramType.BASIC_VENN, "Basic Venn", "basic-venn",
+            "Quality\nSpeed\nCost"
+        },
+        {
+            DiagramType.BASIC_MATRIX, "Basic Matrix", "basic-matrix",
+            "Urgent and Important\n"
+            + I  + "Do now\n"
+            + "Important, Not Urgent\n"
+            + I  + "Schedule\n"
+            + "Urgent, Not Important\n"
+            + I  + "Delegate\n"
+            + "Neither\n"
+            + I  + "Drop"
+        },
     };
 
     private final XComponentContext context;
@@ -162,9 +204,6 @@ final class DemoRunner {
             // Make it the active page so SlideRenderer can find it.
             view.setCurrentPage(page);
 
-            addCornerLabel(factory, page, "[DEV DEMO] " + slideLabel);
-            addInputListing(factory, page, inputText);
-
             ParseResult parsed = new HierarchyParser().parse(inputText);
             if (!parsed.isValid()) {
                 LibreOfficeHelper.showMessage(context, "SmartArt Demo – internal error",
@@ -174,7 +213,13 @@ final class DemoRunner {
             DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
             renderer.drawHierarchy(layout, ColorPalette.EMPTY);
 
+            // Export a clean screenshot of just the diagram, then annotate the
+            // on-screen dev slide with the label/input listing afterwards so the
+            // dev chrome never appears in the exported PNG.
             exportScreenshot(document, page, slug);
+
+            addCornerLabel(factory, page, "[DEV DEMO] " + slideLabel);
+            addInputListing(factory, page, inputText);
         }
     }
 

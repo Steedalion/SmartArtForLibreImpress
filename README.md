@@ -2,11 +2,11 @@
 
 A LibreOffice Impress UNO extension that generates structured diagrams from
 hierarchical text input — hierarchy trees, hub-and-spoke, process flows,
-chevron sequences, cycles, pyramids, and more.
+chevron sequences, cycles, pyramids, lists, Venn, matrix, and more.
 
 ## Download
 
-**[⬇ SmartArt.oxt v0.1.0](https://github.com/Steedalion/SmartArtForLibreImpress/releases/latest/download/SmartArt.oxt)**
+**[⬇ SmartArt-0.3.0.oxt](https://github.com/Steedalion/SmartArtForLibreImpress/releases/download/v0.3.0/SmartArt-0.3.0.oxt)**
 
 Double-click the downloaded `.oxt` to install, or use the Extension Manager
 (*Tools → Extension Manager → Add*). Restart Impress — a **SmartArt** menu
@@ -26,6 +26,10 @@ Browse all releases → [Releases](https://github.com/Steedalion/SmartArtForLibr
 | **Cycle (Arrows)** | Clockwise ring of circles with directed curved connector arrows | ![Cycle (Arrows)](docs/screenshots/cycle-arrows.png) |
 | **Cycle (Blocks)** | Clockwise ring of rectangles with solid block-arrow shapes between adjacent nodes | ![Cycle (Blocks)](docs/screenshots/cycle-blocks.png) |
 | **Pyramid** | Centre-aligned rectangular tiers stacked top-to-bottom, narrowest at apex; level-2+ sub-items to the right | ![Pyramid](docs/screenshots/pyramid.png) |
+| **Basic Block List** | Equal rectangles in a near-square grid; level-2 and deeper children become nested, indented bullet lines inside each block | ![Basic Block List](docs/screenshots/basic-block-list.png) |
+| **Vertical Bullet List** | Stacked title bars, each with a content box of its level-2 and deeper children as nested, indented bullets beneath | ![Vertical Bullet List](docs/screenshots/vertical-bullet-list.png) |
+| **Basic Venn** | Overlapping translucent circles, one per level-1 item, around the slide centre | ![Basic Venn](docs/screenshots/basic-venn.png) |
+| **Basic Matrix** | First four level-1 items as the quadrants of a 2×2 grid | ![Basic Matrix](docs/screenshots/basic-matrix.png) |
 
 ## Input format
 
@@ -54,7 +58,8 @@ or remove one dash level on the current line.
 mvn clean package
 ```
 
-Produces **`target/SmartArt.oxt`**.
+Produces **`target/SmartArt.oxt`** (plus a version-stamped copy
+**`target/SmartArt-0.3.0.oxt`** for release distribution).
 
 ## Install & verify
 
@@ -105,7 +110,11 @@ LibreImpress-SmartArt/
 │   │   │   ├── CycleLayout.java
 │   │   │   ├── CycleArrowLayout.java
 │   │   │   ├── CycleBlockLayout.java
-│   │   │   └── PyramidLayout.java
+│   │   │   ├── PyramidLayout.java
+│   │   │   ├── BlockListLayout.java
+│   │   │   ├── VerticalBulletListLayout.java
+│   │   │   ├── VennLayout.java
+│   │   │   └── MatrixLayout.java
 │   │   ├── rendering/                  # SlideRenderer — draws shapes + connectors
 │   │   └── helpers/
 │   └── test/java/org/libreimpress/smartart/
@@ -136,4 +145,4 @@ LibreImpress-SmartArt/
 
 ---
 
-**Version:** 0.1.0
+**Version:** 0.3.0

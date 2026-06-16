@@ -54,7 +54,7 @@ public final class CycleArrowLayout {
                     nodes.get(i).getText(), 1,
                     nodeCX - CIRCLE_D / 2, nodeCY - CIRCLE_D / 2,
                     CIRCLE_D, CIRCLE_D,
-                    ShapeKind.ELLIPSE);
+                    ShapeKind.ELLIPSE, true);
             indices[i] = out.addShape(shape);
         }
 

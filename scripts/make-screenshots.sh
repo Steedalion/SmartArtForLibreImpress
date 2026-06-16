@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Generate diagram screenshots for the README.
 #
+# NOTE: DemoRunner.java (the in-app "[DEV DEMO]" menu action) is the canonical
+# screenshot source — it renders through the real SlideRenderer, so its output
+# always matches actual diagrams. This headless probe is a secondary,
+# hand-maintained reimplementation and is not kept in aesthetic sync.
+#
 # Usage:
 #   scripts/make-screenshots.sh [--oxt <path>]
 #
