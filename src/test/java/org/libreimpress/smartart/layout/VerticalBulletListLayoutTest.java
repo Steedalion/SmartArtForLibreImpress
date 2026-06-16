@@ -68,6 +68,22 @@ public class VerticalBulletListLayoutTest {
     }
 
     @Test
+    public void level3AndDeeperChildrenAreNestedNotDropped() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode title = new DiagramNode("Project status", 1);
+        DiagramNode milestone = new DiagramNode("Milestones", 2);
+        milestone.addChild(new DiagramNode("Phase 1 shipped", 3));
+        title.addChild(milestone);
+        root.addChild(title);
+
+        DiagramLayout layout = VerticalBulletListLayout.layout(root);
+        LaidOutShape content = layout.getShapes().get(1);
+        assertTrue("level-2 bullet present", content.getText().contains("• Milestones"));
+        assertTrue("level-3 item must be nested, not dropped",
+                content.getText().contains("Phase 1 shipped"));
+    }
+
+    @Test
     public void shapesStayWithinTheSlide() {
         DiagramNode root = new DiagramNode("", 0);
         root.addChild(nodeWithChildren("A", "a1", "a2"));

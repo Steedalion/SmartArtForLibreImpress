@@ -8,9 +8,9 @@ import java.util.List;
  * Lays out a Basic Matrix: the first up to four level-1 nodes become equal
  * rectangular quadrants of a 2x2 grid centred on the slide (order top-left,
  * top-right, bottom-left, bottom-right), each coloured distinctly. Any level-1
- * nodes beyond the fourth are ignored, and level-2 children become bullet lines
- * inside their quadrant. No connectors are drawn. Pure Java (no UNO). Units are
- * 1/100 mm.
+ * nodes beyond the fourth are ignored, and level-2 and deeper children become
+ * nested, indented bullet lines inside their quadrant. No connectors are drawn.
+ * Pure Java (no UNO). Units are 1/100 mm.
  */
 public final class MatrixLayout {
 
@@ -46,7 +46,7 @@ public final class MatrixLayout {
 
         for (int i = 0; i < n; i++) {
             out.addShape(new LaidOutShape(
-                    BlockListLayout.composeText(nodes.get(i)), 1,
+                    BulletText.withTitle(nodes.get(i)), 1,
                     xs[i], ys[i], cellW, cellH, ShapeKind.MATRIX_CELL));
         }
 

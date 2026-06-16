@@ -6,8 +6,9 @@ import java.util.List;
 
 /**
  * Lays out a Vertical Bullet List: level-1 nodes become title bars stacked
- * top-to-bottom; each title's level-2 children appear as bullet lines in a
- * content box directly beneath its title. A node with no children gives a title
+ * top-to-bottom; each title's level-2 and deeper children appear as nested,
+ * indented bullet lines in a content box directly beneath its title. A node
+ * with no children gives a title
  * bar that fills its whole vertical slot. No connectors are drawn. Pure Java
  * (no UNO). Units are 1/100 mm.
  */
@@ -51,7 +52,7 @@ public final class VerticalBulletListLayout {
                 int contentH = slotH - titleH - INNER_GAP;
                 if (contentH > 0) {
                     out.addShape(new LaidOutShape(
-                            bullets(item), 2, MARGIN, contentY, width, contentH,
+                            BulletText.bullets(item), 2, MARGIN, contentY, width, contentH,
                             ShapeKind.RECTANGLE));
                 }
             } else {
@@ -63,18 +64,5 @@ public final class VerticalBulletListLayout {
         }
 
         return out;
-    }
-
-    /** Joins a node's children as bullet lines (no leading title). */
-    static String bullets(DiagramNode node) {
-        StringBuilder sb = new StringBuilder();
-        List<DiagramNode> children = node.getChildren();
-        for (int i = 0; i < children.size(); i++) {
-            if (i > 0) {
-                sb.append('\n');
-            }
-            sb.append("• ").append(children.get(i).getText());
-        }
-        return sb.toString();
     }
 }

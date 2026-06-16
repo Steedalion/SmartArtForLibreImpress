@@ -6,9 +6,9 @@ import java.util.List;
 
 /**
  * Lays out a Basic Block List: level-1 nodes become equal rectangles arranged
- * in a near-square grid that fills the slide, wrapping into rows. Level-2
- * children become bullet lines inside their parent block. No connectors are
- * drawn. Pure Java (no UNO). Units are 1/100 mm.
+ * in a near-square grid that fills the slide, wrapping into rows. Level-2 and
+ * deeper children become nested, indented bullet lines inside their parent
+ * block. No connectors are drawn. Pure Java (no UNO). Units are 1/100 mm.
  */
 public final class BlockListLayout {
 
@@ -46,19 +46,10 @@ public final class BlockListLayout {
             int x = MARGIN + col * (blockW + GAP);
             int y = MARGIN + row * (blockH + GAP);
             out.addShape(new LaidOutShape(
-                    composeText(blocks.get(i)), 1, x, y, blockW, blockH,
+                    BulletText.withTitle(blocks.get(i)), 1, x, y, blockW, blockH,
                     ShapeKind.RECTANGLE));
         }
 
         return out;
-    }
-
-    /** Joins a node's title with its children as bullet lines. */
-    static String composeText(DiagramNode node) {
-        StringBuilder sb = new StringBuilder(node.getText());
-        for (DiagramNode child : node.getChildren()) {
-            sb.append("\n• ").append(child.getText());
-        }
-        return sb.toString();
     }
 }

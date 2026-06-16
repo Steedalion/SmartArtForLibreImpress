@@ -80,8 +80,8 @@ the current slide. Twelve diagram types are fully implemented:
 | Cycle (Arrows) | Clockwise ring of circles with directed curved connector arrows |
 | Cycle (Blocks) | Clockwise ring of rectangles with solid block-arrow shapes between adjacent nodes |
 | Pyramid | Centre-aligned rectangular tiers stacked top-to-bottom, apex narrowest; level-2+ sub-items to the right |
-| Basic Block List | Equal rectangles in a near-square grid; level-2 children become bullet lines inside each block |
-| Vertical Bullet List | Stacked title bars, each with a bullet content box of its level-2 children beneath |
+| Basic Block List | Equal rectangles in a near-square grid; level-2 and deeper children become nested, indented bullet lines inside each block |
+| Vertical Bullet List | Stacked title bars, each with a content box of its level-2 and deeper children as nested, indented bullets beneath |
 | Basic Venn | Overlapping translucent circles, one per level-1 item, around the slide centre |
 | Basic Matrix | First four level-1 items as the quadrants of a 2×2 grid |
 
@@ -194,14 +194,16 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 
 #### 2.2.9 Basic Block List Diagram
 - **Purpose:** Present a set of unordered, equally-weighted items
-- **Level Structure:** Level 1 = blocks; level 2 = bullet lines inside the block
+- **Level Structure:** Level 1 = blocks; level 2 and deeper = nested, indented
+  bullet lines inside the block
 - **Layout:** Equal rectangles in a near-square grid (`cols = ceil(sqrt(n))`)
   that fills the slide, wrapping into rows
 - **Connections:** None
 
 #### 2.2.10 Vertical Bullet List Diagram
 - **Purpose:** Grouped lists under headings (agendas, feature lists)
-- **Level Structure:** Level 1 = title bar; level 2 = bullets beneath it
+- **Level Structure:** Level 1 = title bar; level 2 and deeper = nested,
+  indented bullets beneath it
 - **Layout:** Title bars stacked top-to-bottom; each title with children gets a
   content box of bullet lines directly below it; a childless title fills its slot
 - **Connections:** None
@@ -215,7 +217,8 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 
 #### 2.2.12 Basic Matrix Diagram
 - **Purpose:** Show the relationship of four parts to a whole
-- **Level Structure:** First four level-1 items only; level 2 = bullets in a cell
+- **Level Structure:** First four level-1 items only; level 2 and deeper =
+  nested, indented bullets in a cell
 - **Layout:** Four equal rectangular quadrants of a 2×2 grid centred on the slide
   (order top-left, top-right, bottom-left, bottom-right), each coloured distinctly
 - **Connections:** None

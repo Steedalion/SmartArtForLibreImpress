@@ -71,6 +71,23 @@ public class BlockListLayoutTest {
     }
 
     @Test
+    public void level3AndDeeperChildrenAreNestedNotDropped() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode block = new DiagramNode("Build", 1);
+        DiagramNode sub = new DiagramNode("Backend", 2);
+        sub.addChild(new DiagramNode("Database", 3));
+        block.addChild(sub);
+        root.addChild(block);
+        root.addChild(new DiagramNode("B", 1));
+        root.addChild(new DiagramNode("C", 1));
+
+        DiagramLayout layout = BlockListLayout.layout(root);
+        String text = layout.getShapes().get(0).getText();
+        assertTrue("level-2 bullet present", text.contains("• Backend"));
+        assertTrue("level-3 item must be nested, not dropped", text.contains("Database"));
+    }
+
+    @Test
     public void blocksStayWithinTheSlide() {
         DiagramLayout layout = BlockListLayout.layout(root("A", "B", "C", "D", "E", "F"));
         for (LaidOutShape s : layout.getShapes()) {

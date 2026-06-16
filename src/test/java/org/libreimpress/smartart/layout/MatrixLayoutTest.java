@@ -89,4 +89,19 @@ public class MatrixLayoutTest {
         assertTrue(text.startsWith("Quadrant"));
         assertTrue(text.contains("• Point"));
     }
+
+    @Test
+    public void level3AndDeeperChildrenAreNestedNotDropped() {
+        DiagramNode root = new DiagramNode("", 0);
+        DiagramNode a = new DiagramNode("Quadrant", 1);
+        DiagramNode point = new DiagramNode("Point", 2);
+        point.addChild(new DiagramNode("Detail", 3));
+        a.addChild(point);
+        root.addChild(a);
+        root.addChild(new DiagramNode("B", 1));
+        DiagramLayout layout = MatrixLayout.layout(root);
+        String text = layout.getShapes().get(0).getText();
+        assertTrue(text.contains("• Point"));
+        assertTrue("level-3 item must be nested, not dropped", text.contains("Detail"));
+    }
 }

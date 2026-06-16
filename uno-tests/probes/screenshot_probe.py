@@ -468,14 +468,31 @@ def draw_cycle(doc, page):
                           straight=True, arrow_end=True)
 
 
+# Nested-bullet rendering, mirroring layout/BulletText.java: deeper levels are
+# indented and use distinct glyphs (no level is dropped). Sub-items are nested
+# (label, [children...]) tuples.
+BULLET_MARKERS = ["•", "◦", "▪"]
+BULLET_INDENT = "    "
+
+
+def bullet_lines(items, depth=0):
+    lines = []
+    for label, children in items:
+        marker = BULLET_MARKERS[min(depth, len(BULLET_MARKERS) - 1)]
+        lines.append(BULLET_INDENT * depth + marker + " " + label)
+        lines.extend(bullet_lines(children, depth + 1))
+    return lines
+
+
 def draw_block_list(doc, page):
-    """6 equal blocks in a near-square grid; two blocks carry bullet sub-items."""
+    """6 equal blocks in a near-square grid; sub-items nest to three levels."""
     SLIDE_W, SLIDE_H = 25400, 19050
     MARGIN, GAP = 2000, 400
     blocks = [
-        ("Plan",    ["Scope", "Budget"]),
+        ("Plan",    [("Scope", []), ("Budget", [])]),
         ("Design",  []),
-        ("Build",   ["Backend", "Frontend"]),
+        ("Build",   [("Backend", [("Database", []), ("API", [])]),
+                     ("Frontend", [])]),
         ("Test",    []),
         ("Release", []),
         ("Review",  []),
@@ -490,19 +507,20 @@ def draw_block_list(doc, page):
         row, col = i // cols, i % cols
         x = MARGIN + col * (block_w + GAP)
         y = MARGIN + row * (block_h + GAP)
-        text = title + "".join("\n• " + s for s in subs)
+        text = "\n".join([title] + bullet_lines(subs))
         s = add_rect(doc, page, x, y, block_w, block_h, text, colors[i])
         font_size(s, 14)
 
 
 def draw_vertical_bullet_list(doc, page):
-    """3 stacked title bars, each with a bullet content box beneath."""
+    """3 stacked title bars, each with a nested bullet content box beneath."""
     SLIDE_W, SLIDE_H = 25400, 19050
     MARGIN, SLOT_GAP, INNER_GAP, TITLE_H = 2000, 400, 100, 1000
     items = [
-        ("Introductions", ["Welcome", "Goals for today"]),
-        ("Project status", ["Milestones hit", "Risks", "Next steps"]),
-        ("Q & A", ["Open floor"]),
+        ("Introductions", [("Welcome", []), ("Goals for today", [])]),
+        ("Project status", [("Milestones hit", [("Phase 1 shipped", [])]),
+                            ("Risks", []), ("Next steps", [])]),
+        ("Q & A", [("Open floor", [])]),
     ]
     width = SLIDE_W - 2 * MARGIN
     avail_h = SLIDE_H - 2 * MARGIN
@@ -514,7 +532,7 @@ def draw_vertical_bullet_list(doc, page):
         font_size(s, 14)
         content_h = slot_h - title_h - INNER_GAP
         if subs and content_h > 0:
-            bullets = "\n".join("• " + sub for sub in subs)
+            bullets = "\n".join(bullet_lines(subs))
             cs = add_rect(doc, page, MARGIN, y + title_h + INNER_GAP,
                           width, content_h, bullets, GREEN)
             font_size(cs, 11)
