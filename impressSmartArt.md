@@ -68,7 +68,7 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 opens a programmatic dialog (diagram-type dropdown + multiline text + optional
 colour palette field); on **Create** the indented text is parsed into a validated
 hierarchy and the chosen diagram type is rendered as grouped, editable shapes on
-the current slide. Eight diagram types are fully implemented:
+the current slide. Twelve diagram types are fully implemented:
 
 | Type | Description |
 |------|-------------|
@@ -80,6 +80,10 @@ the current slide. Eight diagram types are fully implemented:
 | Cycle (Arrows) | Clockwise ring of circles with directed curved connector arrows |
 | Cycle (Blocks) | Clockwise ring of rectangles with solid block-arrow shapes between adjacent nodes |
 | Pyramid | Centre-aligned rectangular tiers stacked top-to-bottom, apex narrowest; level-2+ sub-items to the right |
+| Basic Block List | Equal rectangles in a near-square grid; level-2 children become bullet lines inside each block |
+| Vertical Bullet List | Stacked title bars, each with a bullet content box of its level-2 children beneath |
+| Basic Venn | Overlapping translucent circles, one per level-1 item, around the slide centre |
+| Basic Matrix | First four level-1 items as the quadrants of a 2×2 grid |
 
 All types share: built-in blue/green colour palette, font sizing by level, and
 per-level colour overrides via the palette field (format: `1=#4472C4`).
@@ -188,6 +192,34 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
   pair of adjacent rectangles and rotated to point toward the next node
 - **Connections:** None (the block arrows are positioned shapes, not connectors)
 
+#### 2.2.9 Basic Block List Diagram
+- **Purpose:** Present a set of unordered, equally-weighted items
+- **Level Structure:** Level 1 = blocks; level 2 = bullet lines inside the block
+- **Layout:** Equal rectangles in a near-square grid (`cols = ceil(sqrt(n))`)
+  that fills the slide, wrapping into rows
+- **Connections:** None
+
+#### 2.2.10 Vertical Bullet List Diagram
+- **Purpose:** Grouped lists under headings (agendas, feature lists)
+- **Level Structure:** Level 1 = title bar; level 2 = bullets beneath it
+- **Layout:** Title bars stacked top-to-bottom; each title with children gets a
+  content box of bullet lines directly below it; a childless title fills its slot
+- **Connections:** None
+
+#### 2.2.11 Basic Venn Diagram
+- **Purpose:** Show overlapping or shared concepts
+- **Level Structure:** Level 1 only (deeper descendants are ignored)
+- **Layout:** Equal translucent circles arranged so adjacent circles overlap,
+  around the slide centre (single circle centred; two placed horizontally)
+- **Connections:** None
+
+#### 2.2.12 Basic Matrix Diagram
+- **Purpose:** Show the relationship of four parts to a whole
+- **Level Structure:** First four level-1 items only; level 2 = bullets in a cell
+- **Layout:** Four equal rectangular quadrants of a 2×2 grid centred on the slide
+  (order top-left, top-right, bottom-left, bottom-right), each coloured distinctly
+- **Connections:** None
+
 ---
 
 ## 3. Shape & Styling System
@@ -238,7 +270,8 @@ needed, it belongs in a phase plan — not here, and not in the architecture doc
 The dialog collects, with **Create** and **Cancel** actions:
 
 - **Diagram type** — one of Hierarchy, Hub & Spoke, Process Flow, Sequential
-  Chevron, Cycle, Cycle (Arrows), Cycle (Blocks), or Pyramid (a dropdown).
+  Chevron, Cycle, Cycle (Arrows), Cycle (Blocks), Pyramid, Basic Block List,
+  Vertical Bullet List, Basic Venn, or Basic Matrix (a dropdown).
 - **Text points** — a multi-line outline field; each line is one node. Hierarchy
   depth is expressed by **leading dashes** followed by a space, resembling
   Markdown list syntax (per the rules in §5.2). It behaves as an outline
@@ -350,7 +383,7 @@ actually work is described in `TESTING_STRATEGY.md`.
 - Animation support
 - Export to other formats
 - Undo/Redo integration
-- More diagram types (matrix, venn, pyramid, etc.)
+- More diagram types (target, balance, picture-based, etc.)
 
 ---
 

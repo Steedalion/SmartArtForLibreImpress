@@ -14,7 +14,11 @@ public enum DiagramType {
     CYCLE("Cycle"),
     CYCLE_ARROW("Cycle (Arrows)"),
     PYRAMID("Pyramid"),
-    CYCLE_BLOCK("Cycle (Blocks)");
+    CYCLE_BLOCK("Cycle (Blocks)"),
+    BASIC_BLOCK_LIST("Basic Block List"),
+    VERTICAL_BULLET_LIST("Vertical Bullet List"),
+    BASIC_VENN("Basic Venn"),
+    BASIC_MATRIX("Basic Matrix");
 
     private final String label;
 

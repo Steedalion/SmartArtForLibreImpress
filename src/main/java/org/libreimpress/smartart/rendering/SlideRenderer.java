@@ -111,13 +111,14 @@ public class SlideRenderer {
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
             String service;
-            if (s.getKind() == ShapeKind.ELLIPSE) {
+            if (s.getKind() == ShapeKind.ELLIPSE || s.getKind() == ShapeKind.VENN_CIRCLE) {
                 service = "com.sun.star.drawing.EllipseShape";
             } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
                     || s.getKind() == ShapeKind.BLOCK_ARROW) {
                 service = "com.sun.star.drawing.CustomShape";
             } else {
-                service = "com.sun.star.drawing.RectangleShape"; // RECTANGLE and PYRAMID_TIER
+                // RECTANGLE, PYRAMID_TIER and MATRIX_CELL
+                service = "com.sun.star.drawing.RectangleShape";
             }
             Object shape = factory.createInstance(service);
             XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
@@ -141,7 +142,8 @@ public class SlideRenderer {
                 applyBlockArrowGeometry(shape);
                 XPropertySet rProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
                 rProps.setPropertyValue("RotateAngle", Integer.valueOf(s.getRotateAngle100()));
-            } else if (s.getKind() == ShapeKind.PYRAMID_TIER) {
+            } else if (s.getKind() == ShapeKind.PYRAMID_TIER
+                    || s.getKind() == ShapeKind.MATRIX_CELL) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
@@ -149,6 +151,17 @@ public class SlideRenderer {
                 chevronSeq++;
                 applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
                         DefaultPalette.fontSize(s.getLevel()));
+            } else if (s.getKind() == ShapeKind.VENN_CIRCLE) {
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor
+                        : DefaultPalette.chevronFill(chevronSeq);
+                chevronSeq++;
+                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
+                        DefaultPalette.fontSize(s.getLevel()));
+                // Partial transparency so overlapping circles remain visible.
+                XPropertySet vProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
+                vProps.setPropertyValue("FillTransparence", Integer.valueOf(25));
             } else {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
@@ -160,7 +173,8 @@ public class SlideRenderer {
             XText xText = UnoRuntime.queryInterface(XText.class, shape);
             if (xText != null) {
                 xText.setString(s.getText());
-                if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
+                if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
+                        || s.getKind() == ShapeKind.VENN_CIRCLE) {
                     centerChevronText(shape, xText);
                 }
             }
