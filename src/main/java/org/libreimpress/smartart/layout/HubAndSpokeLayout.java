@@ -24,9 +24,17 @@ public final class HubAndSpokeLayout {
     private HubAndSpokeLayout() {
     }
 
-    /** Diameter of a circle node at the given level. */
+    /**
+     * Diameter of a circle node at the given level. Circles are sized generously
+     * so typical labels (e.g. "Technology", "Innovation") fit at a readable size
+     * rather than being shrunk to fit a tiny circle.
+     */
     private static int nodeDiameter(int level) {
-        return Math.max(1500, BASE_NODE_H - (level - 1) * SIZE_DECREMENT);
+        switch (level) {
+            case 1:  return 3000; // hub
+            case 2:  return 2500; // spokes
+            default: return 2100; // level-3+ descendants
+        }
     }
 
     /**

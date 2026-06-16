@@ -23,6 +23,7 @@ public final class SequentialChevronLayout {
     static final int MARGIN_X = 1000;
     static final int MARGIN_Y = 1000;
     static final int CHILD_V_GAP = 500; // vertical gap between a sub-item and its children
+    static final int SUBITEM_H = 900;   // landscape sub-item height (text fills it instead of floating)
 
     private SequentialChevronLayout() {
     }
@@ -87,7 +88,7 @@ public final class SequentialChevronLayout {
             if (!subitems.isEmpty()) {
                 int n2 = subitems.size();
                 int baseW2 = nodeWidth(2);
-                int h2 = nodeHeight(2);
+                int h2 = SUBITEM_H;
                 // Shrink each sub-item so the whole row fits inside the chevron.
                 int w2 = Math.min(baseW2, (w1 - (n2 - 1) * SUBITEM_GAP) / n2);
                 int totalSubitemWidth = n2 * w2 + (n2 - 1) * SUBITEM_GAP;

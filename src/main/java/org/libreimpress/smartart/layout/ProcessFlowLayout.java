@@ -19,6 +19,7 @@ public final class ProcessFlowLayout {
     static final int H_GAP = 1500;  // space between consecutive step boxes
     static final int V_GAP = 800;   // vertical gap between parent and child rows
     static final int CHILD_H_GAP = 400; // horizontal gap between children in a row
+    static final int SUBITEM_H = 900;   // landscape sub-item height (text fills it instead of floating)
     static final int SLIDE_W = 25400; // standard Impress slide: 254 mm
     static final int SLIDE_H = 19050; // standard Impress slide: 190.5 mm
     static final int MARGIN_X = 1000;
@@ -83,7 +84,7 @@ public final class ProcessFlowLayout {
         // Place level-2 children below each step in a horizontal row, scaled to
         // fit within the step's width so columns never overlap.
         int baseW2 = nodeWidth(2);
-        int h2 = nodeHeight(2);
+        int h2 = SUBITEM_H;
         int childY = y1 + h1 + V_GAP;
         for (int i = 0; i < n; i++) {
             List<DiagramNode> children = steps.get(i).getChildren();
