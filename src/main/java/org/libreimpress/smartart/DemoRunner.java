@@ -213,13 +213,7 @@ final class DemoRunner {
             DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
             renderer.drawHierarchy(layout, ColorPalette.EMPTY);
 
-            // Export a clean screenshot of just the diagram, then annotate the
-            // on-screen dev slide with the label/input listing afterwards so the
-            // dev chrome never appears in the exported PNG.
             exportScreenshot(document, page, slug);
-
-            addCornerLabel(factory, page, "[DEV DEMO] " + slideLabel);
-            addInputListing(factory, page, inputText);
         }
     }
 

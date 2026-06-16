@@ -17,10 +17,6 @@ public final class LayoutFactory {
             case CYCLE_ARROW:        return CycleArrowLayout.layout(root);
             case CYCLE_BLOCK:        return CycleBlockLayout.layout(root);
             case PYRAMID:            return PyramidLayout.layout(root);
-            case BASIC_BLOCK_LIST:   return BlockListLayout.layout(root);
-            case VERTICAL_BULLET_LIST: return VerticalBulletListLayout.layout(root);
-            case BASIC_VENN:         return VennLayout.layout(root);
-            case BASIC_MATRIX:       return MatrixLayout.layout(root);
             default:                 return HierarchyLayout.layout(root);
         }
     }
