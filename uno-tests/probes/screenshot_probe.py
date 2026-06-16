@@ -4,12 +4,12 @@
 Called by scripts/make-screenshots.sh:
     python3 uno-tests/probes/screenshot_probe.py <port> <out-dir>
 
-Outputs:
-    <out-dir>/cycle.png
-    <out-dir>/sequential-chevron.png
-    <out-dir>/hub-and-spoke.png
-    <out-dir>/process-flow.png
+Outputs one PNG per diagram type (see DIAGRAMS at the bottom), e.g.:
     <out-dir>/hierarchy.png
+    <out-dir>/basic-block-list.png
+    <out-dir>/vertical-bullet-list.png
+    <out-dir>/basic-venn.png
+    <out-dir>/basic-matrix.png
 """
 
 import sys
@@ -468,19 +468,138 @@ def draw_cycle(doc, page):
                           straight=True, arrow_end=True)
 
 
+# Nested-bullet rendering, mirroring layout/BulletText.java: deeper levels are
+# indented and use distinct glyphs (no level is dropped). Sub-items are nested
+# (label, [children...]) tuples.
+BULLET_MARKERS = ["•", "◦", "▪"]
+BULLET_INDENT = "    "
+
+
+def bullet_lines(items, depth=0):
+    lines = []
+    for label, children in items:
+        marker = BULLET_MARKERS[min(depth, len(BULLET_MARKERS) - 1)]
+        lines.append(BULLET_INDENT * depth + marker + " " + label)
+        lines.extend(bullet_lines(children, depth + 1))
+    return lines
+
+
+def draw_block_list(doc, page):
+    """6 equal blocks in a near-square grid; sub-items nest to three levels."""
+    SLIDE_W, SLIDE_H = 25400, 19050
+    MARGIN, GAP = 2000, 400
+    blocks = [
+        ("Plan",    [("Scope", []), ("Budget", [])]),
+        ("Design",  []),
+        ("Build",   [("Backend", [("Database", []), ("API", [])]),
+                     ("Frontend", [])]),
+        ("Test",    []),
+        ("Release", []),
+        ("Review",  []),
+    ]
+    colors = [BLUE, BLUE2, BLUE3, BLUE, BLUE2, BLUE3]
+    n = len(blocks)
+    cols = math.ceil(math.sqrt(n))
+    rows = math.ceil(n / cols)
+    block_w = (SLIDE_W - 2 * MARGIN - (cols - 1) * GAP) // cols
+    block_h = (SLIDE_H - 2 * MARGIN - (rows - 1) * GAP) // rows
+    for i, (title, subs) in enumerate(blocks):
+        row, col = i // cols, i % cols
+        x = MARGIN + col * (block_w + GAP)
+        y = MARGIN + row * (block_h + GAP)
+        text = "\n".join([title] + bullet_lines(subs))
+        s = add_rect(doc, page, x, y, block_w, block_h, text, colors[i])
+        font_size(s, 14)
+
+
+def draw_vertical_bullet_list(doc, page):
+    """3 stacked title bars, each with a nested bullet content box beneath."""
+    SLIDE_W, SLIDE_H = 25400, 19050
+    MARGIN, SLOT_GAP, INNER_GAP, TITLE_H = 2000, 400, 100, 1000
+    items = [
+        ("Introductions", [("Welcome", []), ("Goals for today", [])]),
+        ("Project status", [("Milestones hit", [("Phase 1 shipped", [])]),
+                            ("Risks", []), ("Next steps", [])]),
+        ("Q & A", [("Open floor", [])]),
+    ]
+    width = SLIDE_W - 2 * MARGIN
+    avail_h = SLIDE_H - 2 * MARGIN
+    slot_h = (avail_h - (len(items) - 1) * SLOT_GAP) // len(items)
+    y = MARGIN
+    for title, subs in items:
+        title_h = min(TITLE_H, slot_h)
+        s = add_rect(doc, page, MARGIN, y, width, title_h, title, BLUE)
+        font_size(s, 14)
+        content_h = slot_h - title_h - INNER_GAP
+        if subs and content_h > 0:
+            bullets = "\n".join(bullet_lines(subs))
+            cs = add_rect(doc, page, MARGIN, y + title_h + INNER_GAP,
+                          width, content_h, bullets, GREEN)
+            font_size(cs, 11)
+        y += slot_h + SLOT_GAP
+
+
+def draw_venn(doc, page):
+    """3 overlapping translucent circles."""
+    SLIDE_W, SLIDE_H = 25400, 19050
+    CX, CY = SLIDE_W // 2, SLIDE_H // 2
+    r = 4500
+    ring_r = round(r * 0.62)
+    labels = ["Quality", "Speed", "Cost"]
+    colors = [BLUE, BLUE2, BLUE3]
+    n = len(labels)
+    for i, label in enumerate(labels):
+        angle = math.radians(-90 + i * 360 / n)
+        ccx = CX + int(round(ring_r * math.cos(angle)))
+        ccy = CY + int(round(ring_r * math.sin(angle)))
+        s = add_ellipse(doc, page, ccx - r, ccy - r, 2 * r, 2 * r, label, colors[i])
+        font_size(s, 12)
+        try:
+            s.setPropertyValue("FillTransparence", 25)
+            s.setPropertyValue("TextVerticalAdjust",
+                uno.Enum("com.sun.star.drawing.TextVerticalAdjust", "CENTER"))
+        except Exception:
+            pass
+
+
+def draw_matrix(doc, page):
+    """2x2 quadrant grid of four distinctly coloured cells."""
+    SLIDE_W, SLIDE_H = 25400, 19050
+    TOTAL_W, TOTAL_H, CENTRE_GAP = 18000, 13000, 200
+    cell_w = (TOTAL_W - CENTRE_GAP) // 2
+    cell_h = (TOTAL_H - CENTRE_GAP) // 2
+    left = (SLIDE_W - TOTAL_W) // 2
+    top = (SLIDE_H - TOTAL_H) // 2
+    right_x = left + cell_w + CENTRE_GAP
+    bot_y = top + cell_h + CENTRE_GAP
+    cells = [
+        ("Urgent / Important", left, top, BLUE),
+        ("Not Urgent / Important", right_x, top, BLUE2),
+        ("Urgent / Not Important", left, bot_y, BLUE3),
+        ("Not Urgent / Not Important", right_x, bot_y, 0x1F4E79),
+    ]
+    for label, x, y, color in cells:
+        s = add_rect(doc, page, x, y, cell_w, cell_h, label, color)
+        font_size(s, 14)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 DIAGRAMS = [
-    ("pyramid",            draw_pyramid),
-    ("cycle-blocks",       draw_cycle_blocks),
-    ("cycle-arrows",       draw_cycle_arrows),
-    ("cycle",              draw_cycle),
-    ("sequential-chevron", draw_sequential_chevron),
-    ("hub-and-spoke",      draw_hub_and_spoke),
-    ("process-flow",       draw_process_flow),
-    ("hierarchy",          draw_hierarchy),
+    ("pyramid",              draw_pyramid),
+    ("cycle-blocks",         draw_cycle_blocks),
+    ("cycle-arrows",         draw_cycle_arrows),
+    ("cycle",                draw_cycle),
+    ("sequential-chevron",   draw_sequential_chevron),
+    ("hub-and-spoke",        draw_hub_and_spoke),
+    ("process-flow",         draw_process_flow),
+    ("hierarchy",            draw_hierarchy),
+    ("basic-block-list",     draw_block_list),
+    ("vertical-bullet-list", draw_vertical_bullet_list),
+    ("basic-venn",           draw_venn),
+    ("basic-matrix",         draw_matrix),
 ]
 
 

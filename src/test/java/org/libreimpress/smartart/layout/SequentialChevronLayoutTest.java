@@ -140,8 +140,11 @@ public class SequentialChevronLayoutTest {
         DiagramLayout layout = SequentialChevronLayout.layout(root);
         LaidOutShape chevronShape = layout.getShapes().get(0);
         LaidOutShape subitemShape = layout.getShapes().get(1);
-        // Subitem (level-2) should be smaller than chevron (level-1)
+        // Subitem (level-2) should be smaller than chevron (level-1): slightly
+        // narrower, and a short landscape height so the text fills the box.
         assertEquals(chevronShape.getWidth() - 30, subitemShape.getWidth());
-        assertEquals(chevronShape.getHeight() - 30, subitemShape.getHeight());
+        assertEquals(SequentialChevronLayout.SUBITEM_H, subitemShape.getHeight());
+        assertTrue("subitem should be shorter than the chevron",
+                subitemShape.getHeight() < chevronShape.getHeight());
     }
 }

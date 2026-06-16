@@ -42,6 +42,12 @@ public class SlideRenderer {
     private static final int WIDTH = 6000;
     private static final int HEIGHT = 3000;
 
+    /** Corner-rounding radius for rectangular shapes (1/100 mm). */
+    private static final int CORNER_RADIUS = 250;
+    /** Connector line colour (mid-grey) and width (1/100 mm). */
+    private static final int CONNECTOR_COLOR = 0x595959;
+    private static final int CONNECTOR_WIDTH = 40;
+
     private final XComponentContext context;
 
     public SlideRenderer(XComponentContext context) {
@@ -111,13 +117,14 @@ public class SlideRenderer {
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
             String service;
-            if (s.getKind() == ShapeKind.ELLIPSE) {
+            if (s.getKind() == ShapeKind.ELLIPSE || s.getKind() == ShapeKind.VENN_CIRCLE) {
                 service = "com.sun.star.drawing.EllipseShape";
             } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
                     || s.getKind() == ShapeKind.BLOCK_ARROW) {
                 service = "com.sun.star.drawing.CustomShape";
             } else {
-                service = "com.sun.star.drawing.RectangleShape"; // RECTANGLE and PYRAMID_TIER
+                // RECTANGLE, PYRAMID_TIER and MATRIX_CELL
+                service = "com.sun.star.drawing.RectangleShape";
             }
             Object shape = factory.createInstance(service);
             XShape xShape = UnoRuntime.queryInterface(XShape.class, shape);
@@ -141,7 +148,8 @@ public class SlideRenderer {
                 applyBlockArrowGeometry(shape);
                 XPropertySet rProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
                 rProps.setPropertyValue("RotateAngle", Integer.valueOf(s.getRotateAngle100()));
-            } else if (s.getKind() == ShapeKind.PYRAMID_TIER) {
+            } else if (s.getKind() == ShapeKind.PYRAMID_TIER
+                    || s.getKind() == ShapeKind.MATRIX_CELL) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
@@ -149,6 +157,20 @@ public class SlideRenderer {
                 chevronSeq++;
                 applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
                         DefaultPalette.fontSize(s.getLevel()));
+                roundCorners(shape, CORNER_RADIUS);
+            } else if (s.getKind() == ShapeKind.VENN_CIRCLE) {
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor
+                        : DefaultPalette.chevronFill(chevronSeq);
+                chevronSeq++;
+                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
+                        DefaultPalette.fontSize(s.getLevel()));
+                // Partial transparency so overlapping circles remain visible;
+                // drop the shadow, which muddies translucent overlaps.
+                XPropertySet vProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
+                vProps.setPropertyValue("FillTransparence", Integer.valueOf(25));
+                vProps.setPropertyValue("Shadow", Boolean.FALSE);
             } else {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
@@ -156,11 +178,28 @@ public class SlideRenderer {
                         : DefaultPalette.fill(s.getKind(), s.getLevel());
                 applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
                         DefaultPalette.fontSize(s.getLevel()));
+                // Round rectangle corners (not ellipses).
+                if (s.getKind() == ShapeKind.RECTANGLE) {
+                    roundCorners(shape, CORNER_RADIUS);
+                }
+            }
+            // Small label boxes (process/chevron sub-items) scale text to fit so
+            // long single-line labels shrink instead of overflowing the box.
+            if (s.scalesTextToFit()) {
+                XPropertySet fp = UnoRuntime.queryInterface(XPropertySet.class, shape);
+                fp.setPropertyValue("TextFitToSize",
+                        com.sun.star.drawing.TextFitToSizeType.PROPORTIONAL);
             }
             XText xText = UnoRuntime.queryInterface(XText.class, shape);
             if (xText != null) {
                 xText.setString(s.getText());
-                if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON) {
+                // Apply the text colour to the inserted text itself. Setting
+                // CharColor on the shape before it holds text does not reliably
+                // colour text added later (especially with TextFitToSize), so
+                // colour the runs via a cursor after setString.
+                applyTextColor(xText, DefaultPalette.TEXT_WHITE);
+                if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
+                        || s.getKind() == ShapeKind.VENN_CIRCLE) {
                     centerChevronText(shape, xText);
                 }
             }
@@ -179,6 +218,8 @@ public class SlideRenderer {
                     Integer.valueOf(edge.getStartGlue()));
             props.setPropertyValue("EndGluePointIndex",
                     Integer.valueOf(edge.getEndGlue()));
+            props.setPropertyValue("LineColor", Integer.valueOf(CONNECTOR_COLOR));
+            props.setPropertyValue("LineWidth", Integer.valueOf(CONNECTOR_WIDTH));
             if (edge.isStraight()) {
                 props.setPropertyValue("EdgeKind",
                         com.sun.star.drawing.ConnectorType.LINE);
@@ -207,9 +248,28 @@ public class SlideRenderer {
         props.setPropertyValue("CharHeight", Float.valueOf(fontSize));
         props.setPropertyValue("LineStyle",
                 com.sun.star.drawing.LineStyle.NONE);
-        // Auto-shrink text when it doesn't fit; never enlarges text that already fits.
+        // Soft drop shadow to lift the shape off the slide.
+        props.setPropertyValue("Shadow", Boolean.TRUE);
+        props.setPropertyValue("ShadowColor", Integer.valueOf(0x404040));
+        props.setPropertyValue("ShadowTransparence", Integer.valueOf(75));
+        props.setPropertyValue("ShadowXDistance", Integer.valueOf(80));
+        props.setPropertyValue("ShadowYDistance", Integer.valueOf(80));
+        // Wrap text to the shape width and auto-shrink on overflow. Word-wrap is
+        // what makes AUTOFIT respect width, so long labels in narrow boxes shrink
+        // to fit instead of overflowing — while short text is never enlarged.
+        props.setPropertyValue("TextWordWrap", Boolean.TRUE);
         props.setPropertyValue("TextFitToSize",
                 com.sun.star.drawing.TextFitToSizeType.AUTOFIT);
+    }
+
+    /**
+     * Rounds the corners of a {@code RectangleShape} (radius in 1/100 mm). Must
+     * only be called on rectangle shapes — {@code CornerRadius} is not a property
+     * of ellipses or custom shapes and would throw {@code UnknownPropertyException}.
+     */
+    private static void roundCorners(Object shape, int radius) throws Exception {
+        XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
+        props.setPropertyValue("CornerRadius", Integer.valueOf(radius));
     }
 
     /**
@@ -241,6 +301,15 @@ public class SlideRenderer {
         XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
         props.setPropertyValue("CustomShapeGeometry",
                 new com.sun.star.beans.PropertyValue[]{ typeVal });
+    }
+
+    /** Colours all of a shape's text by selecting it with a cursor after insertion. */
+    private static void applyTextColor(XText xText, int color) throws Exception {
+        com.sun.star.text.XTextCursor cursor = xText.createTextCursor();
+        cursor.gotoStart(false);
+        cursor.gotoEnd(true);
+        XPropertySet cursorProps = UnoRuntime.queryInterface(XPropertySet.class, cursor);
+        cursorProps.setPropertyValue("CharColor", Integer.valueOf(color));
     }
 
     /** Centers text both vertically and horizontally inside a chevron/pentagon. */

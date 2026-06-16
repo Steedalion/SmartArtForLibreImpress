@@ -24,9 +24,17 @@ public final class HubAndSpokeLayout {
     private HubAndSpokeLayout() {
     }
 
-    /** Diameter of a circle node at the given level. */
+    /**
+     * Diameter of a circle node at the given level. Circles are sized generously
+     * so typical labels (e.g. "Technology", "Innovation") fit at a readable size
+     * rather than being shrunk to fit a tiny circle.
+     */
     private static int nodeDiameter(int level) {
-        return Math.max(1500, BASE_NODE_H - (level - 1) * SIZE_DECREMENT);
+        switch (level) {
+            case 1:  return 3000; // hub
+            case 2:  return 2500; // spokes
+            default: return 2100; // level-3+ descendants
+        }
     }
 
     /**
@@ -54,7 +62,7 @@ public final class HubAndSpokeLayout {
             LaidOutShape hubShape = new LaidOutShape(
                     hubNode.getText(), 1,
                     hubCX - hubD / 2, hubCY - hubD / 2, hubD, hubD,
-                    ShapeKind.ELLIPSE);
+                    ShapeKind.ELLIPSE, true);
             int hubIndex = out.addShape(hubShape);
 
             List<DiagramNode> spokes = hubNode.getChildren();
@@ -76,7 +84,7 @@ public final class HubAndSpokeLayout {
                 LaidOutShape spokeShape = new LaidOutShape(
                         spokeNode.getText(), 2,
                         spokeCX - spokeD / 2, spokeCY - spokeD / 2, spokeD, spokeD,
-                        ShapeKind.ELLIPSE);
+                        ShapeKind.ELLIPSE, true);
                 int spokeIndex = out.addShape(spokeShape);
                 out.addEdge(new Edge(hubIndex, spokeIndex, -1, -1, true));
 
@@ -127,7 +135,7 @@ public final class HubAndSpokeLayout {
             LaidOutShape childShape = new LaidOutShape(
                     children.get(i).getText(), level,
                     childCX - childD / 2, childCY - childD / 2, childD, childD,
-                    ShapeKind.ELLIPSE);
+                    ShapeKind.ELLIPSE, true);
             int childIdx = out.addShape(childShape);
             out.addEdge(new Edge(parentIdx, childIdx, -1, -1, true));
             placeChildren(out, children.get(i).getChildren(), childCX, childCY,
