@@ -8,7 +8,7 @@
 
 ### 1.1 Specification Document Hierarchy
 
-This file (`impressSmartArt.md`) is the **master specification** — the single
+This file (`impressSmartArt.md`) is the **functional specification** — the single
 source of truth for *what* the plugin does and the packaging/registration rules
 it must satisfy (§5.5). All other documents sit beneath it and must stay
 consistent with it:
@@ -16,7 +16,7 @@ consistent with it:
 ```
 impressSmartArt.md                 ← master spec (this file): scope, behaviour, packaging rules
 │
-├── Phase plans (how each phase is built, in order)
+├── Phase plans (how each phase is built, in order). These files contain code and configuration snippets like
 │   ├── Phase1_ImplementationPlan.md   — Phase 1: Empty OXT extension (installable skeleton)
 │   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (top-level menu entry → dispatch)
 │   ├── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing
@@ -31,7 +31,7 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 │   ├── Phase12_ImplementationPlan.md  — Phase 12: Pyramid diagram type
 │   └── Phase13_ImplementationPlan.md  — Phase 13: Cycle (Blocks) diagram type
 │
-├── Architecture_VDiagram.md       — architecture overview & V-model development process
+├── Architecture_VDiagram.md       — Architecture overview & V-model development process. This file uses mermaid diagrams, but does not contain any code.
 ├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)
 └── README.md                      — build, install, and run instructions
 ```
@@ -42,7 +42,7 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 - When the master spec and a phase plan disagree, the master spec wins; update
   the phase plan to match.
 
-### 1.2 Implementation Status (as of 2026-06-14)
+### 1.2 Implementation Status (as of 2026-06-16, v0.3.0)
 
 | Phase | Scope | Status |
 |-------|-------|--------|
@@ -63,8 +63,10 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 | 11 | Cycle diagram: clockwise ring of rectangles with directed arrows; Cycle (Arrows): circles with curved connector arrows | ✅ Done |
 | 12 | Pyramid diagram: stepped rectangular tiers, narrowest at top, widest at base | ✅ Done |
 | 13 | Cycle (Blocks): rectangles in a ring with solid block-arrow shapes between them | ✅ Done |
+| 14 | Four popular figures: Basic Block List, Vertical Bullet List, Basic Venn, Basic Matrix | ✅ Done |
+| 15 | Aesthetics refresh: rounded corners, soft shadows, navy→teal palette, per-shape text fit | ✅ Done |
 
-**What works today (Phases 1–13):** clicking **SmartArt → Create Diagram…**
+**What works today (Phases 1–15):** clicking **SmartArt → Create Diagram…**
 opens a programmatic dialog (diagram-type dropdown + multiline text + optional
 colour palette field); on **Create** the indented text is parsed into a validated
 hierarchy and the chosen diagram type is rendered as grouped, editable shapes on
@@ -392,7 +394,7 @@ actually work is described in `TESTING_STRATEGY.md`.
 
 ## 9. Success Criteria
 
-Status as of 2026-06-14 (✅ met):
+Status as of 2026-06-16, v0.3.0 (✅ met):
 
 ✅ Plugin loads / installs without errors (verified by `uno-tests/run.sh`)  
 ✅ Dialog accepts text input with indentation  
@@ -409,6 +411,7 @@ Status as of 2026-06-14 (✅ met):
 ✅ Color palette (when provided) is applied per level (Phase 10)  
 ✅ Cycle and Cycle (Arrows) diagrams render correctly — directed arrows, circular arrangement (Phase 11)  
 ✅ Pyramid diagram renders stepped tiers with apex at top and base at bottom (Phase 12)  
-✅ Cycle (Blocks) renders rectangles in a ring with solid block-arrow shapes pointing clockwise (Phase 13)
-
+✅ Cycle (Blocks) renders rectangles in a ring with solid block-arrow shapes pointing clockwise (Phase 13)  
+✅ Basic Block List, Vertical Bullet List, Basic Venn, and Basic Matrix render correctly (Phase 14)  
+✅ Cohesive aesthetics applied — rounded corners, soft shadows, navy→teal palette, per-shape text fit (Phase 15)
 
