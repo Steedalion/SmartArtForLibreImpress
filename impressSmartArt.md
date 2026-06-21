@@ -16,7 +16,7 @@ consistent with it:
 ```
 impressSmartArt.md                 ← master spec (this file): scope, behaviour, packaging rules
 │
-├── Phase plans (how each phase is built, in order). These files contain code and configuration snippets like
+├── docs/plans/ — Phase plans (how each phase is built, in order). These files contain code and configuration snippets like
 │   ├── Phase1_ImplementationPlan.md   — Phase 1: Empty OXT extension (installable skeleton)
 │   ├── Phase2_ImplementationPlan.md   — Phase 2: Menu integration (top-level menu entry → dispatch)
 │   ├── Phase3_ImplementationPlan.md   — Phase 3: Dialog & text parsing
@@ -28,8 +28,8 @@ impressSmartArt.md                 ← master spec (this file): scope, behaviour
 │   ├── Phase9_ImplementationPlan.md   — Phase 9: Sequential Chevron level-3+ children
 │   ├── Phase10_ImplementationPlan.md  — Phase 10: User colour palette via dialog
 │   ├── Phase11_ImplementationPlan.md  — Phase 11: Cycle diagram type
-│   ├── Phase12_ImplementationPlan.md  — Phase 12: Pyramid diagram type
-│   └── Phase13_ImplementationPlan.md  — Phase 13: Cycle (Blocks) diagram type
+│   └── Phase12_ImplementationPlan.md  — Phase 12: Pyramid diagram type
+│       (Phases 13–15 were delivered in batches without separate plan files; see § 1.2)
 │
 ├── Architecture_VDiagram.md       — Architecture overview & V-model development process. This file uses mermaid diagrams, but does not contain any code.
 ├── TESTING_STRATEGY.md            — testing approach (Java unit · OXT structure · runtime dispatch)

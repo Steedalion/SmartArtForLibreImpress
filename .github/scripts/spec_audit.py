@@ -41,39 +41,39 @@ COMPONENTS = [
         "src": f"{LAYOUT}/HierarchyLayout.java",
         "specs": [
             "impressSmartArt.md",
-            "Phase4_ImplementationPlan.md",
-            "Phase6_ImplementationPlan.md",
+            "docs/plans/Phase4_ImplementationPlan.md",
+            "docs/plans/Phase6_ImplementationPlan.md",
         ],
     },
     {
         "name": "HubAndSpokeLayout",
         "src": f"{LAYOUT}/HubAndSpokeLayout.java",
-        "specs": ["impressSmartArt.md", "Phase8_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase8_ImplementationPlan.md"],
     },
     {
         "name": "ProcessFlowLayout",
         "src": f"{LAYOUT}/ProcessFlowLayout.java",
-        "specs": ["impressSmartArt.md", "Phase7_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase7_ImplementationPlan.md"],
     },
     {
         "name": "SequentialChevronLayout",
         "src": f"{LAYOUT}/SequentialChevronLayout.java",
-        "specs": ["impressSmartArt.md", "Phase9_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase9_ImplementationPlan.md"],
     },
     {
         "name": "CycleLayout",
         "src": f"{LAYOUT}/CycleLayout.java",
-        "specs": ["impressSmartArt.md", "Phase11_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase11_ImplementationPlan.md"],
     },
     {
         "name": "CycleArrowLayout",
         "src": f"{LAYOUT}/CycleArrowLayout.java",
-        "specs": ["impressSmartArt.md", "Phase11_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase11_ImplementationPlan.md"],
     },
     {
         "name": "HierarchyParser",
         "src": f"{PARSER}/HierarchyParser.java",
-        "specs": ["impressSmartArt.md", "Phase3_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase3_ImplementationPlan.md"],
     },
 ]
 
