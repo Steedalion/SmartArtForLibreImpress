@@ -120,7 +120,7 @@ LibreImpress-SmartArt/
 │   └── test/java/org/libreimpress/smartart/
 │       ├── parsers/HierarchyParserTest.java
 │       ├── editing/OutlineEditorTest.java
-│       └── layout/                     # 91 unit tests across all layout classes
+│       └── layout/                     # 111 unit tests across all layout classes
 ├── uno-tests/                          # headless LibreOffice integration tests
 │   ├── run.sh
 │   └── probes/

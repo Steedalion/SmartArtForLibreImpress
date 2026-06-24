@@ -41,39 +41,39 @@ COMPONENTS = [
         "src": f"{LAYOUT}/HierarchyLayout.java",
         "specs": [
             "impressSmartArt.md",
-            "Phase4_ImplementationPlan.md",
-            "Phase6_ImplementationPlan.md",
+            "docs/plans/Phase4_ImplementationPlan.md",
+            "docs/plans/Phase6_ImplementationPlan.md",
         ],
     },
     {
         "name": "HubAndSpokeLayout",
         "src": f"{LAYOUT}/HubAndSpokeLayout.java",
-        "specs": ["impressSmartArt.md", "Phase8_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase8_ImplementationPlan.md"],
     },
     {
         "name": "ProcessFlowLayout",
         "src": f"{LAYOUT}/ProcessFlowLayout.java",
-        "specs": ["impressSmartArt.md", "Phase7_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase7_ImplementationPlan.md"],
     },
     {
         "name": "SequentialChevronLayout",
         "src": f"{LAYOUT}/SequentialChevronLayout.java",
-        "specs": ["impressSmartArt.md", "Phase9_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase9_ImplementationPlan.md"],
     },
     {
         "name": "CycleLayout",
         "src": f"{LAYOUT}/CycleLayout.java",
-        "specs": ["impressSmartArt.md", "Phase11_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase11_ImplementationPlan.md"],
     },
     {
         "name": "CycleArrowLayout",
         "src": f"{LAYOUT}/CycleArrowLayout.java",
-        "specs": ["impressSmartArt.md", "Phase11_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase11_ImplementationPlan.md"],
     },
     {
         "name": "HierarchyParser",
         "src": f"{PARSER}/HierarchyParser.java",
-        "specs": ["impressSmartArt.md", "Phase3_ImplementationPlan.md"],
+        "specs": ["impressSmartArt.md", "docs/plans/Phase3_ImplementationPlan.md"],
     },
 ]
 
@@ -322,26 +322,47 @@ def write_report(date: str, findings: list[dict]) -> None:
 # Main
 # ---------------------------------------------------------------------------
 def main() -> None:
+    # Fail fast on missing credentials: without this guard a total auth
+    # failure still produces a "report" full of SDK error strings, which the
+    # workflow then commits and pushes (see the dropped 2026-06-1*.md reports).
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        sys.exit(
+            "ANTHROPIC_API_KEY is not set — aborting before any report is "
+            "written. Set the secret in the repo's Actions settings."
+        )
+
     date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     findings = []
+    failures = 0
 
     for comp in COMPONENTS:
         print(f"[{comp['name']}] reconstructing…", flush=True)
         try:
             reco = reconstruct(comp)
+        except anthropic.AuthenticationError as e:
+            sys.exit(f"Authentication failed ({e}) — aborting; no report written.")
         except Exception as e:
             print(f"  reconstruction failed: {e}", file=sys.stderr)
             reco = {"code": "", "assumptions": [], "ambiguities": [], "missing": [str(e)]}
+            failures += 1
 
         print(f"[{comp['name']}] comparing…", flush=True)
         try:
             gaps = compare(comp, reco)
+        except anthropic.AuthenticationError as e:
+            sys.exit(f"Authentication failed ({e}) — aborting; no report written.")
         except Exception as e:
             print(f"  comparison failed: {e}", file=sys.stderr)
             gaps = {"gaps": [str(e)], "suggestions": [], "divergences": []}
+            failures += 1
 
         gaps["component"] = comp["name"]
         findings.append(gaps)
+
+    # If every call failed the report would be pure error noise — don't write
+    # or commit it.
+    if failures == 2 * len(COMPONENTS):
+        sys.exit("All audit calls failed — aborting; no report written.")
 
     write_report(date, findings)
 

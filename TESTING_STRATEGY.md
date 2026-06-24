@@ -48,7 +48,7 @@ the fragile strings are correct, without launching LibreOffice:
 - `description.xml` declares `<identifier value="org.libreimpress.smartart"/>`.
 
 These are cheap regression guards for the registration contract
-(`Phase2_ImplementationPlan.md` §15), but they **cannot** prove the extension
+(`docs/plans/Phase2_ImplementationPlan.md` §15), but they **cannot** prove the extension
 actually works — that is layer 3.
 
 ---
@@ -71,7 +71,7 @@ Check 2 is the decisive one: LibreOffice **silently hides** an addon menu item
 whose command cannot be dispatched, so a null dispatch means an empty submenu.
 This catches the registration/dispatch regressions that layers 1–2 miss — e.g.
 the component jar packaged at the OXT root instead of `uno/smartart.jar`, which
-leaves the config perfect but the dispatch null (see `Phase2_ImplementationPlan.md`
+leaves the config perfect but the dispatch null (see `docs/plans/Phase2_ImplementationPlan.md`
 §15).
 
 **`render_probe.py`** (no extension needed) exercises the drawing API the renderer
