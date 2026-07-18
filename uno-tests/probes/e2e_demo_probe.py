@@ -42,34 +42,42 @@ RESULT_TIMEOUT_S = 180
 
 # Mirrors DemoRunner.DEMOS (order matters — slides are appended in this
 # order). "texts" are substrings that must appear in the grouped diagram's
-# text; "min_shapes" is a conservative lower bound on the group's children.
+# text; "min_shapes" is a conservative lower bound on the group's children;
+# the last field is the DiagramType enum name expected in the group's
+# stamped metadata (Phase 17).
 EXPECTED = [
     ("hierarchy",
-     ["Company", "Products", "Alpha", "Bravo", "Services", "Charlie", "Delta"], 7),
+     ["Company", "Products", "Alpha", "Bravo", "Services", "Charlie", "Delta"],
+     7, "HIERARCHY"),
     ("hub-and-spoke",
-     ["Innovation", "People", "Training", "Process", "Technology", "Partners"], 6),
+     ["Innovation", "People", "Training", "Process", "Technology", "Partners"],
+     6, "HUB_AND_SPOKE"),
     ("process-flow",
-     ["Research", "Survey", "Analysis", "Design", "Prototype", "Testing", "Launch"], 7),
+     ["Research", "Survey", "Analysis", "Design", "Prototype", "Testing", "Launch"],
+     7, "PROCESS_FLOW"),
     ("sequential-chevron",
-     ["Plan", "Scope", "Schedule", "Execute", "Build", "Test", "Review"], 7),
-    ("cycle", ["Plan", "Do", "Check", "Act"], 4),
-    ("cycle-arrows", ["Plan", "Do", "Check", "Act"], 4),
-    ("cycle-blocks", ["Plan", "Do", "Check", "Act"], 4),
+     ["Plan", "Scope", "Schedule", "Execute", "Build", "Test", "Review"],
+     7, "SEQUENTIAL_CHEVRON"),
+    ("cycle", ["Plan", "Do", "Check", "Act"], 4, "CYCLE"),
+    ("cycle-arrows", ["Plan", "Do", "Check", "Act"], 4, "CYCLE_ARROW"),
+    ("cycle-blocks", ["Plan", "Do", "Check", "Act"], 4, "CYCLE_BLOCK"),
     ("pyramid",
      ["Vision", "Strategy", "Execution", "Results",
-      "Goal A", "Goal B", "Goal C"], 4),
+      "Goal A", "Goal B", "Goal C"], 4, "PYRAMID"),
     ("basic-block-list",
      ["Plan", "Scope", "Budget", "Design", "Build", "Backend", "Database",
-      "Frontend", "Test", "Release", "Review"], 6),
+      "Frontend", "Test", "Release", "Review"], 6, "BASIC_BLOCK_LIST"),
     ("vertical-bullet-list",
      ["Introductions", "Welcome", "Goals for today", "Project status",
       "Milestones", "Phase 1 shipped", "Risks", "Next steps", "Q and A",
-      "Open floor"], 3),
-    ("basic-venn", ["Quality", "Speed", "Cost"], 3),
+      "Open floor"], 3, "VERTICAL_BULLET_LIST"),
+    ("basic-venn", ["Quality", "Speed", "Cost"], 3, "BASIC_VENN"),
     ("basic-matrix",
      ["Urgent and Important", "Important, Not Urgent",
-      "Urgent, Not Important", "Neither"], 4),
+      "Urgent, Not Important", "Neither"], 4, "BASIC_MATRIX"),
 ]
+
+METADATA_MARKER = "smartart:v1;"
 
 
 def pv(name, value):
@@ -114,7 +122,7 @@ def check_result_file(outdir):
     with open(path, encoding="utf-8") as f:
         lines = [ln.strip() for ln in f if ln.strip()]
     ok = True
-    slugs = [slug for slug, _, _ in EXPECTED]
+    slugs = [slug for slug, _, _, _ in EXPECTED]
     got = {}
     for ln in lines:
         status, _, rest = ln.partition(" ")
@@ -140,7 +148,7 @@ def check_slides(doc, first_demo_page):
                  pages.getCount()))
         return False
     ok = True
-    for i, (slug, texts, min_shapes) in enumerate(EXPECTED):
+    for i, (slug, texts, min_shapes, type_name) in enumerate(EXPECTED):
         page = pages.getByIndex(first_demo_page + i)
         groups = [page.getByIndex(j) for j in range(page.Count)
                   if supports(page.getByIndex(j),
@@ -166,14 +174,26 @@ def check_slides(doc, first_demo_page):
                   % (slug, missing, joined))
             ok = False
             continue
-        print("PASS: %s: 1 group (%d shapes), all %d node texts present"
+        # Phase 17: every generated group carries edit metadata.
+        desc = group.Description
+        if not desc.startswith(METADATA_MARKER) \
+                or ("type=%s" % type_name) not in desc:
+            print("FAIL: %s: group Description lacks metadata for %s: %r"
+                  % (slug, type_name, desc))
+            ok = False
+            continue
+        if not group.Name.startswith("SmartArt: "):
+            print("FAIL: %s: group Name not stamped: %r" % (slug, group.Name))
+            ok = False
+            continue
+        print("PASS: %s: 1 group (%d shapes), %d node texts, metadata stamped"
               % (slug, group.Count, len(texts)))
     return ok
 
 
 def check_pngs(outdir):
     ok = True
-    for slug, _, _ in EXPECTED:
+    for slug, _, _, _ in EXPECTED:
         path = os.path.join(outdir, slug + ".png")
         if not os.path.exists(path):
             print("FAIL: missing screenshot %s" % path)

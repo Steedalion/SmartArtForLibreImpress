@@ -41,6 +41,7 @@ import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.LayoutFactory;
 import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramType;
+import org.libreimpress.smartart.models.SmartArtMetadata;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
 import org.libreimpress.smartart.rendering.SlideRenderer;
@@ -85,11 +86,23 @@ public class SmartArtDialog {
     }
 
     /**
-     * Shows the dialog modally.
+     * Shows the dialog modally in create mode.
      *
      * @return the entered text and type on Create, or {@code null} on Cancel.
      */
     public Result show() throws Exception {
+        return show(null);
+    }
+
+    /**
+     * Shows the dialog modally. With a non-null {@code prefill} (from an
+     * existing diagram's metadata) the dialog opens in edit mode: outline,
+     * type and palette are seeded from the metadata, the title reads
+     * "Edit Diagram" and the OK button "Update".
+     *
+     * @return the entered text and type on Create/Update, or {@code null} on Cancel.
+     */
+    public Result show(SmartArtMetadata prefill) throws Exception {
         XMultiComponentFactory smgr = context.getServiceManager();
 
         Object dialogModel = smgr.createInstanceWithContext(
@@ -100,7 +113,8 @@ public class SmartArtDialog {
         dialogProps.setPropertyValue("PositionY", Integer.valueOf(80));
         dialogProps.setPropertyValue("Width",     Integer.valueOf(DIALOG_W));
         dialogProps.setPropertyValue("Height",    Integer.valueOf(DIALOG_H));
-        dialogProps.setPropertyValue("Title",     "SmartArt – Create Diagram");
+        dialogProps.setPropertyValue("Title", prefill == null
+                ? "SmartArt – Create Diagram" : "SmartArt – Edit Diagram");
 
         XMultiServiceFactory modelFactory =
                 UnoRuntime.queryInterface(XMultiServiceFactory.class, dialogModel);
@@ -119,10 +133,18 @@ public class SmartArtDialog {
         addLabel(modelFactory, container, "lblPalette",
                 "Colours (optional, e.g. 1=#4472C4):", 8, 136, 214, 10);
         addPaletteEdit(modelFactory, container, "txtPalette", 8, 148, 214, 36);
-        addButton(modelFactory, container, "btnOk", "Create", 110, 190, 54, 16,
+        addButton(modelFactory, container, "btnOk",
+                prefill == null ? "Create" : "Update", 110, 190, 54, 16,
                 PushButtonType.OK_value, true);
         addButton(modelFactory, container, "btnCancel", "Cancel", 168, 190, 54, 16,
                 PushButtonType.CANCEL_value, false);
+
+        if (prefill != null) {
+            setModelProp(container, "txtInput", "Text", prefill.getOutline());
+            setModelProp(container, "txtPalette", "Text", prefill.getPaletteText());
+            setModelProp(container, "lstType", "SelectedItems",
+                    new short[]{ (short) prefill.getType().ordinal() });
+        }
 
         // ---- right panel: preview ----
         int px = LEFT_W + SEP;
@@ -578,6 +600,13 @@ public class SmartArtDialog {
         Object model = container.getByName(controlName);
         XPropertySet p = UnoRuntime.queryInterface(XPropertySet.class, model);
         return p.getPropertyValue(property);
+    }
+
+    private void setModelProp(XNameContainer container, String controlName,
+            String property, Object value) throws Exception {
+        Object model = container.getByName(controlName);
+        XPropertySet p = UnoRuntime.queryInterface(XPropertySet.class, model);
+        p.setPropertyValue(property, value);
     }
 
     private static PropertyValue pv(String name, Object value) {

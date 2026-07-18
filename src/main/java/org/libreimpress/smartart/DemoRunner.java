@@ -34,6 +34,7 @@ import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.LayoutFactory;
 import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramType;
+import org.libreimpress.smartart.models.SmartArtMetadata;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
 import org.libreimpress.smartart.rendering.SlideRenderer;
@@ -227,7 +228,9 @@ final class DemoRunner {
                     throw new Exception("parse: " + parsed.getErrorMessage());
                 }
                 DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
-                renderer.drawHierarchy(layout, ColorPalette.EMPTY);
+                XShape group = renderer.drawHierarchy(layout, ColorPalette.EMPTY);
+                SlideRenderer.stampMetadata(group,
+                        new SmartArtMetadata(type, "DEFAULT", "", inputText));
 
                 // Export a clean screenshot of just the diagram, then annotate the
                 // on-screen dev slide with the label/input listing afterwards so the

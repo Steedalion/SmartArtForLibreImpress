@@ -55,6 +55,9 @@ jobs:
       - name: Verify rendering API (headless UNO)
         run: xvfb-run -a bash uno-tests/run.sh uno-tests/probes/render_probe.py
 
+      - name: Verify metadata survives ODP save/reload (headless UNO)
+        run: xvfb-run -a bash uno-tests/run.sh uno-tests/probes/metadata_persistence_probe.py
+
       - name: End-to-end render via Java pipeline (headless UNO)
         run: |
           xvfb-run -a bash uno-tests/run.sh --install target/SmartArt.oxt uno-tests/probes/e2e_demo_probe.py

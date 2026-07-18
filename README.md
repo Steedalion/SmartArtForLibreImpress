@@ -46,6 +46,19 @@ Root
 The **Indent →** and **← Outdent** buttons (or **Ctrl+]** / **Ctrl+[**) add
 or remove one dash level on the current line.
 
+## Edit an existing diagram
+
+Every generated diagram stores its source (outline, type, colours) inside the
+group shape, and this survives saving and reopening the presentation. To edit:
+select the diagram's group on the slide, then run **SmartArt → Create
+Diagram…** again — the dialog opens prefilled in *Edit* mode and **Update**
+replaces the diagram in place (keeping its position). Changing the type in the
+dropdown converts the diagram to another layout.
+
+Notes: manual tweaks made *inside* the group (moved boxes, edited text) are
+not read back — Update regenerates from the stored outline. A diagram that
+consists of a single shape is not grouped and cannot be edited this way.
+
 ## Prerequisites
 
 - **JDK 11+** — `java -version`

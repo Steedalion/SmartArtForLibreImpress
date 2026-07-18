@@ -82,15 +82,18 @@ public class SlideRenderer {
     /**
      * Draws a laid-out diagram using the built-in default palette.
      */
-    public void drawHierarchy(DiagramLayout layout) throws Exception {
-        drawHierarchy(layout, ColorPalette.EMPTY);
+    public XShape drawHierarchy(DiagramLayout layout) throws Exception {
+        return drawHierarchy(layout, ColorPalette.EMPTY);
     }
 
     /**
      * Draws a laid-out diagram onto the current slide of the current document,
      * applying {@code palette} fill colours where set.
+     *
+     * @return the group holding the diagram, or {@code null} if the diagram
+     *         had fewer than two shapes (nothing to group)
      */
-    public void drawHierarchy(DiagramLayout layout, ColorPalette palette) throws Exception {
+    public XShape drawHierarchy(DiagramLayout layout, ColorPalette palette) throws Exception {
         XComponent document = currentComponent();
         XDrawPage page = currentPage(document);
         if (page == null) {
@@ -98,15 +101,17 @@ public class SlideRenderer {
         }
         XMultiServiceFactory factory =
                 UnoRuntime.queryInterface(XMultiServiceFactory.class, document);
-        drawHierarchy(page, factory, layout, palette);
+        return drawHierarchy(page, factory, layout, palette);
     }
 
     /**
      * Draws a laid-out diagram onto an explicit {@code page} using the given
      * {@code factory}. Used by preview and screenshot export where the target
      * page is not the desktop's current view.
+     *
+     * @return the group holding the diagram, or {@code null} if ungrouped
      */
-    public void drawHierarchy(XDrawPage page, XMultiServiceFactory factory,
+    public XShape drawHierarchy(XDrawPage page, XMultiServiceFactory factory,
             DiagramLayout layout, ColorPalette palette) throws Exception {
         XShapes shapes = UnoRuntime.queryInterface(XShapes.class, page);
         List<XShape> created = new ArrayList<>();
@@ -234,7 +239,27 @@ public class SlideRenderer {
             created.add(xConnector);
         }
 
-        groupShapes(page, created);
+        return groupShapes(page, created);
+    }
+
+    /**
+     * Writes {@code meta} onto a diagram group: the serialized form into
+     * {@code Description} (persisted as {@code <svg:desc>} in ODF) and a
+     * friendly label into {@code Name}. No-op on a null group (ungrouped
+     * single-shape diagram — such diagrams cannot be edited later).
+     */
+    public static void stampMetadata(XShape group,
+            org.libreimpress.smartart.models.SmartArtMetadata meta) {
+        if (group == null || meta == null) {
+            return;
+        }
+        try {
+            XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, group);
+            props.setPropertyValue("Description", meta.serialize());
+            props.setPropertyValue("Name", meta.displayName());
+        } catch (Exception e) {
+            // Metadata is an enhancement; the drawn diagram is still valid.
+        }
     }
 
     /** Applies solid fill, text colour, font size, and auto-shrink to a shape. */
@@ -326,10 +351,14 @@ public class SlideRenderer {
                 com.sun.star.style.ParagraphAdjust.CENTER);
     }
 
-    /** Groups all the diagram's shapes into one editable group on the page. */
-    private void groupShapes(XDrawPage page, List<XShape> created) {
+    /**
+     * Groups all the diagram's shapes into one editable group on the page.
+     *
+     * @return the group shape, or {@code null} if grouping was skipped/failed
+     */
+    private XShape groupShapes(XDrawPage page, List<XShape> created) {
         if (created.size() < 2) {
-            return;
+            return null;
         }
         try {
             XMultiComponentFactory smgr = context.getServiceManager();
@@ -341,10 +370,12 @@ public class SlideRenderer {
             }
             XShapeGrouper grouper = UnoRuntime.queryInterface(XShapeGrouper.class, page);
             if (grouper != null) {
-                grouper.group(collection);
+                return grouper.group(collection);
             }
+            return null;
         } catch (Exception e) {
             // Grouping is cosmetic; leave shapes ungrouped if it fails.
+            return null;
         }
     }
 
