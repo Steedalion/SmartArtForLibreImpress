@@ -150,13 +150,11 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
                 DiagramNode root = parsed.getRoot();
                 DiagramLayout layout = LayoutFactory.build(result.getType(), root);
                 ColorPalette palette = PaletteParser.parse(result.getPaletteText());
-                XShape group = new SlideRenderer(xComponentContext)
+                XShape group = new SlideRenderer(xComponentContext, result.getStyle())
                         .drawHierarchy(layout, palette);
-                String template =
-                        target != null ? target.meta.getTemplate() : "DEFAULT";
                 SlideRenderer.stampMetadata(group, new SmartArtMetadata(
-                        result.getType(), template, result.getPaletteText(),
-                        result.getText()));
+                        result.getType(), result.getStyle().name(),
+                        result.getPaletteText(), result.getText()));
                 if (target != null) {
                     // Replace in place: the old diagram is removed only after
                     // the new one rendered, and the new group inherits the old

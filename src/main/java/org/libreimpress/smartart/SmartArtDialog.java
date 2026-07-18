@@ -45,6 +45,7 @@ import org.libreimpress.smartart.models.SmartArtMetadata;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
 import org.libreimpress.smartart.rendering.SlideRenderer;
+import org.libreimpress.smartart.rendering.StyleTemplate;
 
 /**
  * A programmatically-built UNO dialog that collects the diagram type and the
@@ -60,16 +61,20 @@ public class SmartArtDialog {
         private final String text;
         private final DiagramType type;
         private final String paletteText;
+        private final StyleTemplate style;
 
-        Result(String text, DiagramType type, String paletteText) {
+        Result(String text, DiagramType type, String paletteText,
+                StyleTemplate style) {
             this.text = text;
             this.type = type;
             this.paletteText = paletteText;
+            this.style = style;
         }
 
         public String getText() { return text; }
         public DiagramType getType() { return type; }
         public String getPaletteText() { return paletteText != null ? paletteText : ""; }
+        public StyleTemplate getStyle() { return style != null ? style : StyleTemplate.DEFAULT; }
     }
 
     // ---- layout constants (UNO dialog units) ----
@@ -77,7 +82,7 @@ public class SmartArtDialog {
     private static final int SEP      = 8;
     private static final int PREV_W   = 242;
     private static final int DIALOG_W = LEFT_W + SEP + PREV_W;  // 480
-    private static final int DIALOG_H = 216;
+    private static final int DIALOG_H = 234;
 
     private final XComponentContext context;
 
@@ -133,10 +138,12 @@ public class SmartArtDialog {
         addLabel(modelFactory, container, "lblPalette",
                 "Colours (optional, e.g. 1=#4472C4):", 8, 136, 214, 10);
         addPaletteEdit(modelFactory, container, "txtPalette", 8, 148, 214, 36);
+        addLabel(modelFactory, container, "lblStyle", "Style:", 8, 190, 60, 12);
+        addStyleListBox(modelFactory, container, "lstStyle", 70, 188, 152, 14);
         addButton(modelFactory, container, "btnOk",
-                prefill == null ? "Create" : "Update", 110, 190, 54, 16,
+                prefill == null ? "Create" : "Update", 110, 208, 54, 16,
                 PushButtonType.OK_value, true);
-        addButton(modelFactory, container, "btnCancel", "Cancel", 168, 190, 54, 16,
+        addButton(modelFactory, container, "btnCancel", "Cancel", 168, 208, 54, 16,
                 PushButtonType.CANCEL_value, false);
 
         if (prefill != null) {
@@ -144,6 +151,8 @@ public class SmartArtDialog {
             setModelProp(container, "txtPalette", "Text", prefill.getPaletteText());
             setModelProp(container, "lstType", "SelectedItems",
                     new short[]{ (short) prefill.getType().ordinal() });
+            setModelProp(container, "lstStyle", "SelectedItems", new short[]{
+                    (short) StyleTemplate.fromName(prefill.getTemplate()).ordinal() });
         }
 
         // ---- right panel: preview ----
@@ -227,8 +236,11 @@ public class SmartArtDialog {
             short[] selected = (short[]) getModelProp(container, "lstType", "SelectedItems");
             int index = (selected != null && selected.length > 0) ? selected[0] : 0;
             String paletteText = (String) getModelProp(container, "txtPalette", "Text");
+            short[] styleSel = (short[]) getModelProp(container, "lstStyle", "SelectedItems");
+            int styleIndex = (styleSel != null && styleSel.length > 0) ? styleSel[0] : 0;
             return new Result(text == null ? "" : text, DiagramType.fromIndex(index),
-                    paletteText == null ? "" : paletteText);
+                    paletteText == null ? "" : paletteText,
+                    StyleTemplate.fromIndex(styleIndex));
         } finally {
             preview.shutdown();
             if (extToolkit != null) {
@@ -418,6 +430,9 @@ public class SmartArtDialog {
                 short[] selected = (short[]) getModelProp(container, "lstType", "SelectedItems");
                 int index = (selected != null && selected.length > 0) ? selected[0] : 0;
                 DiagramType type = DiagramType.fromIndex(index);
+                short[] styleSel = (short[]) getModelProp(container, "lstStyle", "SelectedItems");
+                StyleTemplate previewStyle = StyleTemplate.fromIndex(
+                        (styleSel != null && styleSel.length > 0) ? styleSel[0] : 0);
 
                 step = "parse";
                 ParseResult parsed = new HierarchyParser()
@@ -441,7 +456,7 @@ public class SmartArtDialog {
                         currentPages.getByIndex(origCount));
 
                 step = "render";
-                new SlideRenderer(context)
+                new SlideRenderer(context, previewStyle)
                         .drawHierarchy(renderPage, docFactory, layout, ColorPalette.EMPTY);
 
                 step = "temp-file";
@@ -559,6 +574,15 @@ public class SmartArtDialog {
                 "com.sun.star.awt.UnoControlListBoxModel", name, x, y, w, h);
         p.setPropertyValue("Dropdown", Boolean.TRUE);
         p.setPropertyValue("StringItemList", DiagramType.labels());
+        p.setPropertyValue("SelectedItems", new short[]{ 0 });
+    }
+
+    private void addStyleListBox(XMultiServiceFactory factory, XNameContainer container,
+            String name, int x, int y, int w, int h) throws Exception {
+        XPropertySet p = newControl(factory, container,
+                "com.sun.star.awt.UnoControlListBoxModel", name, x, y, w, h);
+        p.setPropertyValue("Dropdown", Boolean.TRUE);
+        p.setPropertyValue("StringItemList", StyleTemplate.labels());
         p.setPropertyValue("SelectedItems", new short[]{ 0 });
     }
 

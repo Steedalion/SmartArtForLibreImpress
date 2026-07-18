@@ -6,7 +6,7 @@ import java.util.Map;
 
 /**
  * An optional per-level fill-colour palette supplied by the user.
- * Levels not present in the map fall back to the built-in {@code DefaultPalette}.
+ * Levels not present in the map fall back to the selected {@code StyleTemplate}.
  */
 public final class ColorPalette {
 

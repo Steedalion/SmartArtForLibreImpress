@@ -42,16 +42,17 @@ public class SlideRenderer {
     private static final int WIDTH = 6000;
     private static final int HEIGHT = 3000;
 
-    /** Corner-rounding radius for rectangular shapes (1/100 mm). */
-    private static final int CORNER_RADIUS = 250;
-    /** Connector line colour (mid-grey) and width (1/100 mm). */
-    private static final int CONNECTOR_COLOR = 0x595959;
-    private static final int CONNECTOR_WIDTH = 40;
-
     private final XComponentContext context;
+    private final StyleTemplate style;
 
+    /** Renders with the {@link StyleTemplate#DEFAULT} look. */
     public SlideRenderer(XComponentContext context) {
+        this(context, StyleTemplate.DEFAULT);
+    }
+
+    public SlideRenderer(XComponentContext context, StyleTemplate style) {
         this.context = context;
+        this.style = style == null ? StyleTemplate.DEFAULT : style;
     }
 
     /** Adds one rectangle containing {@code text} to the current slide. */
@@ -141,15 +142,14 @@ public class SlideRenderer {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.chevronFill(chevronSeq);
+                        : style.accent(chevronSeq);
                 chevronSeq++;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
             } else if (s.getKind() == ShapeKind.BLOCK_ARROW) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
-                        ? userColor : DefaultPalette.ARROW_ACCENT;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE, 9f);
+                        ? userColor : style.arrowAccent();
+                applyStyle(shape, fill, 9f);
                 applyBlockArrowGeometry(shape);
                 XPropertySet rProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
                 rProps.setPropertyValue("RotateAngle", Integer.valueOf(s.getRotateAngle100()));
@@ -158,34 +158,32 @@ public class SlideRenderer {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.chevronFill(chevronSeq);
+                        : style.accent(chevronSeq);
                 chevronSeq++;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
-                roundCorners(shape, CORNER_RADIUS);
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
+                roundCorners(shape, style.getCornerRadius());
             } else if (s.getKind() == ShapeKind.VENN_CIRCLE) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.chevronFill(chevronSeq);
+                        : style.accent(chevronSeq);
                 chevronSeq++;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
                 // Partial transparency so overlapping circles remain visible;
                 // drop the shadow, which muddies translucent overlaps.
                 XPropertySet vProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
-                vProps.setPropertyValue("FillTransparence", Integer.valueOf(25));
+                vProps.setPropertyValue("FillTransparence",
+                        Integer.valueOf(style.getVennTransparence()));
                 vProps.setPropertyValue("Shadow", Boolean.FALSE);
             } else {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.fill(s.getKind(), s.getLevel());
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
+                        : style.fill(s.getKind(), s.getLevel());
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
                 // Round rectangle corners (not ellipses).
                 if (s.getKind() == ShapeKind.RECTANGLE) {
-                    roundCorners(shape, CORNER_RADIUS);
+                    roundCorners(shape, style.getCornerRadius());
                 }
             }
             // Small label boxes (process/chevron sub-items) scale text to fit so
@@ -202,7 +200,7 @@ public class SlideRenderer {
                 // CharColor on the shape before it holds text does not reliably
                 // colour text added later (especially with TextFitToSize), so
                 // colour the runs via a cursor after setString.
-                applyTextColor(xText, DefaultPalette.TEXT_WHITE);
+                applyTextColor(xText, style.getTextColor());
                 if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
                         || s.getKind() == ShapeKind.VENN_CIRCLE) {
                     centerChevronText(shape, xText);
@@ -223,8 +221,10 @@ public class SlideRenderer {
                     Integer.valueOf(edge.getStartGlue()));
             props.setPropertyValue("EndGluePointIndex",
                     Integer.valueOf(edge.getEndGlue()));
-            props.setPropertyValue("LineColor", Integer.valueOf(CONNECTOR_COLOR));
-            props.setPropertyValue("LineWidth", Integer.valueOf(CONNECTOR_WIDTH));
+            props.setPropertyValue("LineColor",
+                    Integer.valueOf(style.getConnectorColor()));
+            props.setPropertyValue("LineWidth",
+                    Integer.valueOf(style.getConnectorWidth()));
             if (edge.isStraight()) {
                 props.setPropertyValue("EdgeKind",
                         com.sun.star.drawing.ConnectorType.LINE);
@@ -263,22 +263,28 @@ public class SlideRenderer {
     }
 
     /** Applies solid fill, text colour, font size, and auto-shrink to a shape. */
-    private static void applyStyle(Object shape, int fillColor, int textColor,
-                                   float fontSize) throws Exception {
+    private void applyStyle(Object shape, int fillColor, float fontSize)
+            throws Exception {
         XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
         props.setPropertyValue("FillStyle",
                 com.sun.star.drawing.FillStyle.SOLID);
         props.setPropertyValue("FillColor", Integer.valueOf(fillColor));
-        props.setPropertyValue("CharColor", Integer.valueOf(textColor));
+        props.setPropertyValue("CharColor", Integer.valueOf(style.getTextColor()));
         props.setPropertyValue("CharHeight", Float.valueOf(fontSize));
         props.setPropertyValue("LineStyle",
                 com.sun.star.drawing.LineStyle.NONE);
-        // Soft drop shadow to lift the shape off the slide.
-        props.setPropertyValue("Shadow", Boolean.TRUE);
-        props.setPropertyValue("ShadowColor", Integer.valueOf(0x404040));
-        props.setPropertyValue("ShadowTransparence", Integer.valueOf(75));
-        props.setPropertyValue("ShadowXDistance", Integer.valueOf(80));
-        props.setPropertyValue("ShadowYDistance", Integer.valueOf(80));
+        // Soft drop shadow to lift the shape off the slide (template-dependent).
+        props.setPropertyValue("Shadow", Boolean.valueOf(style.hasShadow()));
+        if (style.hasShadow()) {
+            props.setPropertyValue("ShadowColor",
+                    Integer.valueOf(style.getShadowColor()));
+            props.setPropertyValue("ShadowTransparence",
+                    Integer.valueOf(style.getShadowTransparence()));
+            props.setPropertyValue("ShadowXDistance",
+                    Integer.valueOf(style.getShadowDistance()));
+            props.setPropertyValue("ShadowYDistance",
+                    Integer.valueOf(style.getShadowDistance()));
+        }
         // Wrap text to the shape width and auto-shrink on overflow. Word-wrap is
         // what makes AUTOFIT respect width, so long labels in narrow boxes shrink
         // to fit instead of overflowing — while short text is never enlarged.
