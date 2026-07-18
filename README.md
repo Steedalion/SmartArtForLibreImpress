@@ -30,6 +30,9 @@ Browse all releases → [Releases](https://github.com/Steedalion/SmartArtForLibr
 | **Vertical Bullet List** | Stacked title bars, each with a content box of its level-2 and deeper children as nested, indented bullets beneath | ![Vertical Bullet List](docs/screenshots/vertical-bullet-list.png) |
 | **Basic Venn** | Overlapping translucent circles, one per level-1 item, around the slide centre | ![Basic Venn](docs/screenshots/basic-venn.png) |
 | **Basic Matrix** | First four level-1 items as the quadrants of a 2×2 grid | ![Basic Matrix](docs/screenshots/basic-matrix.png) |
+| **Target** | Concentric circles, first item outermost, last item the bullseye; labels in each ring's top band | ![Target](docs/screenshots/target.png) |
+| **Basic Timeline** | Horizontal spine with one marker per item; label boxes alternate above/below, level-2+ children as bullets | ![Basic Timeline](docs/screenshots/basic-timeline.png) |
+| **Radial List** | Central circle with rectangular satellites in a ring; level-3+ children as bullets inside each satellite | ![Radial List](docs/screenshots/radial-list.png) |
 
 ## Input format
 

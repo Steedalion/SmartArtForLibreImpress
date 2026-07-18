@@ -165,6 +165,28 @@ final class DemoRunner {
             + "Neither\n"
             + I  + "Drop"
         },
+        {
+            DiagramType.TARGET, "Target", "target",
+            "Total Market\nTarget Segment\nNiche\nCore Focus"
+        },
+        {
+            DiagramType.BASIC_TIMELINE, "Basic Timeline", "basic-timeline",
+            "Kickoff\n"
+            + I + "Charter\n"
+            + "Design\n"
+            + I + "Mockups\n"
+            + "Build\n"
+            + "Launch"
+        },
+        {
+            DiagramType.RADIAL_LIST, "Radial List", "radial-list",
+            "Wellness\n"
+            + I  + "Diet\n"
+            + I2 + "Vegetables\n"
+            + I  + "Exercise\n"
+            + I  + "Sleep\n"
+            + I  + "Community"
+        },
     };
 
     private final XComponentContext context;
@@ -257,7 +279,8 @@ final class DemoRunner {
     }
 
     /**
-     * Exports {@code page} as a 1280×960 PNG to the screenshots directory.
+     * Exports {@code page} as a 1280-wide, aspect-correct PNG to the
+     * screenshots directory.
      *
      * <p>Interactive mode ({@code outputDir} null): best-effort — the directory
      * comes from the system property {@code smartart.screenshots.dir} (default
@@ -286,6 +309,22 @@ final class DemoRunner {
         try {
             String fileUrl = new File(outDir, slug + ".png").toURI().toString();
 
+            // Match the page's aspect ratio — a fixed 1280×960 vertically
+            // stretches diagrams on the default 16:9 page (28000×15750).
+            int pixelW = 1280;
+            int pixelH = 960;
+            try {
+                XPropertySet pageProps =
+                        UnoRuntime.queryInterface(XPropertySet.class, page);
+                int pageW = ((Integer) pageProps.getPropertyValue("Width")).intValue();
+                int pageH = ((Integer) pageProps.getPropertyValue("Height")).intValue();
+                if (pageW > 0 && pageH > 0) {
+                    pixelH = (int) Math.round(pixelW * (double) pageH / pageW);
+                }
+            } catch (Exception ignored) {
+                // Keep the 4:3 fallback if the page size is unreadable.
+            }
+
             XMultiComponentFactory smgr = context.getServiceManager();
             Object expObj = smgr.createInstanceWithContext(
                     "com.sun.star.drawing.GraphicExportFilter", context);
@@ -301,8 +340,8 @@ final class DemoRunner {
                 pv("MediaType",   "image/png"),
                 pv("URL",         fileUrl),
                 pv("FilterData",  new PropertyValue[] {
-                    pv("PixelWidth",  Integer.valueOf(1280)),
-                    pv("PixelHeight", Integer.valueOf(960)),
+                    pv("PixelWidth",  Integer.valueOf(pixelW)),
+                    pv("PixelHeight", Integer.valueOf(pixelH)),
                 }),
             });
         } catch (Exception e) {

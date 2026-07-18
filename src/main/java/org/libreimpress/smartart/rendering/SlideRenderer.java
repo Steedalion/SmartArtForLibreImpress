@@ -123,7 +123,9 @@ public class SlideRenderer {
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
             String service;
-            if (s.getKind() == ShapeKind.ELLIPSE || s.getKind() == ShapeKind.VENN_CIRCLE) {
+            if (s.getKind() == ShapeKind.ELLIPSE || s.getKind() == ShapeKind.VENN_CIRCLE
+                    || s.getKind() == ShapeKind.TARGET_RING
+                    || s.getKind() == ShapeKind.TIMELINE_MARKER) {
                 service = "com.sun.star.drawing.EllipseShape";
             } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
                     || s.getKind() == ShapeKind.BLOCK_ARROW) {
@@ -162,6 +164,23 @@ public class SlideRenderer {
                 chevronSeq++;
                 applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
                 roundCorners(shape, style.getCornerRadius());
+            } else if (s.getKind() == ShapeKind.TARGET_RING
+                    || s.getKind() == ShapeKind.TIMELINE_MARKER) {
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor
+                        : style.accent(chevronSeq);
+                chevronSeq++;
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
+                XPropertySet eProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
+                if (s.getKind() == ShapeKind.TARGET_RING) {
+                    // Rings stack on top of each other: anchor the label in the
+                    // exposed top band and drop the shadow, which would darken
+                    // every ring below.
+                    eProps.setPropertyValue("TextVerticalAdjust",
+                            com.sun.star.drawing.TextVerticalAdjust.TOP);
+                }
+                eProps.setPropertyValue("Shadow", Boolean.FALSE);
             } else if (s.getKind() == ShapeKind.VENN_CIRCLE) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)

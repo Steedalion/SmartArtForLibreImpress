@@ -35,8 +35,10 @@ slides, PNGs, and a per-type result file.
      one `GroupShape` (the diagram) + the two dev-chrome text shapes;
    - group child count ≥ a conservative per-type minimum, and all expected
      node labels appear in the group's (recursive) shape texts;
-   - `<slug>.png` exists, has a valid PNG IHDR of 1280×960 (parsed by hand,
-     no PIL), and is > 5 KB (non-blank).
+   - `<slug>.png` exists, has a valid PNG IHDR (parsed by hand, no PIL) of
+     width 1280 at the page's aspect ratio (since Phase 19 — originally a
+     fixed 1280×960, which vertically stretched diagrams on 16:9 pages),
+     and is > 5 KB (non-blank).
 
 Dispatch over URP is synchronous, but the probe still polls for
 `demo-result.txt` with a generous timeout as a belt-and-braces measure.

@@ -87,8 +87,9 @@ dispatches `org.libreimpress.smartart:Demo` with an `OutputDir` argument, which
 runs the extension's **real** `HierarchyParser` → `LayoutFactory` →
 `SlideRenderer` for every diagram type (the same code path as the dialog's
 Create button, minus the dialog itself). It then asserts one grouped diagram
-per type on its own slide with the expected node texts, a 1280×960 non-blank
-PNG per type, and an `OK` line per type in the `demo-result.txt` that
+per type on its own slide with the expected node texts, a 1280-wide
+aspect-correct non-blank PNG per type, and an `OK` line per type in the
+`demo-result.txt` that
 `DemoRunner` writes in headless mode. A failure here means the shipped Java
 code is broken — closing the gap the render probe leaves open.
 

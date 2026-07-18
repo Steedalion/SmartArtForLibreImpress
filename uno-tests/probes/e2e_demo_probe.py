@@ -7,8 +7,8 @@ Run via uno-tests/run.sh with the extension installed:
 Dispatches org.libreimpress.smartart:Demo (DemoRunner) with an OutputDir
 argument against a loaded Impress document. DemoRunner runs the extension's
 actual HierarchyParser -> LayoutFactory -> SlideRenderer for every diagram
-type, exports one 1280x960 PNG per type, and writes a demo-result.txt with
-one "OK <slug>" line per type.
+type, exports one 1280-wide aspect-correct PNG per type, and writes a
+demo-result.txt with one "OK <slug>" line per type.
 
 Unlike render_probe.py (which merely mirrors the renderer's UNO call
 sequence from Python), a failure here means the shipped Java code is broken.
@@ -18,7 +18,8 @@ Asserts:
   2. One slide per type was appended; each demo slide holds exactly one
      GroupShape (the diagram) plus the two dev-chrome text shapes.
   3. The expected node labels appear in the grouped shapes' text.
-  4. Every PNG exists, is a real 1280x960 PNG, and is not trivially blank.
+  4. Every PNG exists, matches the page's aspect at width 1280, and is not
+     trivially blank.
 
 Exit 0 = pass, 1 = a check failed, 2 = could not connect.
 """
@@ -36,7 +37,7 @@ from _connect import connect
 
 DEMO_URL = "org.libreimpress.smartart:Demo"
 RESULT_FILE = "demo-result.txt"
-PNG_SIZE = (1280, 960)
+PNG_WIDTH = 1280  # height follows the page's aspect ratio
 PNG_MIN_BYTES = 5000
 RESULT_TIMEOUT_S = 180
 
@@ -75,6 +76,14 @@ EXPECTED = [
     ("basic-matrix",
      ["Urgent and Important", "Important, Not Urgent",
       "Urgent, Not Important", "Neither"], 4, "BASIC_MATRIX"),
+    ("target",
+     ["Total Market", "Target Segment", "Niche", "Core Focus"], 4, "TARGET"),
+    ("basic-timeline",
+     ["Kickoff", "Charter", "Design", "Mockups", "Build", "Launch"], 9,
+     "BASIC_TIMELINE"),
+    ("radial-list",
+     ["Wellness", "Diet", "Vegetables", "Exercise", "Sleep", "Community"], 5,
+     "RADIAL_LIST"),
 ]
 
 METADATA_MARKER = "smartart:v1;"
@@ -191,7 +200,7 @@ def check_slides(doc, first_demo_page):
     return ok
 
 
-def check_pngs(outdir):
+def check_pngs(outdir, expected_size):
     ok = True
     for slug, _, _, _ in EXPECTED:
         path = os.path.join(outdir, slug + ".png")
@@ -208,8 +217,8 @@ def check_pngs(outdir):
             continue
         dims = (int.from_bytes(head[16:20], "big"),
                 int.from_bytes(head[20:24], "big"))
-        if dims != PNG_SIZE:
-            print("FAIL: %s is %s, expected %s" % (path, dims, PNG_SIZE))
+        if dims != expected_size:
+            print("FAIL: %s is %s, expected %s" % (path, dims, expected_size))
             ok = False
         elif size < PNG_MIN_BYTES:
             print("FAIL: %s is only %d bytes — likely blank" % (path, size))
@@ -231,6 +240,10 @@ def main():
     outdir = tempfile.mkdtemp(prefix="smartart-e2e.", dir="target")
     try:
         initial_pages = doc.getDrawPages().getCount()
+        page0 = doc.getDrawPages().getByIndex(0)
+        # DemoRunner exports 1280-wide PNGs at the page's aspect ratio.
+        expected_png = (PNG_WIDTH,
+                        round(PNG_WIDTH * page0.Height / page0.Width))
 
         frame = doc.getCurrentController().getFrame()
         transformer = smgr.createInstanceWithContext(
@@ -248,7 +261,7 @@ def main():
 
         ok = check_result_file(os.path.abspath(outdir))
         ok = check_slides(doc, initial_pages) and ok
-        ok = check_pngs(os.path.abspath(outdir)) and ok
+        ok = check_pngs(os.path.abspath(outdir), expected_png) and ok
 
         if ok:
             print("E2E DEMO PROBE: all checks passed")
