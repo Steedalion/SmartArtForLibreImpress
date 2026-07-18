@@ -9,6 +9,7 @@ on each push; layers 1–3 also run locally.
 | 1. Java unit tests | Pure-Java logic (the parser) is correct | No | `mvn package` |
 | 2. OXT structure validation | The `.oxt` contains the right files in the right places | No | CI shell step |
 | 3. Runtime checks (registration/dispatch + drawing API) | LibreOffice loads the component, the command dispatches, and the drawing API behaves as assumed | Yes (headless) | `uno-tests/run.sh` |
+| 3b. End-to-end render through the Java pipeline | The shipped parser → layout → `SlideRenderer` code actually draws every diagram type | Yes (headless) | `uno-tests/run.sh` |
 | Manual | The dialog *looks* right on screen | Yes (GUI) | human |
 
 The key change from earlier phases: **layer 3 is now automated.** A headless
@@ -60,7 +61,7 @@ See [`uno-tests/README.md`](uno-tests/README.md). `run.sh` starts a throwaway,
 headless LibreOffice (profile under `target/`, never `/tmp`), optionally installs
 the `.oxt`, runs the given probe over a UNO socket, and tears everything down.
 
-There are two probes:
+Three probes gate CI:
 
 **`registration_probe.py`** (installs the `.oxt`) asserts:
 1. the SmartArt menu item is present in LibreOffice's **merged** Addons config; and
@@ -81,11 +82,22 @@ LibreOffice version where any of those behaves differently (each was a real
 surprise during development). It is an API-contract smoke test; it does not invoke
 the Java renderer (that needs the modal dialog, which can't run headless).
 
+**`e2e_demo_probe.py`** (installs the `.oxt`) is the true end-to-end check: it
+dispatches `org.libreimpress.smartart:Demo` with an `OutputDir` argument, which
+runs the extension's **real** `HierarchyParser` → `LayoutFactory` →
+`SlideRenderer` for every diagram type (the same code path as the dialog's
+Create button, minus the dialog itself). It then asserts one grouped diagram
+per type on its own slide with the expected node texts, a 1280×960 non-blank
+PNG per type, and an `OK` line per type in the `demo-result.txt` that
+`DemoRunner` writes in headless mode. A failure here means the shipped Java
+code is broken — closing the gap the render probe leaves open.
+
 ```bash
 # requires libreoffice (unopkg, soffice) + python3-uno on PATH
 mvn clean package
 uno-tests/run.sh --install target/SmartArt.oxt uno-tests/probes/registration_probe.py
 uno-tests/run.sh uno-tests/probes/render_probe.py
+uno-tests/run.sh --install target/SmartArt.oxt uno-tests/probes/e2e_demo_probe.py
 #   … PASS lines …
 #   UNO TEST PASS: <probe>
 ```
@@ -102,10 +114,12 @@ Only the **visual appearance and interaction** of the dialog:
 
 - dialog layout / control sizing on screen;
 - that Create echoes the parsed tree and Cancel does nothing;
-- end-to-end shape rendering on a slide (Phase 4+).
+- how the rendered diagrams *look* (geometry/text presence is asserted by
+  `e2e_demo_probe.py`; aesthetics still need eyes).
 
-Everything up to "the command dispatches to our handler" is automated; what the
-human still confirms is what happens *after* the handler runs and draws on screen.
+Everything up to and including "the shipped Java pipeline draws every diagram
+type" is automated; what the human still confirms is dialog interaction and
+visual quality.
 
 Manual smoke test:
 ```bash

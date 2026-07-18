@@ -11,6 +11,7 @@ import com.sun.star.frame.XDispatch;
 import com.sun.star.util.URL;
 import com.sun.star.frame.DispatchDescriptor;
 import com.sun.star.beans.PropertyValue;
+import com.sun.star.uno.AnyConverter;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
 import org.libreimpress.smartart.layout.DiagramLayout;
@@ -75,7 +76,16 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
         if ("org.libreimpress.smartart:Demo".equals(aURL.Complete)) {
             // DEV ONLY — remove this branch together with DemoRunner.java and Addons.xcu m2.
             try {
-                new DemoRunner(xComponentContext).run();
+                // An "OutputDir" dispatch argument switches DemoRunner into
+                // headless/CI mode: PNGs and a demo-result.txt land there.
+                String outputDir = null;
+                for (PropertyValue arg : aArguments) {
+                    if ("OutputDir".equals(arg.Name)
+                            && AnyConverter.isString(arg.Value)) {
+                        outputDir = AnyConverter.toString(arg.Value);
+                    }
+                }
+                new DemoRunner(xComponentContext).run(outputDir);
             } catch (Exception e) {
                 LibreOfficeHelper.showMessage(xComponentContext,
                         "SmartArt Demo – Error", String.valueOf(e), true);

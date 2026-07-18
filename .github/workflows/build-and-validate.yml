@@ -55,6 +55,12 @@ jobs:
       - name: Verify rendering API (headless UNO)
         run: xvfb-run -a bash uno-tests/run.sh uno-tests/probes/render_probe.py
 
+      - name: End-to-end render via Java pipeline (headless UNO)
+        run: |
+          xvfb-run -a bash uno-tests/run.sh --install target/SmartArt.oxt uno-tests/probes/e2e_demo_probe.py
+          # The probe must not write into the checkout (screenshots go to a temp dir).
+          test -z "$(git status --porcelain)" || { git status --porcelain; echo "::error::probe dirtied the checkout"; exit 1; }
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         if: always()
