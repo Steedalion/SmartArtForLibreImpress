@@ -8,7 +8,7 @@
     <!-- Project Metadata -->
     <groupId>org.libreimpress</groupId>
     <artifactId>smartart</artifactId>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
     <packaging>jar</packaging>
     <name>LibreImpress SmartArt</name>
     <description>LibreOffice Impress extension for creating SmartArt-style diagrams from hierarchical text</description>

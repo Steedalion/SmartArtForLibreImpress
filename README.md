@@ -80,7 +80,7 @@ mvn clean package
 ```
 
 Produces **`target/SmartArt.oxt`** (plus a version-stamped copy
-**`target/SmartArt-0.3.0.oxt`** for release distribution).
+**`target/SmartArt-0.4.0.oxt`** for release distribution).
 
 ## Install & verify
 
@@ -166,4 +166,4 @@ LibreImpress-SmartArt/
 
 ---
 
-**Version:** 0.3.0
+**Version:** 0.4.0

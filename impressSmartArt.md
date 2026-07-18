@@ -381,20 +381,24 @@ actually work is described in `TESTING_STRATEGY.md`.
 
 ## 8. Future Enhancements (v2.0+)
 
+Shipped in v0.4.0: diagram style templates, edit existing diagram, diagram
+type conversion, and the Target / Basic Timeline / Radial List types (see §9).
+
+Still open:
+
 - Custom shape support
-- Diagram style templates (modern, classic, minimal)
-- Edit existing diagram
-- Diagram type conversion
 - Animation support
 - Export to other formats
 - Undo/Redo integration
-- More diagram types (target, balance, picture-based, etc.)
+- More diagram types (balance, picture-based, etc.)
+- Layouts adapt to the actual slide size (currently a 25400×19050 page is
+  assumed; on default 16:9 slides diagrams sit slightly left/low of centre)
 
 ---
 
 ## 9. Success Criteria
 
-Status as of 2026-06-16, v0.3.0 (✅ met):
+Status as of 2026-07-18, v0.4.0 (✅ met):
 
 ✅ Plugin loads / installs without errors (verified by `uno-tests/run.sh`)  
 ✅ Dialog accepts text input with indentation  
@@ -413,5 +417,9 @@ Status as of 2026-06-16, v0.3.0 (✅ met):
 ✅ Pyramid diagram renders stepped tiers with apex at top and base at bottom (Phase 12)  
 ✅ Cycle (Blocks) renders rectangles in a ring with solid block-arrow shapes pointing clockwise (Phase 13)  
 ✅ Basic Block List, Vertical Bullet List, Basic Venn, and Basic Matrix render correctly (Phase 14)  
-✅ Cohesive aesthetics applied — rounded corners, soft shadows, navy→teal palette, per-shape text fit (Phase 15)
+✅ Cohesive aesthetics applied — rounded corners, soft shadows, navy→teal palette, per-shape text fit (Phase 15)  
+✅ CI drives the real Java render pipeline end-to-end — Demo dispatch + `e2e_demo_probe.py` assert slides, texts, metadata and PNGs for every type (Phase 16)  
+✅ Edit existing diagram and type conversion — source persisted in the group's `Description`, dialog prefills and replaces in place (Phase 17)  
+✅ Style templates — Modern / Classic / Minimal / Mono selectable in the dialog, persisted per diagram (Phase 18)  
+✅ Target, Basic Timeline, and Radial List render correctly; screenshots exported aspect-correct via the real pipeline (Phase 19)
 
