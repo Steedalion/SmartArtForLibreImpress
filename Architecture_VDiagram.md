@@ -24,10 +24,10 @@ classDiagram
         +getPalette()
     }
     
-    class InputValidator {
-        +validate()
-        +validateLevels()
-        +validateJSON()
+    class ParseResult {
+        +isValid()
+        +getErrorMessage()
+        +getRoot()
     }
     
     class LibreOfficeHelper {
@@ -118,7 +118,7 @@ classDiagram
     
     %% Relationships
     SmartArtCommand --> SmartArtDialog
-    SmartArtCommand --> InputValidator
+    HierarchyParser --> ParseResult
     SmartArtCommand --> LibreOfficeHelper
     HierarchyParser --> Hierarchy
     Hierarchy --> Node
@@ -143,7 +143,7 @@ graph TB
             end
             
             subgraph ProcessingLayer["Processing/Logic Layer"]
-                InputVal["InputValidator"]
+                InputVal["ParseResult<br/>(validation in HierarchyParser)"]
                 Parser["HierarchyParser"]
                 PaletteP["PaletteParser"]
                 HierModel["Hierarchy Data Model<br/>- Node tree structure<br/>- Parent-child relationships"]
@@ -322,7 +322,7 @@ Mapping:
 graph LR
     A["👤 User Input<br/>- Diagram Type<br/>- Text with indent<br/>- Palette JSON"]
     B["📝 SmartArtDialog<br/>Dialog Controller"]
-    C["✔️ InputValidator<br/>Validate inputs"]
+    C["✔️ Validation<br/>HierarchyParser → ParseResult"]
     D["🔀 HierarchyParser<br/>Parse indentation<br/>Build parent-child links"]
     E["🎨 PaletteParser<br/>Parse JSON palette<br/>Apply defaults"]
     F["📊 Hierarchy Object<br/>Node tree structure<br/>Ready for generation"]

@@ -18,7 +18,10 @@ public enum DiagramType {
     BASIC_BLOCK_LIST("Basic Block List"),
     VERTICAL_BULLET_LIST("Vertical Bullet List"),
     BASIC_VENN("Basic Venn"),
-    BASIC_MATRIX("Basic Matrix");
+    BASIC_MATRIX("Basic Matrix"),
+    TARGET("Target"),
+    BASIC_TIMELINE("Basic Timeline"),
+    RADIAL_LIST("Radial List");
 
     private final String label;
 

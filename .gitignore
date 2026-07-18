@@ -25,6 +25,7 @@ dependency-reduced-pom.xml
 .DS_Store
 Thumbs.db
 *.log
+*.log.txt
 
 # Build artifacts
 *.class

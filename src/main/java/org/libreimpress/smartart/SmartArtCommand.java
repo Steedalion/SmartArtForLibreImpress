@@ -10,7 +10,19 @@ import com.sun.star.frame.XDispatchProvider;
 import com.sun.star.frame.XDispatch;
 import com.sun.star.util.URL;
 import com.sun.star.frame.DispatchDescriptor;
+import com.sun.star.awt.Point;
 import com.sun.star.beans.PropertyValue;
+import com.sun.star.beans.XPropertySet;
+import com.sun.star.container.XChild;
+import com.sun.star.drawing.XShape;
+import com.sun.star.drawing.XShapes;
+import com.sun.star.frame.XDesktop;
+import com.sun.star.frame.XModel;
+import com.sun.star.uno.AnyConverter;
+import com.sun.star.uno.UnoRuntime;
+import com.sun.star.view.XSelectionSupplier;
+
+import java.util.Optional;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
 import org.libreimpress.smartart.layout.DiagramLayout;
@@ -18,6 +30,7 @@ import org.libreimpress.smartart.layout.LayoutFactory;
 import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramNode;
 import org.libreimpress.smartart.models.DiagramType;
+import org.libreimpress.smartart.models.SmartArtMetadata;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.PaletteParser;
 import org.libreimpress.smartart.parsers.ParseResult;
@@ -75,7 +88,16 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
         if ("org.libreimpress.smartart:Demo".equals(aURL.Complete)) {
             // DEV ONLY — remove this branch together with DemoRunner.java and Addons.xcu m2.
             try {
-                new DemoRunner(xComponentContext).run();
+                // An "OutputDir" dispatch argument switches DemoRunner into
+                // headless/CI mode: PNGs and a demo-result.txt land there.
+                String outputDir = null;
+                for (PropertyValue arg : aArguments) {
+                    if ("OutputDir".equals(arg.Name)
+                            && AnyConverter.isString(arg.Value)) {
+                        outputDir = AnyConverter.toString(arg.Value);
+                    }
+                }
+                new DemoRunner(xComponentContext).run(outputDir);
             } catch (Exception e) {
                 LibreOfficeHelper.showMessage(xComponentContext,
                         "SmartArt Demo – Error", String.valueOf(e), true);
@@ -112,8 +134,13 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
 
     private void execute() {
         try {
+            // Selection must be read BEFORE the modal dialog opens — inside the
+            // event loop getCurrentComponent() can return the dialog itself.
+            EditTarget target = findEditTarget();
+
             SmartArtDialog dialog = new SmartArtDialog(xComponentContext);
-            SmartArtDialog.Result result = dialog.show();
+            SmartArtDialog.Result result =
+                    dialog.show(target == null ? null : target.meta);
             if (result == null) {
                 return; // user cancelled
             }
@@ -123,7 +150,20 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
                 DiagramNode root = parsed.getRoot();
                 DiagramLayout layout = LayoutFactory.build(result.getType(), root);
                 ColorPalette palette = PaletteParser.parse(result.getPaletteText());
-                new SlideRenderer(xComponentContext).drawHierarchy(layout, palette);
+                XShape group = new SlideRenderer(xComponentContext, result.getStyle())
+                        .drawHierarchy(layout, palette);
+                SlideRenderer.stampMetadata(group, new SmartArtMetadata(
+                        result.getType(), result.getStyle().name(),
+                        result.getPaletteText(), result.getText()));
+                if (target != null) {
+                    // Replace in place: the old diagram is removed only after
+                    // the new one rendered, and the new group inherits the old
+                    // one's (possibly user-adjusted) position.
+                    if (group != null) {
+                        group.setPosition(target.position);
+                    }
+                    target.parent.remove(target.group);
+                }
             } else {
                 LibreOfficeHelper.showMessage(xComponentContext,
                         "SmartArt – Invalid input", parsed.getErrorMessage(), true);
@@ -131,6 +171,68 @@ public class SmartArtCommand extends WeakBase implements XDispatchProvider, XDis
         } catch (Exception e) {
             LibreOfficeHelper.showMessage(xComponentContext,
                     "SmartArt – Error", String.valueOf(e), true);
+        }
+    }
+
+    /** A previously generated diagram the user selected for editing. */
+    private static final class EditTarget {
+        final SmartArtMetadata meta;
+        final XShape group;
+        final XShapes parent;
+        final Point position;
+
+        EditTarget(SmartArtMetadata meta, XShape group, XShapes parent,
+                Point position) {
+            this.meta = meta;
+            this.group = group;
+            this.parent = parent;
+            this.position = position;
+        }
+    }
+
+    /**
+     * Returns the selected SmartArt group if the current selection is exactly
+     * one shape carrying parseable SmartArt metadata in its {@code Description};
+     * {@code null} otherwise (→ ordinary create flow).
+     */
+    private EditTarget findEditTarget() {
+        try {
+            Object desktopObj = xComponentContext.getServiceManager()
+                    .createInstanceWithContext("com.sun.star.frame.Desktop",
+                            xComponentContext);
+            XDesktop desktop = UnoRuntime.queryInterface(XDesktop.class, desktopObj);
+            XModel model = UnoRuntime.queryInterface(XModel.class,
+                    desktop.getCurrentComponent());
+            if (model == null) {
+                return null;
+            }
+            XSelectionSupplier supplier = UnoRuntime.queryInterface(
+                    XSelectionSupplier.class, model.getCurrentController());
+            if (supplier == null) {
+                return null;
+            }
+            XShapes selected = UnoRuntime.queryInterface(XShapes.class,
+                    supplier.getSelection());
+            if (selected == null || selected.getCount() != 1) {
+                return null;
+            }
+            XShape shape = UnoRuntime.queryInterface(XShape.class,
+                    selected.getByIndex(0));
+            XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
+            Optional<SmartArtMetadata> meta = SmartArtMetadata.tryParse(
+                    AnyConverter.toString(props.getPropertyValue("Description")));
+            if (!meta.isPresent()) {
+                return null;
+            }
+            XChild child = UnoRuntime.queryInterface(XChild.class, shape);
+            XShapes parent = UnoRuntime.queryInterface(XShapes.class,
+                    child.getParent());
+            if (parent == null) {
+                return null;
+            }
+            return new EditTarget(meta.get(), shape, parent, shape.getPosition());
+        } catch (Exception e) {
+            return null; // any doubt → plain create flow
         }
     }
 }

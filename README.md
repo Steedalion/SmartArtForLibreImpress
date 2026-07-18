@@ -30,6 +30,9 @@ Browse all releases → [Releases](https://github.com/Steedalion/SmartArtForLibr
 | **Vertical Bullet List** | Stacked title bars, each with a content box of its level-2 and deeper children as nested, indented bullets beneath | ![Vertical Bullet List](docs/screenshots/vertical-bullet-list.png) |
 | **Basic Venn** | Overlapping translucent circles, one per level-1 item, around the slide centre | ![Basic Venn](docs/screenshots/basic-venn.png) |
 | **Basic Matrix** | First four level-1 items as the quadrants of a 2×2 grid | ![Basic Matrix](docs/screenshots/basic-matrix.png) |
+| **Target** | Concentric circles, first item outermost, last item the bullseye; labels in each ring's top band | ![Target](docs/screenshots/target.png) |
+| **Basic Timeline** | Horizontal spine with one marker per item; label boxes alternate above/below, level-2+ children as bullets | ![Basic Timeline](docs/screenshots/basic-timeline.png) |
+| **Radial List** | Central circle with rectangular satellites in a ring; level-3+ children as bullets inside each satellite | ![Radial List](docs/screenshots/radial-list.png) |
 
 ## Input format
 
@@ -46,6 +49,24 @@ Root
 The **Indent →** and **← Outdent** buttons (or **Ctrl+]** / **Ctrl+[**) add
 or remove one dash level on the current line.
 
+The **Style** dropdown picks a visual template — **Modern** (navy→teal,
+rounded, soft shadows), **Classic** (Office blues, square corners),
+**Minimal** (flat, no shadows) or **Mono** (greyscale). The optional colour
+lines override individual levels on top of any template.
+
+## Edit an existing diagram
+
+Every generated diagram stores its source (outline, type, colours) inside the
+group shape, and this survives saving and reopening the presentation. To edit:
+select the diagram's group on the slide, then run **SmartArt → Create
+Diagram…** again — the dialog opens prefilled in *Edit* mode and **Update**
+replaces the diagram in place (keeping its position). Changing the type in the
+dropdown converts the diagram to another layout.
+
+Notes: manual tweaks made *inside* the group (moved boxes, edited text) are
+not read back — Update regenerates from the stored outline. A diagram that
+consists of a single shape is not grouped and cannot be edited this way.
+
 ## Prerequisites
 
 - **JDK 11+** — `java -version`
@@ -59,7 +80,7 @@ mvn clean package
 ```
 
 Produces **`target/SmartArt.oxt`** (plus a version-stamped copy
-**`target/SmartArt-0.3.0.oxt`** for release distribution).
+**`target/SmartArt-0.4.0.oxt`** for release distribution).
 
 ## Install & verify
 
@@ -120,7 +141,7 @@ LibreImpress-SmartArt/
 │   └── test/java/org/libreimpress/smartart/
 │       ├── parsers/HierarchyParserTest.java
 │       ├── editing/OutlineEditorTest.java
-│       └── layout/                     # 91 unit tests across all layout classes
+│       └── layout/                     # 111 unit tests across all layout classes
 ├── uno-tests/                          # headless LibreOffice integration tests
 │   ├── run.sh
 │   └── probes/
@@ -145,4 +166,4 @@ LibreImpress-SmartArt/
 
 ---
 
-**Version:** 0.3.0
+**Version:** 0.4.0

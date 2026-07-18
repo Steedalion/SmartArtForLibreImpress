@@ -42,16 +42,17 @@ public class SlideRenderer {
     private static final int WIDTH = 6000;
     private static final int HEIGHT = 3000;
 
-    /** Corner-rounding radius for rectangular shapes (1/100 mm). */
-    private static final int CORNER_RADIUS = 250;
-    /** Connector line colour (mid-grey) and width (1/100 mm). */
-    private static final int CONNECTOR_COLOR = 0x595959;
-    private static final int CONNECTOR_WIDTH = 40;
-
     private final XComponentContext context;
+    private final StyleTemplate style;
 
+    /** Renders with the {@link StyleTemplate#DEFAULT} look. */
     public SlideRenderer(XComponentContext context) {
+        this(context, StyleTemplate.DEFAULT);
+    }
+
+    public SlideRenderer(XComponentContext context, StyleTemplate style) {
         this.context = context;
+        this.style = style == null ? StyleTemplate.DEFAULT : style;
     }
 
     /** Adds one rectangle containing {@code text} to the current slide. */
@@ -82,15 +83,18 @@ public class SlideRenderer {
     /**
      * Draws a laid-out diagram using the built-in default palette.
      */
-    public void drawHierarchy(DiagramLayout layout) throws Exception {
-        drawHierarchy(layout, ColorPalette.EMPTY);
+    public XShape drawHierarchy(DiagramLayout layout) throws Exception {
+        return drawHierarchy(layout, ColorPalette.EMPTY);
     }
 
     /**
      * Draws a laid-out diagram onto the current slide of the current document,
      * applying {@code palette} fill colours where set.
+     *
+     * @return the group holding the diagram, or {@code null} if the diagram
+     *         had fewer than two shapes (nothing to group)
      */
-    public void drawHierarchy(DiagramLayout layout, ColorPalette palette) throws Exception {
+    public XShape drawHierarchy(DiagramLayout layout, ColorPalette palette) throws Exception {
         XComponent document = currentComponent();
         XDrawPage page = currentPage(document);
         if (page == null) {
@@ -98,15 +102,17 @@ public class SlideRenderer {
         }
         XMultiServiceFactory factory =
                 UnoRuntime.queryInterface(XMultiServiceFactory.class, document);
-        drawHierarchy(page, factory, layout, palette);
+        return drawHierarchy(page, factory, layout, palette);
     }
 
     /**
      * Draws a laid-out diagram onto an explicit {@code page} using the given
      * {@code factory}. Used by preview and screenshot export where the target
      * page is not the desktop's current view.
+     *
+     * @return the group holding the diagram, or {@code null} if ungrouped
      */
-    public void drawHierarchy(XDrawPage page, XMultiServiceFactory factory,
+    public XShape drawHierarchy(XDrawPage page, XMultiServiceFactory factory,
             DiagramLayout layout, ColorPalette palette) throws Exception {
         XShapes shapes = UnoRuntime.queryInterface(XShapes.class, page);
         List<XShape> created = new ArrayList<>();
@@ -117,7 +123,9 @@ public class SlideRenderer {
         for (int i = 0; i < laidOut.size(); i++) {
             LaidOutShape s = laidOut.get(i);
             String service;
-            if (s.getKind() == ShapeKind.ELLIPSE || s.getKind() == ShapeKind.VENN_CIRCLE) {
+            if (s.getKind() == ShapeKind.ELLIPSE || s.getKind() == ShapeKind.VENN_CIRCLE
+                    || s.getKind() == ShapeKind.TARGET_RING
+                    || s.getKind() == ShapeKind.TIMELINE_MARKER) {
                 service = "com.sun.star.drawing.EllipseShape";
             } else if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
                     || s.getKind() == ShapeKind.BLOCK_ARROW) {
@@ -136,15 +144,14 @@ public class SlideRenderer {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.chevronFill(chevronSeq);
+                        : style.accent(chevronSeq);
                 chevronSeq++;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
             } else if (s.getKind() == ShapeKind.BLOCK_ARROW) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
-                        ? userColor : DefaultPalette.ARROW_ACCENT;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE, 9f);
+                        ? userColor : style.arrowAccent();
+                applyStyle(shape, fill, 9f);
                 applyBlockArrowGeometry(shape);
                 XPropertySet rProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
                 rProps.setPropertyValue("RotateAngle", Integer.valueOf(s.getRotateAngle100()));
@@ -153,34 +160,49 @@ public class SlideRenderer {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.chevronFill(chevronSeq);
+                        : style.accent(chevronSeq);
                 chevronSeq++;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
-                roundCorners(shape, CORNER_RADIUS);
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
+                roundCorners(shape, style.getCornerRadius());
+            } else if (s.getKind() == ShapeKind.TARGET_RING
+                    || s.getKind() == ShapeKind.TIMELINE_MARKER) {
+                int userColor = palette.getFillColor(s.getLevel());
+                int fill = (userColor != ColorPalette.UNSET)
+                        ? userColor
+                        : style.accent(chevronSeq);
+                chevronSeq++;
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
+                XPropertySet eProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
+                if (s.getKind() == ShapeKind.TARGET_RING) {
+                    // Rings stack on top of each other: anchor the label in the
+                    // exposed top band and drop the shadow, which would darken
+                    // every ring below.
+                    eProps.setPropertyValue("TextVerticalAdjust",
+                            com.sun.star.drawing.TextVerticalAdjust.TOP);
+                }
+                eProps.setPropertyValue("Shadow", Boolean.FALSE);
             } else if (s.getKind() == ShapeKind.VENN_CIRCLE) {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.chevronFill(chevronSeq);
+                        : style.accent(chevronSeq);
                 chevronSeq++;
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
                 // Partial transparency so overlapping circles remain visible;
                 // drop the shadow, which muddies translucent overlaps.
                 XPropertySet vProps = UnoRuntime.queryInterface(XPropertySet.class, shape);
-                vProps.setPropertyValue("FillTransparence", Integer.valueOf(25));
+                vProps.setPropertyValue("FillTransparence",
+                        Integer.valueOf(style.getVennTransparence()));
                 vProps.setPropertyValue("Shadow", Boolean.FALSE);
             } else {
                 int userColor = palette.getFillColor(s.getLevel());
                 int fill = (userColor != ColorPalette.UNSET)
                         ? userColor
-                        : DefaultPalette.fill(s.getKind(), s.getLevel());
-                applyStyle(shape, fill, DefaultPalette.TEXT_WHITE,
-                        DefaultPalette.fontSize(s.getLevel()));
+                        : style.fill(s.getKind(), s.getLevel());
+                applyStyle(shape, fill, DefaultPalette.fontSize(s.getLevel()));
                 // Round rectangle corners (not ellipses).
                 if (s.getKind() == ShapeKind.RECTANGLE) {
-                    roundCorners(shape, CORNER_RADIUS);
+                    roundCorners(shape, style.getCornerRadius());
                 }
             }
             // Small label boxes (process/chevron sub-items) scale text to fit so
@@ -197,7 +219,7 @@ public class SlideRenderer {
                 // CharColor on the shape before it holds text does not reliably
                 // colour text added later (especially with TextFitToSize), so
                 // colour the runs via a cursor after setString.
-                applyTextColor(xText, DefaultPalette.TEXT_WHITE);
+                applyTextColor(xText, style.getTextColor());
                 if (s.getKind() == ShapeKind.CHEVRON || s.getKind() == ShapeKind.PENTAGON
                         || s.getKind() == ShapeKind.VENN_CIRCLE) {
                     centerChevronText(shape, xText);
@@ -218,8 +240,10 @@ public class SlideRenderer {
                     Integer.valueOf(edge.getStartGlue()));
             props.setPropertyValue("EndGluePointIndex",
                     Integer.valueOf(edge.getEndGlue()));
-            props.setPropertyValue("LineColor", Integer.valueOf(CONNECTOR_COLOR));
-            props.setPropertyValue("LineWidth", Integer.valueOf(CONNECTOR_WIDTH));
+            props.setPropertyValue("LineColor",
+                    Integer.valueOf(style.getConnectorColor()));
+            props.setPropertyValue("LineWidth",
+                    Integer.valueOf(style.getConnectorWidth()));
             if (edge.isStraight()) {
                 props.setPropertyValue("EdgeKind",
                         com.sun.star.drawing.ConnectorType.LINE);
@@ -234,26 +258,52 @@ public class SlideRenderer {
             created.add(xConnector);
         }
 
-        groupShapes(page, created);
+        return groupShapes(page, created);
+    }
+
+    /**
+     * Writes {@code meta} onto a diagram group: the serialized form into
+     * {@code Description} (persisted as {@code <svg:desc>} in ODF) and a
+     * friendly label into {@code Name}. No-op on a null group (ungrouped
+     * single-shape diagram — such diagrams cannot be edited later).
+     */
+    public static void stampMetadata(XShape group,
+            org.libreimpress.smartart.models.SmartArtMetadata meta) {
+        if (group == null || meta == null) {
+            return;
+        }
+        try {
+            XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, group);
+            props.setPropertyValue("Description", meta.serialize());
+            props.setPropertyValue("Name", meta.displayName());
+        } catch (Exception e) {
+            // Metadata is an enhancement; the drawn diagram is still valid.
+        }
     }
 
     /** Applies solid fill, text colour, font size, and auto-shrink to a shape. */
-    private static void applyStyle(Object shape, int fillColor, int textColor,
-                                   float fontSize) throws Exception {
+    private void applyStyle(Object shape, int fillColor, float fontSize)
+            throws Exception {
         XPropertySet props = UnoRuntime.queryInterface(XPropertySet.class, shape);
         props.setPropertyValue("FillStyle",
                 com.sun.star.drawing.FillStyle.SOLID);
         props.setPropertyValue("FillColor", Integer.valueOf(fillColor));
-        props.setPropertyValue("CharColor", Integer.valueOf(textColor));
+        props.setPropertyValue("CharColor", Integer.valueOf(style.getTextColor()));
         props.setPropertyValue("CharHeight", Float.valueOf(fontSize));
         props.setPropertyValue("LineStyle",
                 com.sun.star.drawing.LineStyle.NONE);
-        // Soft drop shadow to lift the shape off the slide.
-        props.setPropertyValue("Shadow", Boolean.TRUE);
-        props.setPropertyValue("ShadowColor", Integer.valueOf(0x404040));
-        props.setPropertyValue("ShadowTransparence", Integer.valueOf(75));
-        props.setPropertyValue("ShadowXDistance", Integer.valueOf(80));
-        props.setPropertyValue("ShadowYDistance", Integer.valueOf(80));
+        // Soft drop shadow to lift the shape off the slide (template-dependent).
+        props.setPropertyValue("Shadow", Boolean.valueOf(style.hasShadow()));
+        if (style.hasShadow()) {
+            props.setPropertyValue("ShadowColor",
+                    Integer.valueOf(style.getShadowColor()));
+            props.setPropertyValue("ShadowTransparence",
+                    Integer.valueOf(style.getShadowTransparence()));
+            props.setPropertyValue("ShadowXDistance",
+                    Integer.valueOf(style.getShadowDistance()));
+            props.setPropertyValue("ShadowYDistance",
+                    Integer.valueOf(style.getShadowDistance()));
+        }
         // Wrap text to the shape width and auto-shrink on overflow. Word-wrap is
         // what makes AUTOFIT respect width, so long labels in narrow boxes shrink
         // to fit instead of overflowing — while short text is never enlarged.
@@ -326,10 +376,14 @@ public class SlideRenderer {
                 com.sun.star.style.ParagraphAdjust.CENTER);
     }
 
-    /** Groups all the diagram's shapes into one editable group on the page. */
-    private void groupShapes(XDrawPage page, List<XShape> created) {
+    /**
+     * Groups all the diagram's shapes into one editable group on the page.
+     *
+     * @return the group shape, or {@code null} if grouping was skipped/failed
+     */
+    private XShape groupShapes(XDrawPage page, List<XShape> created) {
         if (created.size() < 2) {
-            return;
+            return null;
         }
         try {
             XMultiComponentFactory smgr = context.getServiceManager();
@@ -341,10 +395,12 @@ public class SlideRenderer {
             }
             XShapeGrouper grouper = UnoRuntime.queryInterface(XShapeGrouper.class, page);
             if (grouper != null) {
-                grouper.group(collection);
+                return grouper.group(collection);
             }
+            return null;
         } catch (Exception e) {
             // Grouping is cosmetic; leave shapes ungrouped if it fails.
+            return null;
         }
     }
 
