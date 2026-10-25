@@ -24,12 +24,17 @@ import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.libreimpress.smartart.helpers.LibreOfficeHelper;
 import org.libreimpress.smartart.layout.DiagramLayout;
 import org.libreimpress.smartart.layout.LayoutFactory;
 import org.libreimpress.smartart.models.ColorPalette;
 import org.libreimpress.smartart.models.DiagramType;
+import org.libreimpress.smartart.models.SmartArtMetadata;
 import org.libreimpress.smartart.parsers.HierarchyParser;
 import org.libreimpress.smartart.parsers.ParseResult;
 import org.libreimpress.smartart.rendering.SlideRenderer;
@@ -160,6 +165,28 @@ final class DemoRunner {
             + "Neither\n"
             + I  + "Drop"
         },
+        {
+            DiagramType.TARGET, "Target", "target",
+            "Total Market\nTarget Segment\nNiche\nCore Focus"
+        },
+        {
+            DiagramType.BASIC_TIMELINE, "Basic Timeline", "basic-timeline",
+            "Kickoff\n"
+            + I + "Charter\n"
+            + "Design\n"
+            + I + "Mockups\n"
+            + "Build\n"
+            + "Launch"
+        },
+        {
+            DiagramType.RADIAL_LIST, "Radial List", "radial-list",
+            "Wellness\n"
+            + I  + "Diet\n"
+            + I2 + "Vegetables\n"
+            + I  + "Exercise\n"
+            + I  + "Sleep\n"
+            + I  + "Community"
+        },
     };
 
     private final XComponentContext context;
@@ -169,6 +196,19 @@ final class DemoRunner {
     }
 
     void run() throws Exception {
+        run(null);
+    }
+
+    /**
+     * Runs the demo. When {@code outputDir} is non-null the runner is in
+     * headless/CI mode: PNGs go to that directory (created if missing), a
+     * {@code demo-result.txt} with one {@code OK <slug>} / {@code FAIL <slug>}
+     * line per diagram type is written there, no message boxes are shown, and
+     * screenshot-export errors count as failures instead of being best-effort.
+     */
+    void run(String outputDir) throws Exception {
+        boolean headless = outputDir != null;
+        List<String> results = new ArrayList<>();
         XMultiComponentFactory smgr = context.getServiceManager();
         Object desktopObj = smgr.createInstanceWithContext(
                 "com.sun.star.frame.Desktop", context);
@@ -196,49 +236,94 @@ final class DemoRunner {
             String slug        = (String) demo[2];
             String inputText   = (String) demo[3];
 
-            // Append a new blank slide.
-            pages.insertNewByIndex(pages.getCount());
-            XDrawPage page = UnoRuntime.queryInterface(XDrawPage.class,
-                    pages.getByIndex(pages.getCount() - 1));
+            try {
+                // Append a new blank slide.
+                pages.insertNewByIndex(pages.getCount());
+                XDrawPage page = UnoRuntime.queryInterface(XDrawPage.class,
+                        pages.getByIndex(pages.getCount() - 1));
 
-            // Make it the active page so SlideRenderer can find it.
-            view.setCurrentPage(page);
+                // Make it the active page so SlideRenderer can find it.
+                view.setCurrentPage(page);
 
-            ParseResult parsed = new HierarchyParser().parse(inputText);
-            if (!parsed.isValid()) {
-                LibreOfficeHelper.showMessage(context, "SmartArt Demo – internal error",
-                        slideLabel + ": " + parsed.getErrorMessage(), true);
-                continue;
+                ParseResult parsed = new HierarchyParser().parse(inputText);
+                if (!parsed.isValid()) {
+                    throw new Exception("parse: " + parsed.getErrorMessage());
+                }
+                DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
+                XShape group = renderer.drawHierarchy(layout, ColorPalette.EMPTY);
+                SlideRenderer.stampMetadata(group,
+                        new SmartArtMetadata(type, "DEFAULT", "", inputText));
+
+                // Export a clean screenshot of just the diagram, then annotate the
+                // on-screen dev slide with the label/input listing afterwards so the
+                // dev chrome never appears in the exported PNG.
+                exportScreenshot(document, page, slug, outputDir);
+
+                addCornerLabel(factory, page, "[DEV DEMO] " + slideLabel);
+                addInputListing(factory, page, inputText);
+                results.add("OK " + slug);
+            } catch (Exception e) {
+                results.add("FAIL " + slug + ": " + e);
+                if (!headless) {
+                    LibreOfficeHelper.showMessage(context, "SmartArt Demo – error",
+                            slideLabel + ": " + e, true);
+                }
             }
-            DiagramLayout layout = LayoutFactory.build(type, parsed.getRoot());
-            renderer.drawHierarchy(layout, ColorPalette.EMPTY);
+        }
 
-            // Export a clean screenshot of just the diagram, then annotate the
-            // on-screen dev slide with the label/input listing afterwards so the
-            // dev chrome never appears in the exported PNG.
-            exportScreenshot(document, page, slug);
-
-            addCornerLabel(factory, page, "[DEV DEMO] " + slideLabel);
-            addInputListing(factory, page, inputText);
+        if (headless) {
+            Files.write(new File(outputDir, "demo-result.txt").toPath(),
+                    (String.join("\n", results) + "\n")
+                            .getBytes(StandardCharsets.UTF_8));
         }
     }
 
     /**
-     * Exports {@code page} as a 1280×960 PNG to the screenshots directory.
-     * Silently skips if the directory does not exist. Output directory is
-     * controlled by the system property {@code smartart.screenshots.dir};
-     * defaults to {@code ~/Documents/SmartArtForLibreImpress/docs/screenshots}.
+     * Exports {@code page} as a 1280-wide, aspect-correct PNG to the
+     * screenshots directory.
+     *
+     * <p>Interactive mode ({@code outputDir} null): best-effort — the directory
+     * comes from the system property {@code smartart.screenshots.dir} (default
+     * {@code ~/Documents/SmartArtForLibreImpress/docs/screenshots}), a missing
+     * directory or export error is silently ignored.
+     *
+     * <p>Headless mode ({@code outputDir} non-null): the directory is created if
+     * missing and any export error propagates so the type is recorded as FAIL.
      */
-    private void exportScreenshot(XComponent document, XDrawPage page, String slug) {
-        try {
-            String dir = System.getProperty("smartart.screenshots.dir",
-                    System.getProperty("user.home")
-                    + "/Documents/SmartArtForLibreImpress/docs/screenshots");
-            File outDir = new File(dir);
-            if (!outDir.exists()) {
+    private void exportScreenshot(XComponent document, XDrawPage page, String slug,
+            String outputDir) throws Exception {
+        boolean headless = outputDir != null;
+        String dir = headless ? outputDir
+                : System.getProperty("smartart.screenshots.dir",
+                        System.getProperty("user.home")
+                        + "/Documents/SmartArtForLibreImpress/docs/screenshots");
+        File outDir = new File(dir);
+        if (!outDir.exists()) {
+            if (!headless) {
                 return;
             }
+            if (!outDir.mkdirs()) {
+                throw new Exception("cannot create output directory " + dir);
+            }
+        }
+        try {
             String fileUrl = new File(outDir, slug + ".png").toURI().toString();
+
+            // Match the page's aspect ratio — a fixed 1280×960 vertically
+            // stretches diagrams on the default 16:9 page (28000×15750).
+            int pixelW = 1280;
+            int pixelH = 960;
+            try {
+                XPropertySet pageProps =
+                        UnoRuntime.queryInterface(XPropertySet.class, page);
+                int pageW = ((Integer) pageProps.getPropertyValue("Width")).intValue();
+                int pageH = ((Integer) pageProps.getPropertyValue("Height")).intValue();
+                if (pageW > 0 && pageH > 0) {
+                    pixelH = (int) Math.round(pixelW * (double) pageH / pageW);
+                }
+            } catch (Exception ignored) {
+                // Keep the 4:3 fallback if the page size is unreadable.
+            }
 
             XMultiComponentFactory smgr = context.getServiceManager();
             Object expObj = smgr.createInstanceWithContext(
@@ -255,12 +340,15 @@ final class DemoRunner {
                 pv("MediaType",   "image/png"),
                 pv("URL",         fileUrl),
                 pv("FilterData",  new PropertyValue[] {
-                    pv("PixelWidth",  Integer.valueOf(1280)),
-                    pv("PixelHeight", Integer.valueOf(960)),
+                    pv("PixelWidth",  Integer.valueOf(pixelW)),
+                    pv("PixelHeight", Integer.valueOf(pixelH)),
                 }),
             });
         } catch (Exception e) {
-            // Screenshot export is best-effort; don't break the demo flow.
+            if (headless) {
+                throw e;
+            }
+            // Interactive: screenshot export is best-effort; don't break the demo.
         }
     }
 

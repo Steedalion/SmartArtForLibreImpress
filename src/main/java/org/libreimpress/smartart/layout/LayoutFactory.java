@@ -21,6 +21,9 @@ public final class LayoutFactory {
             case VERTICAL_BULLET_LIST: return VerticalBulletListLayout.layout(root);
             case BASIC_VENN:         return VennLayout.layout(root);
             case BASIC_MATRIX:       return MatrixLayout.layout(root);
+            case TARGET:             return TargetLayout.layout(root);
+            case BASIC_TIMELINE:     return TimelineLayout.layout(root);
+            case RADIAL_LIST:        return RadialListLayout.layout(root);
             default:                 return HierarchyLayout.layout(root);
         }
     }

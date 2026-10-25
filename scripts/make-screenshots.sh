@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Generate diagram screenshots for the README.
 #
-# NOTE: DemoRunner.java (the in-app "[DEV DEMO]" menu action) is the canonical
-# screenshot source — it renders through the real SlideRenderer, so its output
-# always matches actual diagrams. This headless probe is a secondary,
-# hand-maintained reimplementation and is not kept in aesthetic sync.
+# Renders through the REAL Java pipeline: dispatches the Demo command with an
+# OutputDir argument, so DemoRunner/SlideRenderer (the shipped code) produce
+# every PNG. The old hand-synced screenshot_probe.py is no longer used here.
 #
 # Usage:
 #   scripts/make-screenshots.sh [--oxt <path>]
@@ -64,7 +63,7 @@ for _ in $(seq 1 60); do
 done
 
 echo "==> Drawing diagrams and exporting PNGs to ${OUT_DIR}/"
-python3 "${REPO_ROOT}/uno-tests/probes/screenshot_probe.py" "${PORT}" "${OUT_DIR}"
+python3 "${REPO_ROOT}/uno-tests/probes/export_screenshots.py" "${PORT}" "${OUT_DIR}"
 
 echo "==> Done"
 ls -lh "${OUT_DIR}/"

@@ -9,5 +9,7 @@ public enum ShapeKind {
     PYRAMID_TIER,     // Centered rectangle whose width encodes tier depth
     BLOCK_ARROW,      // "right-arrow" CustomShape rotated to point toward the next node
     VENN_CIRCLE,      // Translucent ellipse; overlapping circles read as a Venn diagram
-    MATRIX_CELL       // Rectangle coloured per-sequence for a 2x2 matrix quadrant
+    MATRIX_CELL,      // Rectangle coloured per-sequence for a 2x2 matrix quadrant
+    TARGET_RING,      // Opaque concentric ellipse; text anchored to the exposed top band
+    TIMELINE_MARKER   // Small filled circle sitting on the timeline spine
 }

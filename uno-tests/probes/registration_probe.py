@@ -10,7 +10,7 @@ Asserts two things that packaging/structural checks cannot:
 
 Check (2) is decisive: LibreOffice hides an addon menu item whose command cannot
 be dispatched, so a null dispatch == an empty submenu (e.g. the component jar in
-the wrong place). See Phase2_ImplementationPlan.md §15.
+the wrong place). See docs/plans/Phase2_ImplementationPlan.md §15.
 
 Exit 0 = pass, 1 = a check failed, 2 = could not connect.
 """
